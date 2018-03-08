@@ -1,0 +1,18 @@
+language: python
+sudo: required
+dist: trusty
+
+python:
+  - "3.5"
+
+install:
+  - pip3 install codecov pytest pytest-cov
+  - pip3 install -r requirements.txt
+  - ./utils/jumspcale_install.sh
+  - ./utils/zrobot_install.sh
+
+script:
+  - make test
+
+after_success:
+  - codecov
