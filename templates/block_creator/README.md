@@ -1,4 +1,4 @@
-## template: github.com/threefoldtoken/0-templates/zerodb/0.0.1
+## template: github.com/threefoldtoken/0-templates/block_creator/0.0.1
 
 ### Description:
 This template is responsible for deploying block creator node.
