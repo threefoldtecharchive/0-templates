@@ -12,9 +12,6 @@ class BlockCreator(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        if bool(self.data.get('nodeMountPoint')) != bool(self.data['containerMountPoint']):
-            raise ValueError('nodeMountPoint and containerMountPoint must either both be defined or both be none.')
-
         self._rivine_sal = None
 
     @property
@@ -41,13 +38,8 @@ class BlockCreator(TemplateBase):
         """
         Creating tfchain container with the provided flist, and configure mounts for datadirs
         """
-        mounts = {}
-        if self.data['nodeMountPoint'] and self.data['containerMountPoint']:
-            mounts = {self.data['nodeMountPoint']: self.data['containerMountPoint']}
-
         container_data = {
             'flist': TFCHAIN_FLIST,
-            'mounts': mounts,
             'node': self.data['node'],
             'hostNetworking': True,
         }
@@ -79,7 +71,7 @@ class BlockCreator(TemplateBase):
         """
         stop tfchain daemon
         """
-        self.state.check('actions', 'start', 'ok')
+        self.state.check('actions', 'install', 'ok')
         self.logger.info('Stopping rivine daemon {}'.format(self.name))
         self.rivine_sal.daemon.stop()
-        self.state.delete('actions', 'start')
+        self.state.delete('actions', 'install')
