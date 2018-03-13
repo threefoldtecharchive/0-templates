@@ -12,7 +12,7 @@ class BlockCreator(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        self._rivine_sal = None
+        self._tfchain_sal = None
 
     @property
     def node_sal(self):
@@ -23,16 +23,16 @@ class BlockCreator(TemplateBase):
         return self.node_sal.containers.get(self.data['container'])
 
     @property
-    def rivine_sal(self):
-        if self._rivine_sal is None:
+    def tchain_sal(self):
+        if self._tfchain_sal is None:
             kwargs = {
                 'name': self.name,
                 'container': self.container_sal,
                 'rpc_addr': '0.0.0.0:%s' % self.data['rpcPort'],
                 'api_addr': 'localhost:%s' % self.data['apiPort'],
             }
-            self._rivine_sal = j.clients.zero_os.sal.rivine_get(**kwargs)
-        return self._rivine_sal
+            self._tfchain_sal = j.clients.zero_os.sal.tfcain_get(**kwargs)
+        return self._tfchain_sal
 
     def install(self):
         """
@@ -55,17 +55,22 @@ class BlockCreator(TemplateBase):
         start both tfchain daemon and client
         """
         self.state.check('actions', 'install', 'ok')
+
         self.logger.info('Staring tfchaind {}'.format(self.name))
         container = self.api.services.get(template_uid=CONTAINER_TEMPLATE_UID, name=self.data['container'])
         container.schedule_action('start').wait()
+        self.tchain_sal.daemon.start()
 
-        self.rivine_sal.daemon.start()
+        try:
+            self.state.check('wallet', 'init', 'ok')
+        except:
+            self.tchain_sal.client.wallet_init()
+            self.tchain_sal.client.wallet_unlock()
 
-        self.rivine_sal.client.wallet_init()
-
-        self.data['walletSeed'] = self.rivine_sal.client.recovery_seed
-        self.data['walletPassphrase'] = self.rivine_sal.client.wallet_password
+        self.data['walletSeed'] = self.tchain_sal.client.recovery_seed
+        self.data['walletPassphrase'] = self.tchain_sal.client.wallet_password
         self.state.set('actions', 'start', 'ok')
+        self.state.set('wallet', 'init', 'ok')
 
     def stop(self):
         """
@@ -73,5 +78,5 @@ class BlockCreator(TemplateBase):
         """
         self.state.check('actions', 'install', 'ok')
         self.logger.info('Stopping rivine daemon {}'.format(self.name))
-        self.rivine_sal.daemon.stop()
+        self.tchain_sal.daemon.stop()
         self.state.delete('actions', 'install')
