@@ -31,7 +31,7 @@ class BlockCreator(TemplateBase):
                 'rpc_addr': '0.0.0.0:%s' % self.data['rpcPort'],
                 'api_addr': 'localhost:%s' % self.data['apiPort'],
             }
-            self._tfchain_sal = j.clients.zero_os.sal.tfcain_get(**kwargs)
+            self._tfchain_sal = j.clients.zero_os.sal.tfchain_get(**kwargs)
         return self._tfchain_sal
 
     def install(self):
@@ -64,6 +64,7 @@ class BlockCreator(TemplateBase):
         try:
             self.state.check('wallet', 'init', 'ok')
         except:
+            # TODO: needs to accept passwords as soon the flist is updated
             self.tchain_sal.client.wallet_init()
             self.tchain_sal.client.wallet_unlock()
 
