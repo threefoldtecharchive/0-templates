@@ -5,8 +5,7 @@ from zerorobot.template.state import StateCheckError
 
 
 CONTAINER_TEMPLATE_UID = 'github.com/zero-os/0-templates/container/0.0.1'
-# TFCHAIN_FLIST = 'https://hub.gig.tech/khaledkbadr/tfchain-ubuntu.flist'
-TFCHAIN_FLIST = 'http://192.168.20.132:8080/khaledkbadr/tfchain-ubuntu.flist'
+TFCHAIN_FLIST = 'https://hub.gig.tech/khaledkbadr/tfchain-ubuntu.flist'
 
 
 class BlockCreator(TemplateBase):
