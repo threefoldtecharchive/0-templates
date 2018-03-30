@@ -17,4 +17,5 @@ This template is responsible for deploying block creator node.
 - `start`: starts the container and the tfchain daemon process and init wallet.
 - `stop`: stops the tfchain daemon process.
 - `wallet_address`: return wallet address
+- `wallet_amount`: return the amount of token in the wallet
 - `consensus_stat`: return some statistics about the consensus
