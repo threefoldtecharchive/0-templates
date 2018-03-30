@@ -1,11 +1,13 @@
 from js9 import j
-
+import os
+import time
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
+from zerorobot.service_collection import ServiceNotFoundError
 
 
 CONTAINER_TEMPLATE_UID = 'github.com/zero-os/0-templates/container/0.0.1'
-TFCHAIN_FLIST = 'https://hub.gig.tech/khaledkbadr/tfchain-ubuntu.flist'
+TFCHAIN_FLIST = 'https://hub.gig.tech/lee/ubuntu-16.04-tfchain-0.6.0.flist'
 
 
 class BlockCreator(TemplateBase):
@@ -16,13 +18,10 @@ class BlockCreator(TemplateBase):
         super().__init__(name=name, guid=guid, data=data)
         self._tfchain_sal = None
 
-        self.recurring_action('_monitor', 300)  # every 300 seconds
+        self.recurring_action('_monitor', 30)  # every 30 seconds
 
     def validate(self):
-        if bool(self.data.get('nodeMountPoint')) != bool(self.data['containerMountPoint']):
-            raise ValueError('nodeMountPoint and containerMountPoint must either both be defined or both be none.')
-
-        if not bool(self.data.get('walletPassphrase')):
+        if not self.data.get('walletPassphrase'):
             raise ValueError('walletPassphrase must be defined.')
 
     @property
@@ -31,7 +30,11 @@ class BlockCreator(TemplateBase):
 
     @property
     def container_sal(self):
-        return self.node_sal.containers.get(self.data['container'])
+        return self.node_sal.containers.get(self._container_name)
+
+    @property
+    def _container_name(self):
+        return "container-%s" % self.guid
 
     @property
     def tchain_sal(self):
@@ -42,35 +45,70 @@ class BlockCreator(TemplateBase):
                 'rpc_addr': '0.0.0.0:%s' % self.data['rpcPort'],
                 'api_addr': 'localhost:%s' % self.data['apiPort'],
                 'wallet_passphrase': self.data['walletPassphrase'],
+                'data_dir': '/mnt/data',
             }
-
-            if self.data['nodeMountPoint'] and self.data['containerMountPoint']:
-                kwargs['data_dir'] = self.data['containerMountPoint']
 
             self._tfchain_sal = j.clients.zero_os.sal.get_tfchain(**kwargs)
         return self._tfchain_sal
+
+    def _get_container(self):
+        sp = self.node_sal.storagepools.get('zos-cache')
+        try:
+            fs = sp.get(self.guid)
+        except ValueError:
+            fs = sp.create(self.guid)
+
+        # prepare persistant volume to mount into the container
+        node_fs = self.node_sal.client.filesystem
+        vol = os.path.join(fs.path, 'wallet')
+        node_fs.mkdir(vol)
+        mounts = [{
+            'source': vol,
+            'target': '/mnt/data'
+        }]
+
+        container_data = {
+            'flist': TFCHAIN_FLIST,
+            'node': self.data['node'],
+            'nics': [{'type': 'default'}],
+            'mounts': mounts,
+        }
+
+        return self.api.services.find_or_create(CONTAINER_TEMPLATE_UID, self._container_name, data=container_data)
 
     def install(self):
         """
         Creating tfchain container with the provided flist, and configure mounts for datadirs
             'flist': TFCHAIN_FLIST,
         """
-        mounts = []
-        if self.data['nodeMountPoint'] and self.data['containerMountPoint']:
-            mounts = [{'source': self.data['nodeMountPoint'], 'target': self.data['containerMountPoint']}]
-
-        container_data = {
-            'flist': TFCHAIN_FLIST,
-            'node': self.data['node'],
-            'hostNetworking': True,
-            'mounts': mounts,
-        }
-
-        self.data['container'] = 'container_%s' % self.name
-        container = self.api.services.create(
-            CONTAINER_TEMPLATE_UID, self.data['container'], data=container_data)
-        container.schedule_action('install').wait()
+        container = self._get_container()
+        container.schedule_action('install').wait(die=True)
         self.state.set('actions', 'install', 'ok')
+
+    def uninstall(self):
+        """
+        Remove the persistent volume of the wallet, and delete the container
+        """
+        try:
+            self.stop()
+            contservice = self.api.services.get(name=self._container_name)
+            contservice.schedule_action('uninstall').wait(die=True)
+            contservice.delete()
+        except (ServiceNotFoundError, LookupError):
+            pass
+        self.state.delete('status', 'running')
+
+        try:
+            # cleanup filesystem used by this robot
+            sp = self.node_sal.storagepools.get('zos-cache')
+            fs = sp.get(self.guid)
+            fs.delete()
+        except ValueError:
+                # filesystem doesn't exist, nothing else to do
+            pass
+
+        self.state.delete('actions', 'install')
+        self.state.delete('wallet', 'init')
 
     def start(self):
         """
@@ -79,9 +117,8 @@ class BlockCreator(TemplateBase):
         self.state.check('actions', 'install', 'ok')
 
         self.logger.info('Staring tfchaind {}'.format(self.name))
-        container = self.api.services.get(
-            template_uid=CONTAINER_TEMPLATE_UID, name=self.data['container'])
-        container.schedule_action('start').wait()
+        container = self._get_container()
+        container.schedule_action('start').wait(die=True)
 
         self.logger.info('Starting tfcaind %s' % self.name)
         self.tchain_sal.daemon.start()
@@ -89,12 +126,14 @@ class BlockCreator(TemplateBase):
 
         try:
             self.state.check('wallet', 'init', 'ok')
-        except:
+        except StateCheckError:
             self.logger.info('initalizing wallet %s' % self.name)
+            time.sleep(2)  # seems to be need for the daemon to be ready to init the wallet
             self.tchain_sal.client.wallet_init()
-            self.tchain_sal.client.wallet_unlock()
             self.data['walletSeed'] = self.tchain_sal.client.recovery_seed
 
+        time.sleep(2)  # seems to be need for the daemon to be ready to unlock the wallet
+        self.tchain_sal.client.wallet_unlock()
         self.state.set('actions', 'start', 'ok')
         self.state.set('wallet', 'init', 'ok')
 
@@ -102,33 +141,52 @@ class BlockCreator(TemplateBase):
         """
         stop tfchain daemon
         """
-        self.state.check('actions', 'install', 'ok')
         self.logger.info('Stopping tfchain daemon {}'.format(self.name))
-        self.tchain_sal.daemon.stop()
+        try:
+            self.tchain_sal.daemon.stop()
+        except (ServiceNotFoundError, LookupError):
+            # container is not found, good
+            pass
         self.state.delete('status', 'running')
+        self.state.delete('actions', 'start')
 
     def upgrade(self):
         """upgrade the container with an updated flist
         this is done by stopping the container and respawn again with the updated flist
         """
         self.state.check('actions', 'install', 'ok')
-        container = self.api.services.get(template_uid=CONTAINER_TEMPLATE_UID, name=self.data['container'])
+        container = self.api.services.get(template_uid=CONTAINER_TEMPLATE_UID, name=self._container_name)
         container.schedule_action('stop').wait()
         self.start()
 
     def wallet_address(self):
         """load wallet address into the service's data
         """
-        self.data['walletAddr'] = self.tchain_sal.client.wallet_address
+        self.state.check('wallet', 'init', 'ok')
+
+        if not self.data.get('walletAddr'):
+            self.data['walletAddr'] = self.tchain_sal.client.wallet_address
+        return self.data['walletAddr']
+
+    def consensus_stat(self):
+        """
+        return information about the state of consensus
+        """
+        self.state.check('status', 'running', 'ok')
+        return self._tfchain_sal.client.consensus_stat()
 
     def _monitor(self):
-        if self.tchain_sal.daemon.is_running():
-            return
+        self.state.check('actions', 'install', 'ok')
+        self.state.check('actions', 'start', 'ok')
 
-        self.state.delete('status', 'running')
-
+        prev_timeout = self._tfchain_sal.client.container.client.timeout
         try:
-            self.state.check('status', 'running', 'ok')
+            self._tfchain_sal.client.container.client.timeout = 10
+            if self.tchain_sal.daemon.is_running():
+                self.state.set('status', 'running', 'ok')
+                return
+
+            self.state.delete('status', 'running')
             self.start()
-        except StateCheckError:
-            pass
+        finally:
+            self._tfchain_sal.client.container.client.timeout = prev_timeout
