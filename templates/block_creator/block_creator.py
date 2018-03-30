@@ -7,7 +7,7 @@ from zerorobot.service_collection import ServiceNotFoundError
 
 
 CONTAINER_TEMPLATE_UID = 'github.com/zero-os/0-templates/container/0.0.1'
-TFCHAIN_FLIST = 'https://hub.gig.tech/lee/ubuntu-16.04-tfchain-0.6.0.flist'
+TFCHAIN_FLIST = 'https://hub.gig.tech/lee/ubuntu-16.04-tfchain-latest.flist'
 
 
 class BlockCreator(TemplateBase):
