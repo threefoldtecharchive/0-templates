@@ -9,7 +9,7 @@ This template is responsible for deploying block creator node.
 - `apiPort`: api port (default 23110)
 - `node`: reference to the node running the tfchain container
 - `walletSeed`: wallet's primary seed, should be set at start
-- `walletPassphrase`: wallet passphrase
+- `walletPassphrase`: wallet passphrase, if omitted, one will be generated
 - `walletAddr`: address of the wallet
 
 ### Actions
@@ -17,3 +17,4 @@ This template is responsible for deploying block creator node.
 - `start`: starts the container and the tfchain daemon process and init wallet.
 - `stop`: stops the tfchain daemon process.
 - `wallet_address`: return wallet address
+- `consensus_stat`: return some statistics about the consensus

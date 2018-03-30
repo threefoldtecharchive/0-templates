@@ -18,11 +18,11 @@ class BlockCreator(TemplateBase):
         super().__init__(name=name, guid=guid, data=data)
         self._tfchain_sal = None
 
-        self.recurring_action('_monitor', 30)  # every 30 seconds
+        wallet_passphrase = self.data.get('walletPassphrase')
+        if not wallet_passphrase:
+            self.data['walletPassphrase'] = j.data.idgenerator.generateGUID()
 
-    def validate(self):
-        if not self.data.get('walletPassphrase'):
-            raise ValueError('walletPassphrase must be defined.')
+        self.recurring_action('_monitor', 30)  # every 30 seconds
 
     @property
     def node_sal(self):
