@@ -7,7 +7,6 @@ This template is responsible for deploying block creator node.
 
 - `rpcPort`: rpc port for the deamon (default 23112)
 - `apiPort`: api port (default 23110)
-- `container`: reference to the container running the tfchain daemon and client.
 - `node`: reference to the node running the tfchain container
 - `walletSeed`: wallet's primary seed, should be set at start
 - `walletPassphrase`: wallet passphrase
@@ -17,3 +16,4 @@ This template is responsible for deploying block creator node.
 - `install`: create container with tfchain binaries.
 - `start`: starts the container and the tfchain daemon process and init wallet.
 - `stop`: stops the tfchain daemon process.
+- `wallet_address`: return wallet address
