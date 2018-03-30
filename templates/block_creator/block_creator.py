@@ -38,18 +38,15 @@ class BlockCreator(TemplateBase):
 
     @property
     def tfchain_sal(self):
-        if self._tfchain_sal is None:
-            kwargs = {
-                'name': self.name,
-                'container': self.container_sal,
-                'rpc_addr': '0.0.0.0:%s' % self.data['rpcPort'],
-                'api_addr': 'localhost:%s' % self.data['apiPort'],
-                'wallet_passphrase': self.data['walletPassphrase'],
-                'data_dir': '/mnt/data',
-            }
-
-            self._tfchain_sal = j.clients.zero_os.sal.get_tfchain(**kwargs)
-        return self._tfchain_sal
+        kwargs = {
+            'name': self.name,
+            'container': self.container_sal,
+            'rpc_addr': '0.0.0.0:%s' % self.data['rpcPort'],
+            'api_addr': 'localhost:%s' % self.data['apiPort'],
+            'wallet_passphrase': self.data['walletPassphrase'],
+            'data_dir': '/mnt/data',
+        }
+        return j.clients.zero_os.sal.get_tfchain(**kwargs)
 
     def _get_container(self):
         sp = self.node_sal.storagepools.get('zos-cache')
