@@ -55,6 +55,15 @@ class BlockCreator(TemplateBase):
         except ValueError:
             fs = sp.create(self.guid)
 
+        port = self.data.get('port')
+        if not port:
+            freeports = self.node_sal.freeports(baseport=8000, nrports=1)
+            if not freeports:
+                raise RuntimeError("can't find a free port to expose the block creator")
+            self.data['port'] = freeports[0]
+
+        ports = ['%s:%s' % (self.data['port'], self.data['rpcPort'])]
+
         # prepare persistant volume to mount into the container
         node_fs = self.node_sal.client.filesystem
         vol = os.path.join(fs.path, 'wallet')
@@ -69,6 +78,7 @@ class BlockCreator(TemplateBase):
             'node': self.data['node'],
             'nics': [{'type': 'default'}],
             'mounts': mounts,
+            'ports': ports
         }
 
         return self.api.services.find_or_create(CONTAINER_TEMPLATE_UID, self._container_name, data=container_data)
@@ -131,6 +141,9 @@ class BlockCreator(TemplateBase):
 
         time.sleep(2)  # seems to be need for the daemon to be ready to unlock the wallet
         self.tfchain_sal.client.wallet_unlock()
+
+        self.node_sal.client.nft.open_port(self.data['port'])
+
         self.state.set('actions', 'start', 'ok')
         self.state.set('wallet', 'init', 'ok')
 
@@ -144,6 +157,8 @@ class BlockCreator(TemplateBase):
         except (ServiceNotFoundError, LookupError):
             # container is not found, good
             pass
+
+        self.node_sal.client.nft.drop_port(self.data['port'])
         self.state.delete('status', 'running')
         self.state.delete('actions', 'start')
 
