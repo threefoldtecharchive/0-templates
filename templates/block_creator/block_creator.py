@@ -151,9 +151,14 @@ class BlockCreator(TemplateBase):
         """upgrade the container with an updated flist
         this is done by stopping the container and respawn again with the updated flist
         """
-        self.state.check('actions', 'install', 'ok')
+        # stop daemon
+        self.stop()
+
+        # force stop container
         container = self.api.services.get(template_uid=CONTAINER_TEMPLATE_UID, name=self._container_name)
         container.schedule_action('stop').wait()
+
+        # restart daemon in new container
         self.start()
 
     def wallet_address(self):
@@ -195,14 +200,14 @@ class BlockCreator(TemplateBase):
         self.state.check('actions', 'install', 'ok')
         self.state.check('actions', 'start', 'ok')
 
-        prev_timeout = self.tfchain_sal.client.container.client.timeout
         try:
-            self.tfchain_sal.client.container.client.timeout = 10
             if self.tfchain_sal.daemon.is_running():
                 self.state.set('status', 'running', 'ok')
                 return
+        except LookupError:
+            # container not found, need to call start
+            pass
 
-            self.state.delete('status', 'running')
-            self.start()
-        finally:
-            self.tfchain_sal.client.container.client.timeout = prev_timeout
+        self.state.delete('status', 'running')
+        self.install()
+        self.start()
