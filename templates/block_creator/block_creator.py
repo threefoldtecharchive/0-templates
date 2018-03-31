@@ -209,5 +209,13 @@ class BlockCreator(TemplateBase):
             pass
 
         self.state.delete('status', 'running')
+
+        # force stop/delete container so install will create a new container
+        try:
+            container = self.api.services.get(template_uid=CONTAINER_TEMPLATE_UID, name=self._container_name)
+            container.delete()
+        except ServiceNotFoundError:
+            pass
+
         self.install()
         self.start()
