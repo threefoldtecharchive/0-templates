@@ -91,9 +91,6 @@ class BlockCreator(TemplateBase):
         """
         try:
             self.stop()
-            contservice = self.api.services.get(name=self._container_name)
-            contservice.schedule_action('uninstall').wait(die=True)
-            contservice.delete()
         except (ServiceNotFoundError, LookupError):
             pass
         self.state.delete('status', 'running')
@@ -147,6 +144,10 @@ class BlockCreator(TemplateBase):
         self.logger.info('Stopping tfchain daemon {}'.format(self.name))
         try:
             self.tfchain_sal.daemon.stop()
+            # force stop container
+            container = self.api.services.get(template_uid=CONTAINER_TEMPLATE_UID, name=self._container_name)
+            container.schedule_action('stop').wait(die=True)
+            container.delete()
         except (ServiceNotFoundError, LookupError):
             # container is not found, good
             pass
@@ -161,10 +162,6 @@ class BlockCreator(TemplateBase):
         """
         # stop daemon
         self.stop()
-
-        # force stop container
-        container = self.api.services.get(template_uid=CONTAINER_TEMPLATE_UID, name=self._container_name)
-        container.schedule_action('stop').wait()
 
         # restart daemon in new container
         self.start()
