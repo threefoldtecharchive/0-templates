@@ -181,18 +181,7 @@ class BlockCreator(TemplateBase):
         return the amount of token in the wallet
         """
         self.state.check('wallet', 'init', 'ok')
-        cmd = '/tfchainc --addr %s wallet' % self.tfchain_sal.client.addr
-        result = self.tfchain_sal.client.container.client.system(cmd).get()
-        if result.state != 'SUCCESS':
-            raise RuntimeError("Could not unlock wallet: %s" % result.stderr.splitlines()[-1])
-
-        args = {}
-        for line in result.stdout.splitlines()[2:]:
-            k, v = line.split(':')
-            k = k.strip()
-            v = v.strip()
-            args[k] = v
-        return args
+        return self.tfchain_sal.client.wallet_amount()
 
     def consensus_stat(self):
         """
