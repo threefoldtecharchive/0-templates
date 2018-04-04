@@ -11,6 +11,7 @@ This template is responsible for deploying block creator node.
 - `walletSeed`: wallet's primary seed, should be set at start
 - `walletPassphrase`: wallet passphrase, if omitted, one will be generated
 - `walletAddr`: address of the wallet
+- `network`: network to join, default standard
 
 ### Actions
 - `install`: create container with tfchain binaries.
