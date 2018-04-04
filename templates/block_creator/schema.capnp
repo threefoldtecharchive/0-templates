@@ -7,4 +7,5 @@ struct Schema {
     walletSeed @3: Text;
     walletPassphrase @4: Text;
     walletAddr @5: Text; # address of the wallet
+    network @6: Text="standard"; # network to join
 }

@@ -4,4 +4,4 @@ test:
 	pytest --cov=./ templates -vv
 
 test-ui:
-	pytest --cov=./ --cov-report=html templates
+	pytest --cov=./ --cov-report=html -vv templates
