@@ -125,7 +125,6 @@ class Explorer(TemplateBase):
         self._node_sal.client.nft.open_port(80)
 
         self.state.set('actions', 'start', 'ok')
-        self.state.set('wallet', 'init', 'ok')
 
     def stop(self):
         """
@@ -164,13 +163,13 @@ class Explorer(TemplateBase):
         self.state.check('status', 'running', 'ok')
         return self._explorer_sal.consensus_stat()
 
-    def gateway(self):
+    def gateway_stat(self):
         """
         return information about the number of peers connected
         e.g: {'Active peers': '0', 'Address': '96.182.165.25'}
         """
         self.state.check('status', 'running', 'ok')
-        return self._explorer_sal.consensus_stat()
+        return self._explorer_sal.gateway_stat()
 
     def _monitor(self):
         self.state.check('actions', 'install', 'ok')
