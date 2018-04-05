@@ -45,6 +45,7 @@ class Explorer(TemplateBase):
             'api_addr': 'localhost:%s' % self.data['apiPort'],
             'data_dir': '/mnt/data',
             'domain': self.data['domain'],
+            'network': self.data.get('network', 'standard')
         }
         return j.clients.zero_os.sal.tfchain.explorer(**kwargs)
 
