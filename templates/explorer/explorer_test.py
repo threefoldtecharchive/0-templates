@@ -102,6 +102,7 @@ class TestExplorerTemplate(TestCase):
         """
         explorer = Explorer(name='explorer', data=self.valid_data)
         explorer.api.services.find_or_create = MagicMock()
+        explorer._explorer_sal.start = MagicMock()
         fs = MagicMock(path='/var/cache')
         sp = MagicMock()
         sp.get = MagicMock(return_value=fs)
@@ -121,6 +122,7 @@ class TestExplorerTemplate(TestCase):
             'ports': ['80:80', '443:443'],
         }
         explorer.api.services.find_or_create.assert_called_once_with(CONTAINER_TEMPLATE_UID, explorer._container_name, data=container_data)
+        explorer._explorer_sal.start.assert_called_once_with()
         explorer.state.check('actions', 'install', 'ok')
 
     def test_start_not_installed(self):
