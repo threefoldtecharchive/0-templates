@@ -96,6 +96,7 @@ class TestBlockCreatorTemplate(TestCase):
         Test node install
         """
         bc = BlockCreator(name='blockcreator', data=self.valid_data)
+        bc._daemon_sal.start = MagicMock()
         bc.api.services.find_or_create = MagicMock()
         fs = MagicMock(path='/var/cache')
         sp = MagicMock()
@@ -114,6 +115,7 @@ class TestBlockCreatorTemplate(TestCase):
             'ports': ['23112:23112'],
         }
         bc.api.services.find_or_create.assert_called_once_with(CONTAINER_TEMPLATE_UID, bc._container_name, data=container_data)
+        bc._daemon_sal.start.assert_called_once_with()
         bc.state.check('actions', 'install', 'ok')
 
     def test_start_not_installed(self):

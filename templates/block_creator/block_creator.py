@@ -91,8 +91,11 @@ class BlockCreator(TemplateBase):
         Creating tfchain container with the provided flist, and configure mounts for datadirs
             'flist': TFCHAIN_FLIST,
         """
+        self.logger.info('installing tfcaind %s', self.name)
         container = self._get_container()
         container.schedule_action('install').wait(die=True)
+        self._daemon_sal.start()
+        self.state.set('status', 'running', 'ok')
         self.state.set('actions', 'install', 'ok')
 
     def uninstall(self):
@@ -122,19 +125,18 @@ class BlockCreator(TemplateBase):
         start both tfchain daemon and client
         """
         self.state.check('actions', 'install', 'ok')
+        self.logger.info('Starting tfcaind %s', self.name)
 
-        self.logger.info('Staring tfchaind {}'.format(self.name))
         container = self._get_container()
         container.schedule_action('start').wait(die=True)
 
-        self.logger.info('Starting tfcaind %s' % self.name)
         self._daemon_sal.start()
         self.state.set('status', 'running', 'ok')
 
         try:
             self.state.check('wallet', 'init', 'ok')
         except StateCheckError:
-            self.logger.info('initalizing wallet %s' % self.name)
+            self.logger.info('initalizing wallet %s', self.name)
             time.sleep(2)  # seems to be need for the daemon to be ready to init the wallet
             self._client_sal.wallet_init()
             self.data['walletSeed'] = self._client_sal.recovery_seed
@@ -151,7 +153,7 @@ class BlockCreator(TemplateBase):
         """
         stop tfchain daemon
         """
-        self.logger.info('Stopping tfchain daemon {}'.format(self.name))
+        self.logger.info('Stopping tfchain daemon %s', self.name)
         try:
             self._daemon_sal.stop()
             # force stop container

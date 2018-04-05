@@ -81,8 +81,11 @@ class Explorer(TemplateBase):
         """
         Creating tfchain container with the provided flist, and configure mounts for data dirs
         """
+        self.logger.info("installing explorer %s", self.name)
         container = self._get_container()
         container.schedule_action('install').wait(die=True)
+        self._explorer_sal.start()
+        self.state.set('status', 'running', 'ok')
         self.state.set('actions', 'install', 'ok')
 
     def uninstall(self):
@@ -112,12 +115,11 @@ class Explorer(TemplateBase):
         start both tfchain explorer and caddy
         """
         self.state.check('actions', 'install', 'ok')
+        self.logger.info('Starting tfcaind and caddy (%s)', self.name)
 
-        self.logger.info('Staring tfchaind %s', self.name)
         container = self._get_container()
         container.schedule_action('start').wait(die=True)
 
-        self.logger.info('Starting tfcaind and caddy (%s)', self.name)
         self._explorer_sal.start()
         self.state.set('status', 'running', 'ok')
 
