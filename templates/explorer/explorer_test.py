@@ -64,7 +64,7 @@ class TestExplorerTemplate(TestCase):
             'rpcPort': 23112,
             'apiPort': 23110,
             'domain': 'explorer.tft.com',
-            'network': 'standard'
+            'network': 'standard',
         }
         assert explorer.data == expected_data
 
@@ -81,8 +81,9 @@ class TestExplorerTemplate(TestCase):
             'rpcPort': 23112,
             'apiPort': 23110,
             'domain': 'explorer.tft.com',
-            'network': 'testnet'
+            'network': 'testnet',
         }
+
         assert explorer.data == expected_data
 
     def test_node_sal(self):
