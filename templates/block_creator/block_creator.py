@@ -44,6 +44,7 @@ class BlockCreator(TemplateBase):
             'rpc_addr': '0.0.0.0:%s' % self.data['rpcPort'],
             'api_addr': 'localhost:%s' % self.data['apiPort'],
             'data_dir': '/mnt/data',
+            'network': self.data.get('network', 'standard')
         }
         return j.clients.zero_os.sal.tfchain.daemon(**kwargs)
 
