@@ -17,3 +17,24 @@ This template is responsible for deploying an explorer node.
 - `stop`: stops the tfchain daemon process.
 - `consensus_stat`: return some statistics about the consensus
 - `gateway_stat`: return some statistics about the gateway
+
+### Examples:
+#### DLS:
+```python
+data = {'node':'node1', 'domain': 'explorer.tft.com'}
+explorer = robot.services.create('github.com/threefoldtoken/0-templates/explorer/0.0.1','explorer', data)
+explorer.schedule_action('install')
+explorer.schedule_action('start')
+```
+
+#### Blueprint:
+```yaml
+services:
+    - github.com/threefoldtoken/0-templates/explorer/0.0.1__explorer:
+        node: node1
+        domain: explorer.tft.com
+
+actions:
+    - actions: ['install','start']
+      service: explorer
+```
