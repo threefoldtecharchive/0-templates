@@ -125,7 +125,7 @@ class BlockCreator(TemplateBase):
         start both tfchain daemon and client
         """
         self.state.check('actions', 'install', 'ok')
-        self.logger.info('Starting tfcaind %s', self.name)
+        self.logger.info('Starting tfchaind %s', self.name)
 
         container = self._get_container()
         container.schedule_action('start').wait(die=True)

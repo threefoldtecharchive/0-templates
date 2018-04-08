@@ -22,7 +22,7 @@ This template is responsible for deploying block creator node.
 - `consensus_stat`: return some statistics about the consensus
 
 ### Examples:
-#### DLS:
+#### DSL (api interface):
 ```python
 data = {'node':'node1'}
 bc = robot.services.create('github.com/threefoldtoken/0-templates/block_creator/0.0.1','block_creator', data)
@@ -30,7 +30,7 @@ bc.schedule_action('install')
 bc.schedule_action('start')
 ```
 
-#### Blueprint:
+#### Blueprint (cli interface):
 ```yaml
 services:
     - github.com/threefoldtoken/0-templates/block_creator/0.0.1__block_creator:
