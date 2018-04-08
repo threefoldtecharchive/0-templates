@@ -115,7 +115,7 @@ class Explorer(TemplateBase):
         start both tfchain explorer and caddy
         """
         self.state.check('actions', 'install', 'ok')
-        self.logger.info('Starting tfcaind and caddy (%s)', self.name)
+        self.logger.info('Starting tfchaind and caddy (%s)', self.name)
 
         container = self._get_container()
         container.schedule_action('start').wait(die=True)
