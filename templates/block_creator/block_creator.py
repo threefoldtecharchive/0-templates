@@ -1,10 +1,11 @@
-from js9 import j
 import os
 import time
-from zerorobot.template.base import TemplateBase
-from zerorobot.template.state import StateCheckError
-from zerorobot.service_collection import ServiceNotFoundError
 
+from js9 import j
+from zerorobot.service_collection import ServiceNotFoundError
+from zerorobot.template.base import TemplateBase
+from zerorobot.template.decorator import retry
+from zerorobot.template.state import StateCheckError
 
 CONTAINER_TEMPLATE_UID = 'github.com/zero-os/0-templates/container/0.0.1'
 TFCHAIN_FLIST = 'https://hub.gig.tech/tfchain/ubuntu-16.04-tfchain-latest.flist'
@@ -86,6 +87,36 @@ class BlockCreator(TemplateBase):
 
         return self.api.services.find_or_create(CONTAINER_TEMPLATE_UID, self._container_name, data=container_data)
 
+    @retry((RuntimeError), tries=5, delay=2, backoff=2)
+    def _wallet_init(self):
+        """
+        initialize the wallet with a new seed and password
+        """
+        try:
+            self.state.check('wallet', 'init', 'ok')
+            return
+        except StateCheckError:
+            pass
+
+        self.logger.info('initializing wallet %s', self.name)
+        self._client_sal.wallet_init()
+        self.data['walletSeed'] = self._client_sal.recovery_seed
+        self.state.set('wallet', 'init', 'ok')
+
+    @retry((RuntimeError), tries=5, delay=2, backoff=2)
+    def _wallet_unlock(self):
+        """
+        unlock the wallet, so it can start creating blocks and inspecting amount and addresses
+        """
+        try:
+            self.state.check('wallet', 'unlock', 'ok')
+            return
+        except StateCheckError:
+            pass
+
+        self._client_sal.wallet_unlock()
+        self.state.set('wallet', 'unlock', 'ok')
+
     def install(self):
         """
         Creating tfchain container with the provided flist, and configure mounts for datadirs
@@ -118,6 +149,7 @@ class BlockCreator(TemplateBase):
             pass
 
         self.state.delete('actions', 'install')
+        self.state.delete('wallet', 'unlock')
         self.state.delete('wallet', 'init')
 
     def start(self):
@@ -128,26 +160,21 @@ class BlockCreator(TemplateBase):
         self.logger.info('Starting tfchaind %s', self.name)
 
         container = self._get_container()
+        try:
+            container.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            container.schedule_action('install').wait(die=True)
         container.schedule_action('start').wait(die=True)
 
         self._daemon_sal.start()
         self.state.set('status', 'running', 'ok')
 
-        try:
-            self.state.check('wallet', 'init', 'ok')
-        except StateCheckError:
-            self.logger.info('initalizing wallet %s', self.name)
-            time.sleep(2)  # seems to be need for the daemon to be ready to init the wallet
-            self._client_sal.wallet_init()
-            self.data['walletSeed'] = self._client_sal.recovery_seed
-
-        time.sleep(2)  # seems to be need for the daemon to be ready to unlock the wallet
-        self._client_sal.wallet_unlock()
+        self._wallet_init()
+        self._wallet_unlock()
 
         self._node_sal.client.nft.open_port(self.data['rpcPort'])
 
         self.state.set('actions', 'start', 'ok')
-        self.state.set('wallet', 'init', 'ok')
 
     def stop(self):
         """
@@ -167,6 +194,7 @@ class BlockCreator(TemplateBase):
         self._node_sal.client.nft.drop_port(self.data['rpcPort'])
         self.state.delete('status', 'running')
         self.state.delete('actions', 'start')
+        self.state.delete('wallet', 'unlock')
 
     def upgrade(self):
         """upgrade the container with an updated flist
@@ -178,6 +206,7 @@ class BlockCreator(TemplateBase):
         # restart daemon in new container
         self.start()
 
+    @retry((RuntimeError), tries=3, delay=2, backoff=2)
     def wallet_address(self):
         """
         load wallet address into the service's data
@@ -188,13 +217,15 @@ class BlockCreator(TemplateBase):
             self.data['walletAddr'] = self._client_sal.wallet_address
         return self.data['walletAddr']
 
+    @retry((RuntimeError), tries=3, delay=2, backoff=2)
     def wallet_amount(self):
         """
         return the amount of token in the wallet
         """
-        self.state.check('wallet', 'init', 'ok')
+        self.state.check('wallet', 'unlock', 'ok')
         return self._client_sal.wallet_amount()
 
+    @retry((RuntimeError), tries=3, delay=2, backoff=2)
     def consensus_stat(self):
         """
         return information about the state of consensus

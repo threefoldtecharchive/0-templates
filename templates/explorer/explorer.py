@@ -108,7 +108,6 @@ class Explorer(TemplateBase):
             pass
 
         self.state.delete('actions', 'install')
-        self.state.delete('wallet', 'init')
 
     def start(self):
         """

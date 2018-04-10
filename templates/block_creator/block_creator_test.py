@@ -138,6 +138,8 @@ class TestBlockCreatorTemplate(TestCase):
 
         bc.state.check('actions', 'start', 'ok')
         bc.state.check('status', 'running', 'ok')
+        bc.state.check('wallet', 'init', 'ok')
+        bc.state.check('wallet', 'unlock', 'ok')
 
         bc._node_sal.client.nft.open_port.assert_called_once_with(23112)
         bc._daemon_sal.start.assert_called_once_with()
@@ -154,16 +156,19 @@ class TestBlockCreatorTemplate(TestCase):
         bc._node_sal.client.nft.open_port = MagicMock()
         bc._daemon_sal.start = MagicMock()
         bc._client_sal.wallet_init = MagicMock()
-        bc._client_sal.wallet_unlock = MagicMock()
+        bc._client_sal.wallet_unlock = MagicMock(side_effect=(RuntimeError("cannot unlock wallet"), None))
 
         bc.start()
 
         bc.state.check('actions', 'start', 'ok')
         bc.state.check('status', 'running', 'ok')
+        bc.state.check('wallet', 'init', 'ok')
+        bc.state.check('wallet', 'unlock', 'ok')
 
         bc._daemon_sal.start.assert_called_once_with()
         bc._client_sal.wallet_init.assert_not_called()
-        bc._client_sal.wallet_unlock.assert_called_once_with()
+        bc._client_sal.wallet_unlock.assert_called_with()
+        assert bc._client_sal.wallet_unlock.call_count == 2
 
     def test_uninstall(self):
         bc = BlockCreator(name='blockcreator', data=self.valid_data)
@@ -182,6 +187,10 @@ class TestBlockCreatorTemplate(TestCase):
             bc.state.check('actions', 'install', 'ok')
         with pytest.raises(StateCheckError):
             bc.state.check('status', 'running', 'ok')
+        with pytest.raises(StateCheckError):
+            bc.state.check('status', 'init', 'ok')
+        with pytest.raises(StateCheckError):
+            bc.state.check('wallet', 'unlock', 'ok')
 
         bc.stop.assert_called_once_with()
         sp.get.assert_called_once_with(bc.guid)
@@ -228,6 +237,8 @@ class TestBlockCreatorTemplate(TestCase):
             bc.state.check('actions', 'start', 'ok')
         with pytest.raises(StateCheckError):
             bc.state.check('status', 'running', 'ok')
+        with pytest.raises(StateCheckError):
+            bc.state.check('wallet', 'unlock', 'ok')
 
         bc._node_sal.client.nft.drop_port.assert_called_once_with(23112)
         bc._daemon_sal.stop.assert_called_once_with()
@@ -293,6 +304,7 @@ class TestBlockCreatorTemplate(TestCase):
         bc = BlockCreator(name='blockcreator', data=self.valid_data)
         bc.state.set('status', 'running', 'ok')
         bc.state.set('wallet', 'init', 'ok')
+        bc.state.set('wallet', 'unlock', 'ok')
 
         bc._client_sal.wallet_amount = MagicMock()
 
@@ -300,7 +312,7 @@ class TestBlockCreatorTemplate(TestCase):
 
         bc._client_sal.wallet_amount.assert_called_once_with()
 
-    def test_wallet_amount_wallet_not_inited(self):
+    def test_wallet_amount_wallet_not_unlocked(self):
         bc = BlockCreator(name='blockcreator', data=self.valid_data)
         bc.state.set('status', 'running', 'ok')
 
