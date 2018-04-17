@@ -240,12 +240,27 @@ class BlockCreator(TemplateBase):
         try:
             if self._daemon_sal.is_running():
                 self.state.set('status', 'running', 'ok')
-                return
+                # TODO: cleanup when sal is distributed with wallet_status function
+                if hasattr(self._client_sal, 'wallet_status'):
+                    if self._client_sal.wallet_status() == "locked":
+                        # Wallet is locked, should unlock
+                        self.state.delete('wallet', 'unlock')
+                        self._wallet_unlock()
+                else:                        
+                    try:
+                        self._client_sal.wallet_amount()
+                    except ValueError:
+                        # Wallet is locked, should unlock
+                        self.state.delete('wallet', 'unlock')
+                        self._wallet_unlock()
+                return        
         except LookupError:
             # container not found, need to call start
             pass
 
         self.state.delete('status', 'running')
+        self.state.delete('actions', 'start')
+        self.state.delete('wallet', 'unlock')
 
         # force stop/delete container so install will create a new container
         try:
