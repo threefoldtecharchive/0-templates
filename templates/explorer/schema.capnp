@@ -6,4 +6,7 @@ struct Schema {
     apiPort @2: UInt32=23110;     # http port for tfchain client
     domain @3: Text; # domain name where to expose the explorer web page
     network @4: Text="standard"; # network to join
+    tfchainFlist @5: Text="https://hub.gig.tech/tfchain/ubuntu-16.04-tfchain-latest.flist"; # flist to use for tfchain
+    explorerFlist @6: Text="https://hub.gig.tech/tfchain/caddy-explorer-latest.flist"; # flist to use for explorer
+
 }

@@ -8,7 +8,7 @@ from zerorobot.template.decorator import retry
 from zerorobot.template.state import StateCheckError
 
 CONTAINER_TEMPLATE_UID = 'github.com/zero-os/0-templates/container/0.0.1'
-TFCHAIN_FLIST = 'https://hub.gig.tech/tfchain/ubuntu-16.04-tfchain-latest.flist'
+# TFCHAIN_FLIST = 'https://hub.gig.tech/tfchain/ubuntu-16.04-tfchain-latest.flist'
 
 
 class BlockCreator(TemplateBase):
@@ -78,7 +78,7 @@ class BlockCreator(TemplateBase):
         }]
 
         container_data = {
-            'flist': TFCHAIN_FLIST,
+            'flist': self.data['tfchainFlist'],
             'node': self.data['node'],
             'nics': [{'type': 'default'}],
             'mounts': mounts,
