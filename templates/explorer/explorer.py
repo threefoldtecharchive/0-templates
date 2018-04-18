@@ -7,8 +7,6 @@ from zerorobot.service_collection import ServiceNotFoundError
 
 
 CONTAINER_TEMPLATE_UID = 'github.com/zero-os/0-templates/container/0.0.1'
-# TFCHAIN_FLIST = 'https://hub.gig.tech/tfchain/ubuntu-16.04-tfchain-latest.flist'
-# EXPLORER_FLIST = 'https://hub.gig.tech/tfchain/caddy-explorer-latest.flist'
 
 
 class Explorer(TemplateBase):
