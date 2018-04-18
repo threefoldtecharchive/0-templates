@@ -29,7 +29,16 @@ class TestBlockCreatorTemplate(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.valid_data = {'node': 'node'}
+        cls.valid_data = {
+            'node': 'node',
+            'rpcPort': 23112,
+            'apiPort': 23110,
+            'walletAddr': '',
+            'walletSeed': '',
+            'walletPassphrase': 'walletPassphrase',
+            'network': 'standard',
+            'tfchainFlist': 'https://hub.gig.tech/tfchain/ubuntu-16.04-tfchain-latest.flist',
+        }
         config.DATA_DIR = tempfile.mkdtemp(prefix='0-templates_')
         BlockCreator.template_uid = TemplateUID.parse('github.com/threefoldtoken/0-templates/%s/%s' % (BlockCreator.template_name, BlockCreator.version))
 
@@ -50,16 +59,7 @@ class TestBlockCreatorTemplate(TestCase):
         """
         bc = BlockCreator(name='blockcreator', data=self.valid_data)
         bc.validate()
-        expected_data = {
-            'node': 'node',
-            'rpcPort': 23112,
-            'apiPort': 23110,
-            'walletAddr': '',
-            'walletSeed': '',
-            'walletPassphrase': bc.data['walletPassphrase'],
-            'network': 'standard'
-        }
-        assert bc.data == expected_data
+        assert bc.data == self.valid_data
 
     def test_create_with_custom_network(self):
         """
@@ -69,17 +69,7 @@ class TestBlockCreatorTemplate(TestCase):
         valid_data['network'] = 'testnet'
         bc = BlockCreator(name='bc', data=valid_data)
         bc.validate()
-        expected_data = {
-            'node': 'node',
-            'rpcPort': 23112,
-            'apiPort': 23110,
-            'walletAddr': '',
-            'walletSeed': '',
-            'walletPassphrase': bc.data['walletPassphrase'],
-            'network': 'testnet'
-        }
-
-        assert bc.data == expected_data
+        assert bc.data == valid_data
 
     def test_node_sal(self):
         """

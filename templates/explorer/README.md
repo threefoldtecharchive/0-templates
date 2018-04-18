@@ -10,6 +10,8 @@ This template is responsible for deploying an explorer node.
 - `node`: reference to the node running the tfchain container
 - `domain`: domain name where to expose the explorer web page
 - `network`: network to join, default standard
+- `tfchainFlist`: the flist to be used for the tfchain (default: https://hub.gig.tech/tfchain/ubuntu-16.04-tfchain-latest.flist)
+- `explorerFlist`: the flist to be used for the explorer (default: https://hub.gig.tech/tfchain/caddy-explorer-latest.flist)
 
 ### Actions
 - `install`: create container with tfchain binaries.

@@ -8,4 +8,5 @@ struct Schema {
     walletPassphrase @4: Text;
     walletAddr @5: Text; # address of the wallet
     network @6: Text="standard"; # network to join
+    tfchainFlist @7: Text="https://hub.gig.tech/tfchain/ubuntu-16.04-tfchain-latest.flist"; # flist to use for tfchain
 }

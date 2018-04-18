@@ -29,7 +29,15 @@ class TestExplorerTemplate(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.valid_data = {'node': 'node', 'domain': 'explorer.tft.com'}
+        cls.valid_data = {
+            'node': 'node',
+            'rpcPort': 23112,
+            'apiPort': 23110,
+            'domain': 'explorer.tft.com',
+            'network': 'standard',
+            'explorerFlist': 'https://hub.gig.tech/tfchain/caddy-explorer-latest.flist',
+            'tfchainFlist': 'https://hub.gig.tech/tfchain/ubuntu-16.04-tfchain-latest.flist'
+        }
         config.DATA_DIR = tempfile.mkdtemp(prefix='0-templates_')
         Explorer.template_uid = TemplateUID.parse('github.com/threefoldtoken/0-templates/%s/%s' % (Explorer.template_name, Explorer.version))
 
@@ -59,14 +67,7 @@ class TestExplorerTemplate(TestCase):
         """
         explorer = Explorer(name='explorer', data=self.valid_data)
         explorer.validate()
-        expected_data = {
-            'node': 'node',
-            'rpcPort': 23112,
-            'apiPort': 23110,
-            'domain': 'explorer.tft.com',
-            'network': 'standard',
-        }
-        assert explorer.data == expected_data
+        assert explorer.data == self.valid_data
 
     def test_create_with_custom_network(self):
         """
@@ -76,15 +77,8 @@ class TestExplorerTemplate(TestCase):
         valid_data['network'] = 'testnet'
         explorer = Explorer(name='explorer', data=valid_data)
         explorer.validate()
-        expected_data = {
-            'node': 'node',
-            'rpcPort': 23112,
-            'apiPort': 23110,
-            'domain': 'explorer.tft.com',
-            'network': 'testnet',
-        }
 
-        assert explorer.data == expected_data
+        assert explorer.data == valid_data
 
     def test_node_sal(self):
         """
