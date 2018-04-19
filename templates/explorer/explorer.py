@@ -82,7 +82,13 @@ class Explorer(TemplateBase):
         self.logger.info("installing explorer %s", self.name)
         container = self._get_container()
         container.schedule_action('install').wait(die=True)
+
+        self._node_sal.client.nft.open_port(self.data['rpcPort'])
+        self._node_sal.client.nft.open_port(443)
+        self._node_sal.client.nft.open_port(80)
+
         self._explorer_sal.start()
+
         self.state.set('status', 'running', 'ok')
         self.state.set('actions', 'install', 'ok')
 
@@ -117,13 +123,12 @@ class Explorer(TemplateBase):
         container = self._get_container()
         container.schedule_action('start').wait(die=True)
 
-        self._explorer_sal.start()
-        self.state.set('status', 'running', 'ok')
-
         self._node_sal.client.nft.open_port(self.data['rpcPort'])
         self._node_sal.client.nft.open_port(443)
         self._node_sal.client.nft.open_port(80)
 
+        self._explorer_sal.start()
+        self.state.set('status', 'running', 'ok')
         self.state.set('actions', 'start', 'ok')
 
     def stop(self):
