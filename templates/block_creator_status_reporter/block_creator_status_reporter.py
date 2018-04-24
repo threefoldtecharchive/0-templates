@@ -20,6 +20,7 @@ class BlockCreatorStatusReporter(TemplateBase):
 
     def validate(self):
         self._block_creator
+        self._node
         self._url
 
     @property
@@ -38,6 +39,17 @@ class BlockCreatorStatusReporter(TemplateBase):
             self._url_ = self.data['postUrlTemplate'].format(block_creator_identifier=self.data['blockCreatorIdentifier'])
         return self._url_
 
+    @property
+    def _node(self):
+        if not hasattr(self, '_node_'):
+            # Validate if the node service actually exists
+            matches = self.api.services.find(template_uid='github.com/zero-os/0-templates/node/0.0.1', name=self.data['node'])
+            if len(matches) != 1:
+                raise ValueError("Node service %s not found, or ambigious results!" % self.data['node'])
+            else:
+                self._node_ = matches[0]
+        return self._node_            
+
     def start(self):
         self.state.set('status', 'running', 'ok')
 
@@ -52,6 +64,10 @@ class BlockCreatorStatusReporter(TemplateBase):
         
         consensus_task = self._block_creator.schedule_action('consensus_stat')
         wallet_amount_task = self._block_creator.schedule_action('wallet_amount')
+        stats_task = self._node.schedule_action('stats')
+        info_task = self._node.schedule_action('info')
+
+        # Gather chain info
         consensus_task.wait()
         if consensus_task.state == 'ok':
             height = int(consensus_task.result['Height'])
@@ -63,6 +79,22 @@ class BlockCreatorStatusReporter(TemplateBase):
         else:
             status = "error"
         
-        payload = {'wallet_status': status, 'block_height': height}
+        payload = {
+            "chain_status": {'wallet_status': status, 'block_height': height}
+        }
+
+        # Gather stats info
+        stats_task.wait()
+        if stats_task.state == 'ok':
+            stats = dict()
+            payload['stats'] = stats
+            for stat_kind, stat in stats_task.result.items():
+                stats[stat_kind] = stat['history']['300']
+        
+        # Gather node info
+        info_task.wait()
+        if info_task.state == 'ok':
+            payload['info'] = info_task.result
+
         headers = { 'content-type': 'application/json'}
         requests.request('PUT', self._url, json=payload, headers=headers)
