@@ -17,6 +17,7 @@ class BlockCreatorStatusReporter(TemplateBase):
         super().__init__(name=name, guid=guid, data=data)
         self._node_ = None
         self._block_creator_ = None
+        self._url_ = None
         self.recurring_action('_monitor', 300)  # every 5 minutes
 
     def validate(self):
@@ -36,7 +37,7 @@ class BlockCreatorStatusReporter(TemplateBase):
 
     @property
     def _url(self):
-        if not hasattr(self, '_url_'):
+        if not self._url_:
             self._url_ = self.data['postUrlTemplate'].format(block_creator_identifier=self.data['blockCreatorIdentifier'])
         return self._url_
 
