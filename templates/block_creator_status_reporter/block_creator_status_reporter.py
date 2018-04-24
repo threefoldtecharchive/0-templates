@@ -15,23 +15,20 @@ class BlockCreatorStatusReporter(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-
+        self._node_ = None
+        self._block_creator_ = None
         self.recurring_action('_monitor', 300)  # every 5 minutes
 
     def validate(self):
-        self._block_creator
-        self._node
         self._url
 
     @property
     def _block_creator(self):
-        if not hasattr(self, '_block_creator_'):
-            # Validate if the block_creator service actually exists
-            matches = self.api.services.find(template_uid='github.com/threefoldtoken/0-templates/block_creator/0.0.1', name=self.data['blockCreator'])
-            if matches:
-                self._block_creator_ = matches[0]
-            else:
-                return None
+        if not self._block_creator_:
+            try:
+                self._block_creator_ = self.api.services.get(template_uid='github.com/threefoldtoken/0-templates/block_creator/0.0.1', name=self.data['blockCreator'])
+            except ServiceNotFoundError:
+                pass
         return self._block_creator_
 
     @property
@@ -42,13 +39,11 @@ class BlockCreatorStatusReporter(TemplateBase):
 
     @property
     def _node(self):
-        if not hasattr(self, '_node_'):
-            # Validate if the node service actually exists
-            matches = self.api.services.find(template_uid='github.com/zero-os/0-templates/node/0.0.1', name=self.data['node'])
-            if matches:
-                self._node_ = matches[0]
-            else:
-                return None
+        if not self._node_:
+            try:
+                self._node_ = self.api.services.get(template_uid='github.com/zero-os/0-templates/node/0.0.1', name=self.data['node'])
+            except ServiceNotFoundError:
+                pass
         return self._node_            
 
     def start(self):
