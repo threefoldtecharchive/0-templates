@@ -28,9 +28,10 @@ class BlockCreatorStatusReporter(TemplateBase):
         if not hasattr(self, '_block_creator_'):
             # Validate if the block_creator service actually exists
             matches = self.api.services.find(template_uid='github.com/threefoldtoken/0-templates/block_creator/0.0.1', name=self.data['blockCreator'])
-            if len(matches) != 1:
-                raise ValueError("Block creator service %s not found, or ambigious results!" % self.data['blockCreator'])
-            self._block_creator_ = matches[0]
+            if matches:
+                self._block_creator_ = matches[0]
+            else:
+                return None
         return self._block_creator_
 
     @property
@@ -44,10 +45,10 @@ class BlockCreatorStatusReporter(TemplateBase):
         if not hasattr(self, '_node_'):
             # Validate if the node service actually exists
             matches = self.api.services.find(template_uid='github.com/zero-os/0-templates/node/0.0.1', name=self.data['node'])
-            if len(matches) != 1:
-                raise ValueError("Node service %s not found, or ambigious results!" % self.data['node'])
-            else:
+            if matches:
                 self._node_ = matches[0]
+            else:
+                return None
         return self._node_            
 
     def start(self):
@@ -62,39 +63,44 @@ class BlockCreatorStatusReporter(TemplateBase):
         except StateCheckError:
             return
         
-        consensus_task = self._block_creator.schedule_action('consensus_stat')
-        wallet_amount_task = self._block_creator.schedule_action('wallet_amount')
-        stats_task = self._node.schedule_action('stats')
-        info_task = self._node.schedule_action('info')
+        if self._block_creator:
+            consensus_task = self._block_creator.schedule_action('consensus_stat')
+            wallet_amount_task = self._block_creator.schedule_action('wallet_amount')
+        if self._node:
+            stats_task = self._node.schedule_action('stats')
+            info_task = self._node.schedule_action('info')
 
-        # Gather chain info
-        consensus_task.wait()
-        if consensus_task.state == 'ok':
-            height = int(consensus_task.result['Height'])
-        else:
-            height = -1
-        wallet_amount_task.wait()
-        if wallet_amount_task.state == 'ok':
-            status = "unlocked"
-        else:
-            status = "error"
-        
-        payload = {
-            "chain_status": {'wallet_status': status, 'block_height': height}
-        }
 
-        # Gather stats info
-        stats_task.wait()
-        if stats_task.state == 'ok':
-            stats = dict()
-            payload['stats'] = stats
-            for stat_kind, stat in stats_task.result.items():
-                stats[stat_kind] = stat['history']['300']
-        
-        # Gather node info
-        info_task.wait()
-        if info_task.state == 'ok':
-            payload['info'] = info_task.result
+        payload = dict()
+
+        if self._block_creator:
+            # Gather chain info
+            consensus_task.wait()
+            if consensus_task.state == 'ok':
+                height = int(consensus_task.result['Height'])
+            else:
+                height = -1
+            wallet_amount_task.wait()
+            if wallet_amount_task.state == 'ok':
+                status = "unlocked"
+            else:
+                status = "error"
+            
+            payload["chain_status"] = {'wallet_status': status, 'block_height': height}
+
+        if self._node:
+            # Gather stats info
+            stats_task.wait()
+            if stats_task.state == 'ok':
+                stats = dict()
+                payload['stats'] = stats
+                for stat_kind, stat in stats_task.result.items():
+                    stats[stat_kind] = stat['history']['300']
+            
+            # Gather node info
+            info_task.wait()
+            if info_task.state == 'ok':
+                payload['info'] = info_task.result
 
         headers = { 'content-type': 'application/json'}
         requests.request('PUT', self._url, json=payload, headers=headers)
