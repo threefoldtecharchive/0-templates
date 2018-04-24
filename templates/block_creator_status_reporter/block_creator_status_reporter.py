@@ -20,9 +20,10 @@ class BlockCreatorStatusReporter(TemplateBase):
         self.recurring_action('_monitor', 300)  # every 5 minutes
 
     def validate(self):
-        put = self.data['postUrlTemplate']
-        if not put or not put.strip():
-            raise ValueError("postUrlTemplate must be set!")
+        for prop in ('postUrlTemplate', 'blockCreatorIdentifier'):
+            value = self.data[prop]
+            if not value or not value.strip():
+                raise ValueError("%s must be set!" % prop)
 
     @property
     def _block_creator(self):
