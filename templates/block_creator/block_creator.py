@@ -232,6 +232,23 @@ class BlockCreator(TemplateBase):
         self.state.check('status', 'running', 'ok')
         return self._client_sal.consensus_stat()
 
+    @retry((RuntimeError), tries=3, delay=2, backoff=2)
+    def report(self):
+        """
+        returns a full report containing the following fields:
+        - wallet_status = string [locked/unlocked]
+        - block_height = int
+        - active_blockstakes = int
+        - network = string [devnet/testnet/standard]
+        - confirmed_balance = int
+        - connected_peers = int
+        - address = string
+        """
+        self.state.check('status', 'running', 'ok')
+        report = self._client_sal.get_report()
+        report["network"] = self.data["network"]
+        return report
+
     def _monitor(self):
         self.state.check('actions', 'install', 'ok')
         self.state.check('actions', 'start', 'ok')
