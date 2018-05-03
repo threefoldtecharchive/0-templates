@@ -81,7 +81,12 @@ class Explorer(TemplateBase):
         """
         self.logger.info("installing explorer %s", self.name)
         container = self._get_container()
-        container.schedule_action('install').wait(die=True)
+        # ensure container is installed and running
+        for action in ['install', 'start']:
+            try:
+                container.state.check('actions', action, 'ok')
+            except StateCheckError:
+                container.schedule_action(action).wait(die=True)
 
         self._node_sal.client.nft.open_port(self.data['rpcPort'])
         self._node_sal.client.nft.open_port(443)
@@ -98,6 +103,8 @@ class Explorer(TemplateBase):
         """
         try:
             self.stop()
+            container = self.api.services.get(template_uid=CONTAINER_TEMPLATE_UID, name=self._container_name)
+            container.delete()
         except (ServiceNotFoundError, LookupError):
             pass
         self.state.delete('status', 'running')
@@ -121,7 +128,11 @@ class Explorer(TemplateBase):
         self.logger.info('Starting tfchaind and caddy (%s)', self.name)
 
         container = self._get_container()
-        container.schedule_action('start').wait(die=True)
+        # ensure container is installed and running
+        try:
+            container.state.check('actions', 'start', 'ok')
+        except StateCheckError:
+            container.schedule_action('start').wait(die=True)
 
         self._node_sal.client.nft.open_port(self.data['rpcPort'])
         self._node_sal.client.nft.open_port(443)
@@ -141,7 +152,6 @@ class Explorer(TemplateBase):
             # force stop container
             container = self.api.services.get(template_uid=CONTAINER_TEMPLATE_UID, name=self._container_name)
             container.schedule_action('stop').wait(die=True)
-            container.delete()
         except (ServiceNotFoundError, LookupError):
             # container is not found, good
             pass

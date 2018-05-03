@@ -123,7 +123,13 @@ class BlockCreator(TemplateBase):
         """
         self.logger.info('installing tfcaind %s', self.name)
         container = self._get_container()
-        container.schedule_action('install').wait(die=True)
+        # ensure container is installed and running
+        for action in ['install', 'start']:
+            try:
+                container.state.check('actions', action, 'ok')
+            except StateCheckError:
+                container.schedule_action(action).wait(die=True)
+
         self._daemon_sal.start()
         self.state.set('status', 'running', 'ok')
         self.state.set('actions', 'install', 'ok')
@@ -134,6 +140,8 @@ class BlockCreator(TemplateBase):
         """
         try:
             self.stop()
+            container = self.api.services.get(template_uid=CONTAINER_TEMPLATE_UID, name=self._container_name)
+            container.delete()
         except (ServiceNotFoundError, LookupError):
             pass
         self.state.delete('status', 'running')
@@ -159,11 +167,11 @@ class BlockCreator(TemplateBase):
         self.logger.info('Starting tfchaind %s', self.name)
 
         container = self._get_container()
+        # ensure container is running
         try:
-            container.state.check('actions', 'install', 'ok')
+            container.state.check('actions', 'start', 'ok')
         except StateCheckError:
-            container.schedule_action('install').wait(die=True)
-        container.schedule_action('start').wait(die=True)
+            container.schedule_action('start').wait(die=True)
 
         self._daemon_sal.start()
         self.state.set('status', 'running', 'ok')
@@ -185,7 +193,6 @@ class BlockCreator(TemplateBase):
             # force stop container
             container = self.api.services.get(template_uid=CONTAINER_TEMPLATE_UID, name=self._container_name)
             container.schedule_action('stop').wait(die=True)
-            container.delete()
         except (ServiceNotFoundError, LookupError):
             # container is not found, good
             pass
@@ -245,14 +252,14 @@ class BlockCreator(TemplateBase):
                         # Wallet is locked, should unlock
                         self.state.delete('wallet', 'unlock')
                         self._wallet_unlock()
-                else:                        
+                else:
                     try:
                         self._client_sal.wallet_amount()
                     except ValueError:
                         # Wallet is locked, should unlock
                         self.state.delete('wallet', 'unlock')
                         self._wallet_unlock()
-                return        
+                return
         except LookupError:
             # container not found, need to call start
             pass

@@ -163,8 +163,13 @@ class TestBlockCreatorTemplate(TestCase):
     def test_uninstall(self):
         bc = BlockCreator(name='blockcreator', data=self.valid_data)
 
+        container = MagicMock()
+        container.schedule_action = MagicMock()
+        container.delete = MagicMock()
+
         bc.stop = MagicMock()
         bc.api.services.find_or_create = MagicMock()
+        bc.api.services.get = MagicMock(return_value=container)
         fs = MagicMock()
         fs.delete = MagicMock()
         sp = MagicMock()
@@ -185,6 +190,7 @@ class TestBlockCreatorTemplate(TestCase):
         bc.stop.assert_called_once_with()
         sp.get.assert_called_once_with(bc.guid)
         fs.delete.assert_called_once_with()
+        container.delete.assert_called_once_with()
 
     def test_uninstall_container_not_exists(self):
         bc = BlockCreator(name='blockcreator', data=self.valid_data)
@@ -233,7 +239,7 @@ class TestBlockCreatorTemplate(TestCase):
         bc._node_sal.client.nft.drop_port.assert_called_once_with(23112)
         bc._daemon_sal.stop.assert_called_once_with()
         container.schedule_action.assert_called_once_with('stop')
-        container.delete.assert_called_once_with()
+        container.delete.assert_not_called()
 
     def test_stop_container_not_exists(self):
         bc = BlockCreator(name='blockcreator', data=self.valid_data)
