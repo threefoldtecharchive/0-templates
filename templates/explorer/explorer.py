@@ -58,9 +58,13 @@ class Explorer(TemplateBase):
         node_fs = self._node_sal.client.filesystem
         vol = os.path.join(fs.path, 'explorer')
         node_fs.mkdir(vol)
+        caddy = os.path.join(fs.path, 'caddy-certs')
+        node_fs.mkdir(caddy)
         mounts = [
             {'source': vol,
              'target': '/mnt/data'},
+            {'source': caddy,
+             'target': '/root/.caddy'},
             {'source': self.data['explorerFlist'],
              'target': '/mnt/explorer'}
         ]
