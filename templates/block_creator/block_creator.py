@@ -203,7 +203,6 @@ class BlockCreator(TemplateBase):
             container = self._get_container()
             container.schedule_action('install').wait(die=True)      
 
-        self._node_sal.client.nft.drop_port(self.data['rpcPort'])
         self.state.delete('status', 'running')
         self.state.delete('actions', 'start')
         self.state.delete('wallet', 'unlock')
@@ -220,6 +219,9 @@ class BlockCreator(TemplateBase):
         container.delete()
         container = self._get_container()
         container.schedule_action('install').wait(die=True)
+
+        # Node does not need to open this port anymore
+        self._node_sal.client.nft.drop_port(self.data['rpcPort'])
 
         # restart daemon in new container
         self.start()
