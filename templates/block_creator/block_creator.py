@@ -206,10 +206,9 @@ class BlockCreator(TemplateBase):
             # force stop container
             container = self.api.services.get(template_uid=CONTAINER_TEMPLATE_UID, name=self._container_name)
             container.schedule_action('stop').wait(die=True)
-            container.delete()
         except (ServiceNotFoundError, LookupError):
-            # container is not found, good
-            pass
+            container = self._get_container()
+            container.schedule_action('install').wait(die=True)      
 
         self._node_sal.client.nft.drop_port(self.data['rpcPort'])
         self.state.delete('status', 'running')
@@ -222,6 +221,12 @@ class BlockCreator(TemplateBase):
         """
         # stop daemon
         self.stop()
+
+        # delete and recreate the container
+        container = self.api.services.get(template_uid=CONTAINER_TEMPLATE_UID, name=self._container_name)
+        container.delete()
+        container = self._get_container()
+        container.schedule_action('install').wait(die=True)
 
         # restart daemon in new container
         self.start()
