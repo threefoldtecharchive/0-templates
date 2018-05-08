@@ -77,7 +77,7 @@ class BlockCreator(TemplateBase):
         }]
 
         # determine parent interface for macvlan
-        parent_if = self.data["parentInterface"]
+        parent_if = self.data.get("parentInterface")
         if not parent_if:
             candidates = list()
             for route in self._node_sal.client.ip.route.list():
