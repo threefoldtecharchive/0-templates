@@ -206,6 +206,7 @@ class BlockCreator(TemplateBase):
             # force stop container
             container = self.api.services.get(template_uid=CONTAINER_TEMPLATE_UID, name=self._container_name)
             container.schedule_action('stop').wait(die=True)
+            container.delete()
         except (ServiceNotFoundError, LookupError):
             # container is not found, good
             pass
