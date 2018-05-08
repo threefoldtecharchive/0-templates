@@ -63,8 +63,7 @@ class BlockCreatorStatusReporter(TemplateBase):
             return
         
         if self._block_creator:
-            consensus_task = self._block_creator.schedule_action('consensus_stat')
-            wallet_amount_task = self._block_creator.schedule_action('wallet_amount')
+            report_task = self._block_creator.schedule_action('report')
         if self._node:
             stats_task = self._node.schedule_action('stats')
             info_task = self._node.schedule_action('info')
@@ -74,18 +73,12 @@ class BlockCreatorStatusReporter(TemplateBase):
 
         if self._block_creator:
             # Gather chain info
-            consensus_task.wait()
-            if consensus_task.state == 'ok':
-                height = int(consensus_task.result['Height'])
+            report_task.wait()
+            if report_task.state == 'ok':
+                payload["chain_status"] = report_task.result
             else:
-                height = -1
-            wallet_amount_task.wait()
-            if wallet_amount_task.state == 'ok':
-                status = "unlocked"
-            else:
-                status = "error"
+                payload["chain_status"] = {'wallet_status': 'error'}
             
-            payload["chain_status"] = {'wallet_status': status, 'block_height': height}
 
         if self._node:
             # Gather stats info

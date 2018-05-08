@@ -65,8 +65,6 @@ class BlockCreator(TemplateBase):
         except ValueError:
             fs = sp.create(self.guid)
 
-        ports = ['%s:%s' % (self.data['rpcPort'], self.data['rpcPort'])]
-
         # prepare persistant volume to mount into the container
         node_fs = self._node_sal.client.filesystem
         vol = os.path.join(fs.path, 'wallet')
@@ -76,12 +74,24 @@ class BlockCreator(TemplateBase):
             'target': '/mnt/data'
         }]
 
+        # determine parent interface for macvlan
+        parent_if = self.data.get("parentInterface")
+        if not parent_if:
+            candidates = list()
+            for route in self._node_sal.client.ip.route.list():
+                if route['gw']:
+                    candidates.append(route)
+            if not candidates:
+                raise RuntimeError("Could not find interface for macvlan parent")
+            elif len(candidates) > 1:
+                raise RuntimeError("Found multiple eligible interface for macvlan parent: %s" % ",".join(c['dev'] for c in candidates))
+            parent_if = candidates[0]['dev']
+
         container_data = {
             'flist': self.data['tfchainFlist'],
             'node': self.data['node'],
-            'nics': [{'type': 'default'}],
-            'mounts': mounts,
-            'ports': ports
+            'nics': [{'type': 'macvlan', 'id': parent_if, 'name': 'stoffel', 'config': { 'dhcp': True }}],
+            'mounts': mounts
         }
 
         return self.api.services.find_or_create(CONTAINER_TEMPLATE_UID, self._container_name, data=container_data)
@@ -130,8 +140,6 @@ class BlockCreator(TemplateBase):
             except StateCheckError:
                 container.schedule_action(action).wait(die=True)
 
-        self._daemon_sal.start()
-        self.state.set('status', 'running', 'ok')
         self.state.set('actions', 'install', 'ok')
 
     def uninstall(self):
@@ -179,8 +187,6 @@ class BlockCreator(TemplateBase):
         self._wallet_init()
         self._wallet_unlock()
 
-        self._node_sal.client.nft.open_port(self.data['rpcPort'])
-
         self.state.set('actions', 'start', 'ok')
 
     def stop(self):
@@ -194,10 +200,9 @@ class BlockCreator(TemplateBase):
             container = self.api.services.get(template_uid=CONTAINER_TEMPLATE_UID, name=self._container_name)
             container.schedule_action('stop').wait(die=True)
         except (ServiceNotFoundError, LookupError):
-            # container is not found, good
-            pass
+            container = self._get_container()
+            container.schedule_action('install').wait(die=True)      
 
-        self._node_sal.client.nft.drop_port(self.data['rpcPort'])
         self.state.delete('status', 'running')
         self.state.delete('actions', 'start')
         self.state.delete('wallet', 'unlock')
@@ -208,6 +213,15 @@ class BlockCreator(TemplateBase):
         """
         # stop daemon
         self.stop()
+
+        # delete and recreate the container
+        container = self.api.services.get(template_uid=CONTAINER_TEMPLATE_UID, name=self._container_name)
+        container.delete()
+        container = self._get_container()
+        container.schedule_action('install').wait(die=True)
+
+        # Node does not need to open this port anymore
+        self._node_sal.client.nft.drop_port(self.data['rpcPort'])
 
         # restart daemon in new container
         self.start()
@@ -238,6 +252,23 @@ class BlockCreator(TemplateBase):
         """
         self.state.check('status', 'running', 'ok')
         return self._client_sal.consensus_stat()
+
+    @retry((RuntimeError), tries=3, delay=2, backoff=2)
+    def report(self):
+        """
+        returns a full report containing the following fields:
+        - wallet_status = string [locked/unlocked]
+        - block_height = int
+        - active_blockstakes = int
+        - network = string [devnet/testnet/standard]
+        - confirmed_balance = int
+        - connected_peers = int
+        - address = string
+        """
+        self.state.check('status', 'running', 'ok')
+        report = self._client_sal.get_report()
+        report["network"] = self.data["network"]
+        return report
 
     def _monitor(self):
         self.state.check('actions', 'install', 'ok')
