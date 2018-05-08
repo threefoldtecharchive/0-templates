@@ -65,8 +65,6 @@ class BlockCreator(TemplateBase):
         except ValueError:
             fs = sp.create(self.guid)
 
-        # ports = ['%s:%s' % (self.data['rpcPort'], self.data['rpcPort'])]
-
         # prepare persistant volume to mount into the container
         node_fs = self._node_sal.client.filesystem
         vol = os.path.join(fs.path, 'wallet')
@@ -93,8 +91,7 @@ class BlockCreator(TemplateBase):
             'flist': self.data['tfchainFlist'],
             'node': self.data['node'],
             'nics': [{'type': 'macvlan', 'id': parent_if, 'name': 'stoffel', 'config': { 'dhcp': True }}],
-            'mounts': mounts #,
-#            'ports': ports
+            'mounts': mounts
         }
 
         return self.api.services.find_or_create(CONTAINER_TEMPLATE_UID, self._container_name, data=container_data)
@@ -143,8 +140,6 @@ class BlockCreator(TemplateBase):
             except StateCheckError:
                 container.schedule_action(action).wait(die=True)
 
-        # self._daemon_sal.start()
-        # self.state.set('status', 'running', 'ok')
         self.state.set('actions', 'install', 'ok')
 
     def uninstall(self):
@@ -191,8 +186,6 @@ class BlockCreator(TemplateBase):
 
         self._wallet_init()
         self._wallet_unlock()
-
-        # self._node_sal.client.nft.open_port(self.data['rpcPort'])
 
         self.state.set('actions', 'start', 'ok')
 
