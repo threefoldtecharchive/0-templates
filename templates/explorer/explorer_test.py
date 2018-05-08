@@ -146,8 +146,13 @@ class TestExplorerTemplate(TestCase):
     def test_uninstall(self):
         explorer = Explorer(name='explorer', data=self.valid_data)
 
+        container = MagicMock()
+        container.schedule_action = MagicMock()
+        container.delete = MagicMock()
+
         explorer.stop = MagicMock()
         explorer.api.services.find_or_create = MagicMock()
+        explorer.api.services.get = MagicMock(return_value=container)
         fs = MagicMock()
         fs.delete = MagicMock()
         sp = MagicMock()
@@ -163,6 +168,7 @@ class TestExplorerTemplate(TestCase):
 
         sp.get.assert_called_once_with(explorer.guid)
         fs.delete.assert_called_once_with()
+        container.delete.assert_called_once_with()
 
     def test_uninstall_container_not_exists(self):
         explorer = Explorer(name='explorer', data=self.valid_data)
@@ -208,7 +214,7 @@ class TestExplorerTemplate(TestCase):
         assert explorer._node_sal.client.nft.drop_port.mock_calls == [call(23112), call(443), call(80)]
         explorer._explorer_sal.stop.assert_called_once_with()
         container.schedule_action.assert_called_once_with('stop')
-        container.delete.assert_called_once_with()
+        container.delete.assert_not_called()
 
     def test_stop_container_not_exists(self):
         explorer = Explorer(name='explorer', data=self.valid_data)

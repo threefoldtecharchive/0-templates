@@ -23,7 +23,7 @@ This template is responsible for deploying an explorer node.
 ### Examples:
 #### DSL (api interface):
 ```python
-data = {'node':'node1', 'domain': 'explorer.tft.com'}
+data = {'node':'local', 'domain': 'explorer.tft.com'}
 explorer = robot.services.create('github.com/threefoldtoken/0-templates/explorer/0.0.1','explorer', data)
 explorer.schedule_action('install')
 explorer.schedule_action('start')
@@ -33,7 +33,7 @@ explorer.schedule_action('start')
 ```yaml
 services:
     - github.com/threefoldtoken/0-templates/explorer/0.0.1__explorer:
-        node: node1
+        node: local
         domain: explorer.tft.com
 
 actions:
