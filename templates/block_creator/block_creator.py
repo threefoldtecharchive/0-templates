@@ -65,7 +65,7 @@ class BlockCreator(TemplateBase):
         except ValueError:
             fs = sp.create(self.guid)
 
-        ports = ['%s:%s' % (self.data['rpcPort'], self.data['rpcPort'])]
+        # ports = ['%s:%s' % (self.data['rpcPort'], self.data['rpcPort'])]
 
         # prepare persistant volume to mount into the container
         node_fs = self._node_sal.client.filesystem
@@ -76,12 +76,25 @@ class BlockCreator(TemplateBase):
             'target': '/mnt/data'
         }]
 
+        # determine parent interface for macvlan
+        parent_if = self.data["parentInterface"]
+        if not parent_if:
+            candidates = list()
+            for route in self._node_sal.client.ip.route.list():
+                if route['gw']:
+                    candidates.append(route)
+            if not candidates:
+                raise RuntimeError("Could not find interface for macvlan parent")
+            elif len(candidates) > 1:
+                raise RuntimeError("Found multiple eligible interface for macvlan parent: %s" % ",".join(c['dev'] for c in candidates))
+            parent_if = candidates[0]['dev']
+
         container_data = {
             'flist': self.data['tfchainFlist'],
             'node': self.data['node'],
-            'nics': [{'type': 'default'}],
-            'mounts': mounts,
-            'ports': ports
+            'nics': [{'type': 'macvlan', 'id': parent_if, 'name': 'stoffel', 'config': { 'dhcp': True }}],
+            'mounts': mounts #,
+#            'ports': ports
         }
 
         return self.api.services.find_or_create(CONTAINER_TEMPLATE_UID, self._container_name, data=container_data)
@@ -130,8 +143,8 @@ class BlockCreator(TemplateBase):
             except StateCheckError:
                 container.schedule_action(action).wait(die=True)
 
-        self._daemon_sal.start()
-        self.state.set('status', 'running', 'ok')
+        # self._daemon_sal.start()
+        # self.state.set('status', 'running', 'ok')
         self.state.set('actions', 'install', 'ok')
 
     def uninstall(self):
@@ -179,7 +192,7 @@ class BlockCreator(TemplateBase):
         self._wallet_init()
         self._wallet_unlock()
 
-        self._node_sal.client.nft.open_port(self.data['rpcPort'])
+        # self._node_sal.client.nft.open_port(self.data['rpcPort'])
 
         self.state.set('actions', 'start', 'ok')
 

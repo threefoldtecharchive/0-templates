@@ -13,6 +13,7 @@ This template is responsible for deploying block creator node.
 - `walletAddr`: address of the wallet
 - `network`: network to join, default standard
 - `tfchainFlist`: the flist to be used for the tfchain (default: https://hub.gig.tech/tfchain/ubuntu-16.04-tfchain-latest.flist)
+- `parentInterface`: parent interface for macvlan, if not set then discovered automatically
 
 ### Actions
 - `install`: create container with tfchain binaries.
