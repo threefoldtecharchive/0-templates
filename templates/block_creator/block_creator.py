@@ -266,9 +266,28 @@ class BlockCreator(TemplateBase):
         - address = string
         """
         self.state.check('status', 'running', 'ok')
-        report = self._client_sal.get_report()
+        report = self._get_report()
         report["network"] = self.data["network"]
         return report
+
+
+    def _get_report(self):
+        """This is a temporary method, put in the template until the sal version has been fixed"""
+        result = self._client_sal.get_report()
+        wallet_info = self._client_sal._get_wallet_info()
+        wallet_status = "unlocked" if "Unlocked" in wallet_info.stdout else "locked"
+        result["wallet_status"] = wallet_status
+        if wallet_status == "unlocked":
+            wallet_amount = self._client_sal._parse_wallet_info(wallet_info)
+            result["active_blockstakes"] = int(wallet_amount['BlockStakes'].split(" ",1)[0])
+            result["confirmed_balance"] = int(wallet_amount['Confirmed Balance'].split(" ",1)[0])
+            result["address"] = self._client_sal.wallet_address
+        else:
+            result["active_blockstakes"] = -1
+            result["confirmed_balance"] = -1
+            result["address"] = ""
+        return result
+    
 
     def _monitor(self):
         self.state.check('actions', 'install', 'ok')
@@ -277,9 +296,11 @@ class BlockCreator(TemplateBase):
         try:
             if self._daemon_sal.is_running():
                 self.state.set('status', 'running', 'ok')
-                # TODO: cleanup when sal is distributed with wallet_status function
-                if hasattr(self._client_sal, 'wallet_status'):
-                    if self._client_sal.wallet_status() == "locked":
+                # TODO: cleanup when sal is distributed with a fixed wallet_status function
+                if hasattr(self._client_sal, '_get_wallet_info'):
+                    if "Unlocked" in self._client_sal._get_wallet_info().stdout:
+                        self.state.set('wallet', 'unlock', 'ok')
+                    else:
                         # Wallet is locked, should unlock
                         self.state.delete('wallet', 'unlock')
                         self._wallet_unlock()
