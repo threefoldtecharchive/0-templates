@@ -64,7 +64,7 @@ class Explorer(TemplateBase):
             {'source': vol,
              'target': '/mnt/data'},
             {'source': caddy,
-             'target': '/root/.caddy'},
+             'target': '/.caddy'},
             {'source': self.data['explorerFlist'],
              'target': '/mnt/explorer'}
         ]
