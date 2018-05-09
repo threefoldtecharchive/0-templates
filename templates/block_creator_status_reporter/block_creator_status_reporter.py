@@ -7,6 +7,7 @@ from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry
 from zerorobot.template.state import StateCheckError
+from zerorobot.template.decorator import timeout
 
 
 class BlockCreatorStatusReporter(TemplateBase):
@@ -56,6 +57,7 @@ class BlockCreatorStatusReporter(TemplateBase):
     def stop(self):
         self.state.delete('status', 'running')
 
+    @timeout(60, error_message='Monitor function call timed out')
     def _monitor(self):
         try:
             self.state.check('status', 'running', 'ok')
