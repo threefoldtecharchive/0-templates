@@ -273,7 +273,7 @@ class BlockCreator(TemplateBase):
 
     def _get_report(self):
         """This is a temporary method, put in the template until the sal version has been fixed"""
-        result = self._client_sal.get_report()
+        result = dict()
         wallet_info = self._client_sal._get_wallet_info()
         wallet_status = "unlocked" if "Unlocked" in wallet_info.stdout else "locked"
         result["wallet_status"] = wallet_status
@@ -281,11 +281,15 @@ class BlockCreator(TemplateBase):
             wallet_amount = self._client_sal._parse_wallet_info(wallet_info)
             result["active_blockstakes"] = int(wallet_amount['BlockStakes'].split(" ",1)[0])
             result["confirmed_balance"] = int(wallet_amount['Confirmed Balance'].split(" ",1)[0])
-            result["address"] = self._client_sal.wallet_address
+            result["address"] = "not supported by tfchainc"
         else:
             result["active_blockstakes"] = -1
             result["confirmed_balance"] = -1
-            result["address"] = ""
+            result["address"] = "not supported by tfchainc"
+        consensus = self._client_sal.consensus_stat()
+        result["block_height"] = int(consensus["Height"])
+        gateways = self._client_sal.gateway_stat()
+        result["connected_peers"] = int(gateways["Active peers"])
         return result
     
 
