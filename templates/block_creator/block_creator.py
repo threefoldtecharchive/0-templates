@@ -207,12 +207,18 @@ class BlockCreator(TemplateBase):
         self.state.delete('actions', 'start')
         self.state.delete('wallet', 'unlock')
 
-    def upgrade(self):
+    def upgrade(self, tfchainFlist=None):
         """upgrade the container with an updated flist
         this is done by stopping the container and respawn again with the updated flist
+
+        tfchainFlist: If provided, the current used flist will be replaced with the specified one
         """
         # stop daemon
         self.stop()
+
+        # update flist
+        if tfchainFlist:
+            self.data['tfchainFlist'] = tfchainFlist
 
         # delete and recreate the container
         container = self.api.services.get(template_uid=CONTAINER_TEMPLATE_UID, name=self._container_name)
