@@ -195,7 +195,7 @@ class Explorer(TemplateBase):
         self.state.check('actions', 'start', 'ok')
 
         try:
-            if self._explorer_sal.explorer.is_running():
+            if self._explorer_sal.is_running():
                 self.state.set('status', 'running', 'ok')
                 return
         except LookupError:
