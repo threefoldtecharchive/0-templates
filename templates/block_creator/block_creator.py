@@ -1,5 +1,6 @@
 import os
 import time
+from random import shuffle
 
 from js9 import j
 from zerorobot.service_collection import ServiceNotFoundError
@@ -23,6 +24,7 @@ class BlockCreator(TemplateBase):
             self.data['walletPassphrase'] = j.data.idgenerator.generateGUID()
 
         self.recurring_action('_monitor', 30)  # every 30 seconds
+        self.recurring_action('peer_discovery', 300) # every 5 minutes
 
     @property
     def _node_sal(self):
@@ -272,55 +274,58 @@ class BlockCreator(TemplateBase):
         - address = string
         """
         self.state.check('status', 'running', 'ok')
-        report = self._get_report()
+        container = self._container_sal
+        report = container.get_report()
+
         report["network"] = self.data["network"]
         return report
+  
+    def peer_discovery(self, link=None):
+        """ Add new local peers 
+        
+            @link: network interface name
+        """
 
+        container = self._container_sal
+        peers = container.discover_local_peers(link=link, port=self.data['rpcPort'])
+                
+        # shuffle list of peers
+        shuffle(peers)
 
-    def _get_report(self):
-        """This is a temporary method, put in the template until the sal version has been fixed"""
-        result = dict()
-        wallet_info = self._client_sal._get_wallet_info()
-        wallet_status = "unlocked" if "Unlocked" in wallet_info.stdout else "locked"
-        result["wallet_status"] = wallet_status
-        if wallet_status == "unlocked":
-            wallet_amount = self._client_sal._parse_wallet_info(wallet_info)
-            result["active_blockstakes"] = int(wallet_amount['BlockStakes'].split(" ",1)[0])
-            result["confirmed_balance"] = int(wallet_amount['Confirmed Balance'].split(" ",1)[0])
-            result["address"] = "not supported by tfchainc"
+        # fetch list of connected peers
+        connected_peers = [addr['netaddress'] for addr in container.gateway_stat()['peers']]
+        
+        # find first not connected peer
+        for peer in peers:
+            if peer in connected_peers:
+                continue
+            break
         else:
-            result["active_blockstakes"] = -1
-            result["confirmed_balance"] = -1
-            result["address"] = "not supported by tfchainc"
-        consensus = self._client_sal.consensus_stat()
-        result["block_height"] = int(consensus["Height"])
-        gateways = self._client_sal.gateway_stat()
-        result["connected_peers"] = int(gateways["Active peers"])
-        return result
-    
+            peer = None
+        
+        # add first new peer if any
+        if peer:
+            # parse peer address
+            [addr, port] = peer.split(':')
+            container.add_peer(addr, port)
 
     def _monitor(self):
+        """ Unlock wallet if locked """
         self.state.check('actions', 'install', 'ok')
         self.state.check('actions', 'start', 'ok')
-
         try:
             if self._daemon_sal.is_running():
                 self.state.set('status', 'running', 'ok')
-                # TODO: cleanup when sal is distributed with a fixed wallet_status function
-                if hasattr(self._client_sal, '_get_wallet_info'):
-                    if "Unlocked" in self._client_sal._get_wallet_info().stdout:
-                        self.state.set('wallet', 'unlock', 'ok')
-                    else:
-                        # Wallet is locked, should unlock
-                        self.state.delete('wallet', 'unlock')
-                        self._wallet_unlock()
-                else:
-                    try:
-                        self._client_sal.wallet_amount()
-                    except ValueError:
-                        # Wallet is locked, should unlock
-                        self.state.delete('wallet', 'unlock')
-                        self._wallet_unlock()
+
+                # get container
+                container = self._container_sal
+
+                # get container status
+                if container.wallet_status() == 'locked':
+                    self.state.delete('wallet', 'unlock')
+                
+                container._wallet_unlock()
+
                 return
         except LookupError:
             # container not found, need to call start
