@@ -15,10 +15,13 @@ class BlockCreator(TemplateBase):
     version = '0.0.1'
     template_name = 'block_creator'
 
+    _DATA_DIR = '/mnt/data'
+
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self._tfchain_sal = None
-
+        self._tf_client = None
+        
         wallet_passphrase = self.data.get('walletPassphrase')
         if not wallet_passphrase:
             self.data['walletPassphrase'] = j.data.idgenerator.generateGUID()
@@ -26,17 +29,31 @@ class BlockCreator(TemplateBase):
         self.recurring_action('_monitor', 30)  # every 30 seconds
         self.recurring_action('peer_discovery', 300) # every 5 minutes
 
+
     @property
     def _node_sal(self):
         return j.clients.zero_os.sal.get_node(self.data['node'])
+
 
     @property
     def _container_sal(self):
         return self._node_sal.containers.get(self._container_name)
 
+
     @property
     def _container_name(self):
         return "container-%s" % self.guid
+
+
+    @property
+    def _tfchainc(self):
+        if not self._tfchain_sal:
+            self._tfchain_sal = j.clients.zos.sal.tfchain.client(
+                name='test_wallet',
+                container=self._container_sal,
+                wallet_passphrase=self.data['walletPassphrase'])
+        return self._tfchain_sal
+
 
     @property
     def _daemon_sal(self):
@@ -45,10 +62,11 @@ class BlockCreator(TemplateBase):
             'container': self._container_sal,
             'rpc_addr': '0.0.0.0:%s' % self.data['rpcPort'],
             'api_addr': 'localhost:%s' % self.data['apiPort'],
-            'data_dir': '/mnt/data',
+            'data_dir': self._DATA_DIR,
             'network': self.data.get('network', 'standard')
         }
         return j.clients.zero_os.sal.tfchain.daemon(**kwargs)
+
 
     @property
     def _client_sal(self):
@@ -60,6 +78,7 @@ class BlockCreator(TemplateBase):
         }
         return j.clients.zero_os.sal.tfchain.client(**kwargs)
 
+
     def _get_container(self):
         sp = self._node_sal.storagepools.get('zos-cache')
         try:
@@ -67,7 +86,7 @@ class BlockCreator(TemplateBase):
         except ValueError:
             fs = sp.create(self.guid)
 
-        # prepare persistant volume to mount into the container
+        # prepare persistent volume to mount into the container
         node_fs = self._node_sal.client.filesystem
         vol = os.path.join(fs.path, 'wallet')
         node_fs.mkdir(vol)
@@ -86,7 +105,7 @@ class BlockCreator(TemplateBase):
             if not candidates:
                 raise RuntimeError("Could not find interface for macvlan parent")
             elif len(candidates) > 1:
-                raise RuntimeError("Found multiple eligible interface for macvlan parent: %s" % ",".join(c['dev'] for c in candidates))
+                raise RuntimeError("Found multiple eligible interface for macvlan parent: %s" % ", ".join(c['dev'] for c in candidates))
             parent_if = candidates[0]['dev']
 
         container_data = {
@@ -95,8 +114,8 @@ class BlockCreator(TemplateBase):
             'nics': [{'type': 'macvlan', 'id': parent_if, 'name': 'stoffel', 'config': { 'dhcp': True }}],
             'mounts': mounts
         }
-
         return self.api.services.find_or_create(CONTAINER_TEMPLATE_UID, self._container_name, data=container_data)
+
 
     @retry((RuntimeError), tries=5, delay=2, backoff=2)
     def _wallet_init(self):
@@ -114,6 +133,7 @@ class BlockCreator(TemplateBase):
         self.data['walletSeed'] = self._client_sal.recovery_seed
         self.state.set('wallet', 'init', 'ok')
 
+
     @retry((RuntimeError), tries=5, delay=2, backoff=2)
     def _wallet_unlock(self):
         """
@@ -124,9 +144,9 @@ class BlockCreator(TemplateBase):
             return
         except StateCheckError:
             pass
-
         self._client_sal.wallet_unlock()
         self.state.set('wallet', 'unlock', 'ok')
+
 
     def install(self):
         """
@@ -143,6 +163,7 @@ class BlockCreator(TemplateBase):
                 container.schedule_action(action).wait(die=True)
 
         self.state.set('actions', 'install', 'ok')
+
 
     def uninstall(self):
         """
@@ -169,6 +190,7 @@ class BlockCreator(TemplateBase):
         self.state.delete('wallet', 'unlock')
         self.state.delete('wallet', 'init')
 
+
     def start(self):
         """
         start both tfchain daemon and client
@@ -191,6 +213,7 @@ class BlockCreator(TemplateBase):
 
         self.state.set('actions', 'start', 'ok')
 
+
     def stop(self):
         """
         stop tfchain daemon
@@ -208,6 +231,7 @@ class BlockCreator(TemplateBase):
         self.state.delete('status', 'running')
         self.state.delete('actions', 'start')
         self.state.delete('wallet', 'unlock')
+
 
     def upgrade(self, tfchainFlist=None):
         """upgrade the container with an updated flist
@@ -234,6 +258,7 @@ class BlockCreator(TemplateBase):
         # restart daemon in new container
         self.start()
 
+
     @retry((RuntimeError), tries=3, delay=2, backoff=2)
     def wallet_address(self):
         """
@@ -245,6 +270,7 @@ class BlockCreator(TemplateBase):
             self.data['walletAddr'] = self._client_sal.wallet_address
         return self.data['walletAddr']
 
+
     @retry((RuntimeError), tries=3, delay=2, backoff=2)
     def wallet_amount(self):
         """
@@ -253,6 +279,7 @@ class BlockCreator(TemplateBase):
         self.state.check('wallet', 'unlock', 'ok')
         return self._client_sal.wallet_amount()
 
+
     @retry((RuntimeError), tries=3, delay=2, backoff=2)
     def consensus_stat(self):
         """
@@ -260,6 +287,7 @@ class BlockCreator(TemplateBase):
         """
         self.state.check('status', 'running', 'ok')
         return self._client_sal.consensus_stat()
+
 
     @retry((RuntimeError), tries=3, delay=2, backoff=2)
     def report(self):
@@ -279,21 +307,23 @@ class BlockCreator(TemplateBase):
 
         report["network"] = self.data["network"]
         return report
-  
+
+
     def peer_discovery(self, link=None):
         """ Add new local peers 
         
             @link: network interface name
         """
 
-        container = self._container_sal
-        peers = container.discover_local_peers(link=link, port=self.data['rpcPort'])
-                
+        tf_chain = self._tfchainc
+
+        peers = tf_chain.discover_local_peers(link=link, port=self.data['rpcPort'])
+
         # shuffle list of peers
         shuffle(peers)
 
         # fetch list of connected peers
-        connected_peers = [addr['netaddress'] for addr in container.gateway_stat()['peers']]
+        connected_peers = [addr['netaddress'] for addr in tf_chain.gateway_stat()['peers']]
         
         # find first not connected peer
         for peer in peers:
@@ -307,7 +337,8 @@ class BlockCreator(TemplateBase):
         if peer:
             # parse peer address
             [addr, port] = peer.split(':')
-            container.add_peer(addr, port)
+            tf_chain.add_peer(addr, port)
+
 
     def _monitor(self):
         """ Unlock wallet if locked """
@@ -344,3 +375,27 @@ class BlockCreator(TemplateBase):
 
         self.install()
         self.start()
+    
+
+    def create_backup(self, name='backup.tar.gz'):
+        """
+        Create backup of the persistent files
+
+        @name - name of the archive, default to backup.tar.gz
+        """
+        result = self._container_sal.client.system('tar -zcf /var/backups/{} {} -P'.format(name, self._DATA_DIR)).get()
+        if result.state != 'SUCCESS':
+            err = 'error occurred when creating backup: {} \n {}'.format(result.stderr, result.data)
+            raise RuntimeError(err)
+
+
+    def restore_backup(self, name='backup.tar.gz'):
+        """
+        Restore backup of the persistent files
+
+        @name - name of the archive, default to backup.tar.gz
+        """
+        result = self._container_sal.client.system('tar -zxf /var/backups/{} -P'.format(name)).get()
+        if result.state != 'SUCCESS':
+            err = 'error occurred when restoring backup: {} \n {}'.format(result.stderr, result.data)
+            raise RuntimeError(err)
