@@ -2,13 +2,14 @@
 set -e
 
 # settings
-export BRANCH="master"
+export BRANCH="development"
 
-mkdir -p /opt/code/github/jumpscale
-pushd /opt/code/github/jumpscale
+mkdir -p /opt/code/github/zero-os
+pushd /opt/code/github/zero-os
 
 # cloning source code
-git clone --depth=1 -b ${BRANCH} https://github.com/Jumpscale/0-robot
+git clone --depth=1 -b ${BRANCH} https://github.com/zero-os/0-robot.git
 pushd 0-robot
-pip3 install .
+
+pip3 install -e .
 popd
