@@ -395,19 +395,23 @@ class BlockCreator(TemplateBase):
         result = self._container_sal.client.system(cmd).get()
         error_check(result, 'error occurred when listing backups')
 
-        return result.stdout
+        parsed_output = result.stdout.split('\n')
+        list_of_backups = [item for item in parsed_output if item]
+        
+        return list_of_backups
 
     def restore_backup(self, name):
         """
         Restore backup of the persistent files
 
-        @name - name of the archive; available archives can be listed with list_backups()
+        @name (required) - name of the archive; available archives can be listed with list_backups()
         """
         self.state.check('status', 'running', 'ok')
         self._daemon_sal.stop()
+        cmd = 'tar -zxf {} -P'.format(os.path.join(self._BACKUP_DIR, name))
 
         try:
-            result = self._container_sal.client.system('tar -zxf {}/{} -P'.format(self._BACKUP_DIR, name)).get()
+            result = self._container_sal.client.system(cmd).get()
             error_check(result, 'error occurred when restoring backup')
         finally:
             self._daemon_sal.start()
