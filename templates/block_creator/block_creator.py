@@ -393,7 +393,7 @@ class BlockCreator(TemplateBase):
 
         self.state.check('status', 'running', 'ok')
         
-        return self._container.client.filesystem.list(self._BACKUP_DIR)
+        return self._container_sal.client.filesystem.list(self._BACKUP_DIR)
 
 
     def restore_backup(self, name):
