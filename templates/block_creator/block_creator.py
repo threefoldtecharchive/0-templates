@@ -392,7 +392,7 @@ class BlockCreator(TemplateBase):
 
         self.state.check('status', 'running', 'ok')
         cmd = 'ls {}'.format(self._BACKUP_DIR)
-        result = self.container_sal.client.system(cmd).get()
+        result = self._container_sal.client.system(cmd).get()
         error_check(result, 'error occurred when listing backups')
 
         return result.stdout
@@ -416,7 +416,7 @@ class BlockCreator(TemplateBase):
 
 def error_check(result, message):
     """ Raise error if call wasn't successfull """
-    
+
     if result.state != 'SUCCESS':
         err = '{}: {} \n {}'.format(message, result.stderr, result.data)
         raise RuntimeError(err)    
