@@ -80,7 +80,7 @@ class BlockCreator(TemplateBase):
         node_fs.mkdir(vol)
 
         vol_backup = os.path.join(fs.path, 'backups')
-        node_fs.mkdir(vol)
+        node_fs.mkdir(vol_backup)
 
         mounts = [{
             'source': vol,
