@@ -309,7 +309,7 @@ class TestBlockCreatorTemplate(TestCase):
         list_of_candidates = [{'gw': '1.1.1.1', 'dev': 'one'}, {'gw': '1.1.1.2', 'dev':'two'}]
         bc._node_sal.client.ip.route.list = MagicMock(return_value=list_of_candidates)
         
-        with self.assertRaisesRegex(RuntimeError, 'Found multiple eligible interface for macvlan parent: one, two'):
+        with self.assertRaisesRegex(RuntimeError, 'Found multiple eligible interfaces for macvlan parent: one, two'):
             bc.upgrade()
 
     def test_upgrade_success(self):

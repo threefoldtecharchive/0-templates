@@ -19,8 +19,6 @@ class BlockCreator(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        self._tfchain_sal = None
-        self._tf_client = None
         
         wallet_passphrase = self.data.get('walletPassphrase')
         if not wallet_passphrase:
@@ -43,16 +41,6 @@ class BlockCreator(TemplateBase):
     @property
     def _container_name(self):
         return "container-%s" % self.guid
-
-
-    @property
-    def _tfchainc(self):
-        if not self._tfchain_sal:
-            self._tfchain_sal = j.clients.zos.sal.tfchain.client(
-                name='test_wallet',
-                container=self._container_sal,
-                wallet_passphrase=self.data['walletPassphrase'])
-        return self._tfchain_sal
 
 
     @property
@@ -105,7 +93,7 @@ class BlockCreator(TemplateBase):
             if not candidates:
                 raise RuntimeError("Could not find interface for macvlan parent")
             elif len(candidates) > 1:
-                raise RuntimeError("Found multiple eligible interface for macvlan parent: %s" % ", ".join(c['dev'] for c in candidates))
+                raise RuntimeError("Found multiple eligible interfaces for macvlan parent: %s" % ", ".join(c['dev'] for c in candidates))
             parent_if = candidates[0]['dev']
 
         container_data = {
@@ -302,8 +290,7 @@ class BlockCreator(TemplateBase):
         - address = string
         """
         self.state.check('status', 'running', 'ok')
-        container = self._container_sal
-        report = container.get_report()
+        report = self._client_sal.get_report()
 
         report["network"] = self.data["network"]
         return report
@@ -315,29 +302,22 @@ class BlockCreator(TemplateBase):
             @link: network interface name
         """
 
-        tf_chain = self._tfchainc
+        client = self._client_sal
 
-        peers = tf_chain.discover_local_peers(link=link, port=self.data['rpcPort'])
+        peers = client.discover_local_peers(link=link, port=self.data['rpcPort'])
 
         # shuffle list of peers
         shuffle(peers)
 
         # fetch list of connected peers
-        connected_peers = [addr['netaddress'] for addr in tf_chain.gateway_stat()['peers']]
+        connected_peers = [addr['netaddress'] for addr in client.gateway_stat()['peers']]
         
-        # find first not connected peer
+        # add first disconnected     peer
         for peer in peers:
-            if peer in connected_peers:
-                continue
-            break
-        else:
-            peer = None
-        
-        # add first new peer if any
-        if peer:
-            # parse peer address
-            [addr, port] = peer.split(':')
-            tf_chain.add_peer(addr, port)
+            if peer not in connected_peers:
+                [addr, port] = peer.split(':')
+                client.add_peer(addr, port)
+                return
 
 
     def _monitor(self):
@@ -348,14 +328,11 @@ class BlockCreator(TemplateBase):
             if self._daemon_sal.is_running():
                 self.state.set('status', 'running', 'ok')
 
-                # get container
-                container = self._container_sal
-
                 # get container status
-                if container.wallet_status() == 'locked':
+                if self._client_sal.wallet_status() == 'locked':
                     self.state.delete('wallet', 'unlock')
                 
-                container._wallet_unlock()
+                self._client_sal._wallet_unlock()
 
                 return
         except LookupError:
