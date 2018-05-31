@@ -368,7 +368,7 @@ class BlockCreator(TemplateBase):
         """
         Create backup of the persistent files
 
-        @name - name of the archive, if not given default name will be generated based on version and timestamp
+        @name - name of the archive, if not given default name will be generated based on timestamp
         """
         self.state.check('status', 'running', 'ok')
         self._daemon_sal.stop()
@@ -387,18 +387,14 @@ class BlockCreator(TemplateBase):
             self._daemon_sal.start()
             self._wallet_unlock()
 
+
     def list_backups(self):
         """ List all backups """
 
         self.state.check('status', 'running', 'ok')
-        cmd = 'ls {}'.format(self._BACKUP_DIR)
-        result = self._container_sal.client.system(cmd).get()
-        error_check(result, 'error occurred when listing backups')
-
-        parsed_output = result.stdout.split('\n')
-        list_of_backups = [item for item in parsed_output if item]
         
-        return list_of_backups
+        return self._container.client.filesystem.list(self._BACKUP_DIR)
+
 
     def restore_backup(self, name):
         """
