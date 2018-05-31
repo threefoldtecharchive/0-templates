@@ -109,7 +109,9 @@ class TestBlockCreatorTemplate(TestCase):
             'nics': [{'type': 'macvlan', 'id': 'one', 'config': {'dhcp': True}, 'name': 'stoffel'}],
             'mounts': [
                 {'source': '/var/cache/wallet',
-                 'target': '/mnt/data'}
+                 'target': bc._DATA_DIR},
+                {'source': '/var/cache/backups',
+                'target': bc._BACKUP_DIR}
             ],
         }
         # test creation of container
@@ -439,32 +441,58 @@ class TestBlockCreatorTemplate(TestCase):
 
     def test_create_backup_success(self):
         bc = self.type(name='blockcreator', data=self.valid_data)
+        bc.state.set('status', 'running', 'ok')
+
         result_mock = MagicMock(state='SUCCESS')
         bc._container_sal.client.system = MagicMock(return_value=MagicMock(get=MagicMock(return_value=result_mock)))
-        bc.create_backup()
+
+        backup_name = 'backup.tar.gz'
+        bc.create_backup(backup_name)
         bc._container_sal.client.system.assert_called_once_with(
-            'tar -zcf /var/backups/backup.tar.gz /mnt/data -P'
+            'tar -zcf {} {} -P'.format(os.path.join(bc._BACKUP_DIR, backup_name), bc._DATA_DIR)
         )
 
-    def test_create_backup_fail(self):
+
+    def test_create_backup_call_fail(self):
         bc = self.type(name='blockcreator', data=self.valid_data)
+        bc.state.set('status', 'running', 'ok')
+        
         result_mock = MagicMock(state='ERROR', stderr='error message', data='error data')
         bc._container_sal.client.system = MagicMock(return_value=MagicMock(get=MagicMock(return_value=result_mock)))
         with self.assertRaisesRegex(RuntimeError, 'error occurred when creating backup: error message \n '):
             bc.create_backup()
 
+
+    def test_create_backup_fail_state(self):
+        bc = self.type(name='blockcreator', data=self.valid_data)
+
+        with self.assertRaises(StateCheckError):
+            bc.create_backup('name')        
+
+
     def test_restore_backup_success(self):
         bc = self.type(name='blockcreator', data=self.valid_data)
+        bc.state.set('status', 'running', 'ok')
         result_mock = MagicMock(state='SUCCESS')
         bc._container_sal.client.system = MagicMock(return_value=MagicMock(get=MagicMock(return_value=result_mock)))
-        bc.restore_backup()
+
+        backup_name = 'backup.tar.gz'
+        bc.restore_backup(backup_name)
         bc._container_sal.client.system.assert_called_once_with(
-            'tar -zxf /var/backups/backup.tar.gz -P'
+            'tar -zxf {} -P'.format(os.path.join(bc._BACKUP_DIR, backup_name))
         )
 
-    def test_restore_backup_fail(self):
+
+    def test_restore_backup_fail_call(self):
         bc = self.type(name='blockcreator', data=self.valid_data)
+        bc.state.set('status', 'running', 'ok')        
         result_mock = MagicMock(state='ERROR', stderr='error message', data='error data')
         bc._container_sal.client.system = MagicMock(return_value=MagicMock(get=MagicMock(return_value=result_mock)))
         with self.assertRaisesRegex(RuntimeError, 'error occurred when restoring backup: error message \n '):
-            bc.restore_backup()            
+            bc.restore_backup('name')
+
+    def test_restore_backup_fail_state(self):
+        bc = self.type(name='blockcreator', data=self.valid_data)
+       
+        with self.assertRaises(StateCheckError):
+            bc.restore_backup('name')
