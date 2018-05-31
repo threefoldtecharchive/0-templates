@@ -332,7 +332,7 @@ class BlockCreator(TemplateBase):
                 if self._client_sal.wallet_status() == 'locked':
                     self.state.delete('wallet', 'unlock')
                 
-                self._client_sal._wallet_unlock()
+                self._client_sal.wallet_unlock()
 
                 return
         except LookupError:
