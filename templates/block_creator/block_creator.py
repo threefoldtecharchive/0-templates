@@ -78,10 +78,19 @@ class BlockCreator(TemplateBase):
         node_fs = self._node_sal.client.filesystem
         vol = os.path.join(fs.path, 'wallet')
         node_fs.mkdir(vol)
+
+        vol_backup = os.path.join(fs.path, 'backups')
+        node_fs.mkdir(vol)
+
         mounts = [{
             'source': vol,
             'target': '/mnt/data'
-        }]
+        },
+        {
+            'source': vol_backup,
+            'target': '/mnt/backups'
+        },
+        ]
 
         # determine parent interface for macvlan
         parent_if = self.data.get("parentInterface")
@@ -360,11 +369,17 @@ class BlockCreator(TemplateBase):
 
         @name - name of the archive, default to backup.tar.gz
         """
-        result = self._container_sal.client.system('tar -zcf /var/backups/{} {} -P'.format(name, self._DATA_DIR)).get()
-        if result.state != 'SUCCESS':
-            err = 'error occurred when creating backup: {} \n {}'.format(result.stderr, result.data)
-            raise RuntimeError(err)
+        self.state.check('actions', 'running', 'ok')
+        self._daemon_sal.stop()
 
+        try:
+            result = self._container_sal.client.system('tar -zcf /mnt/backups/{} {} -P'.format(name, self._DATA_DIR)).get()
+            if result.state != 'SUCCESS':
+                err = 'error occurred when creating backup: {} \n {}'.format(result.stderr, result.data)
+                raise RuntimeError(err)
+        finally:
+            self._daemon_sal.start()
+            self._wallet_unlock()
 
     def restore_backup(self, name='backup.tar.gz'):
         """
@@ -372,7 +387,14 @@ class BlockCreator(TemplateBase):
 
         @name - name of the archive, default to backup.tar.gz
         """
-        result = self._container_sal.client.system('tar -zxf /var/backups/{} -P'.format(name)).get()
-        if result.state != 'SUCCESS':
-            err = 'error occurred when restoring backup: {} \n {}'.format(result.stderr, result.data)
-            raise RuntimeError(err)
+        self.state.check('actions', 'running', 'ok')
+        self._daemon_sal.stop()
+
+        try:
+            result = self._container_sal.client.system('tar -zxf /mnt/backups/{} -P'.format(name)).get()
+            if result.state != 'SUCCESS':
+                err = 'error occurred when restoring backup: {} \n {}'.format(result.stderr, result.data)
+                raise RuntimeError(err)
+        finally:
+            self._daemon_sal.start()
+            self._wallet_unlock()                
