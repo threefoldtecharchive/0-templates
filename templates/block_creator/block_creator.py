@@ -369,7 +369,7 @@ class BlockCreator(TemplateBase):
 
         @name - name of the archive, default to backup.tar.gz
         """
-        self.state.check('actions', 'running', 'ok')
+        self.state.check('status', 'running', 'ok')
         self._daemon_sal.stop()
 
         try:
@@ -387,7 +387,7 @@ class BlockCreator(TemplateBase):
 
         @name - name of the archive, default to backup.tar.gz
         """
-        self.state.check('actions', 'running', 'ok')
+        self.state.check('status', 'running', 'ok')
         self._daemon_sal.stop()
 
         try:
