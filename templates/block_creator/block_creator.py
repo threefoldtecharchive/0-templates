@@ -1,5 +1,6 @@
 import os
 import time
+from random import shuffle
 
 from js9 import j
 from zerorobot.service_collection import ServiceNotFoundError
@@ -14,27 +15,34 @@ class BlockCreator(TemplateBase):
     version = '0.0.1'
     template_name = 'block_creator'
 
+    _DATA_DIR = '/mnt/data'
+    _BACKUP_DIR = '/mnt/backups'
+
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        self._tfchain_sal = None
-
+        
         wallet_passphrase = self.data.get('walletPassphrase')
         if not wallet_passphrase:
             self.data['walletPassphrase'] = j.data.idgenerator.generateGUID()
 
         self.recurring_action('_monitor', 30)  # every 30 seconds
+        self.recurring_action('peer_discovery', 300) # every 5 minutes
+
 
     @property
     def _node_sal(self):
         return j.clients.zero_os.sal.get_node(self.data['node'])
 
+
     @property
     def _container_sal(self):
         return self._node_sal.containers.get(self._container_name)
 
+
     @property
     def _container_name(self):
         return "container-%s" % self.guid
+
 
     @property
     def _daemon_sal(self):
@@ -43,10 +51,11 @@ class BlockCreator(TemplateBase):
             'container': self._container_sal,
             'rpc_addr': '0.0.0.0:%s' % self.data['rpcPort'],
             'api_addr': 'localhost:%s' % self.data['apiPort'],
-            'data_dir': '/mnt/data',
+            'data_dir': self._DATA_DIR,
             'network': self.data.get('network', 'standard')
         }
         return j.clients.zero_os.sal.tfchain.daemon(**kwargs)
+
 
     @property
     def _client_sal(self):
@@ -58,6 +67,7 @@ class BlockCreator(TemplateBase):
         }
         return j.clients.zero_os.sal.tfchain.client(**kwargs)
 
+
     def _get_container(self):
         sp = self._node_sal.storagepools.get('zos-cache')
         try:
@@ -65,14 +75,23 @@ class BlockCreator(TemplateBase):
         except ValueError:
             fs = sp.create(self.guid)
 
-        # prepare persistant volume to mount into the container
+        # prepare persistent volume to mount into the container
         node_fs = self._node_sal.client.filesystem
         vol = os.path.join(fs.path, 'wallet')
         node_fs.mkdir(vol)
+
+        vol_backup = os.path.join(fs.path, 'backups')
+        node_fs.mkdir(vol_backup)
+
         mounts = [{
             'source': vol,
-            'target': '/mnt/data'
-        }]
+            'target': self._DATA_DIR
+        },
+        {
+            'source': vol_backup,
+            'target': self._BACKUP_DIR
+        },
+        ]
 
         # determine parent interface for macvlan
         parent_if = self.data.get("parentInterface")
@@ -84,7 +103,7 @@ class BlockCreator(TemplateBase):
             if not candidates:
                 raise RuntimeError("Could not find interface for macvlan parent")
             elif len(candidates) > 1:
-                raise RuntimeError("Found multiple eligible interface for macvlan parent: %s" % ",".join(c['dev'] for c in candidates))
+                raise RuntimeError("Found multiple eligible interfaces for macvlan parent: %s" % ", ".join(c['dev'] for c in candidates))
             parent_if = candidates[0]['dev']
 
         container_data = {
@@ -93,8 +112,8 @@ class BlockCreator(TemplateBase):
             'nics': [{'type': 'macvlan', 'id': parent_if, 'name': 'stoffel', 'config': { 'dhcp': True }}],
             'mounts': mounts
         }
-
         return self.api.services.find_or_create(CONTAINER_TEMPLATE_UID, self._container_name, data=container_data)
+
 
     @retry((RuntimeError), tries=5, delay=2, backoff=2)
     def _wallet_init(self):
@@ -112,6 +131,7 @@ class BlockCreator(TemplateBase):
         self.data['walletSeed'] = self._client_sal.recovery_seed
         self.state.set('wallet', 'init', 'ok')
 
+
     @retry((RuntimeError), tries=5, delay=2, backoff=2)
     def _wallet_unlock(self):
         """
@@ -122,9 +142,9 @@ class BlockCreator(TemplateBase):
             return
         except StateCheckError:
             pass
-
         self._client_sal.wallet_unlock()
         self.state.set('wallet', 'unlock', 'ok')
+
 
     def install(self):
         """
@@ -141,6 +161,7 @@ class BlockCreator(TemplateBase):
                 container.schedule_action(action).wait(die=True)
 
         self.state.set('actions', 'install', 'ok')
+
 
     def uninstall(self):
         """
@@ -167,6 +188,7 @@ class BlockCreator(TemplateBase):
         self.state.delete('wallet', 'unlock')
         self.state.delete('wallet', 'init')
 
+
     def start(self):
         """
         start both tfchain daemon and client
@@ -189,6 +211,7 @@ class BlockCreator(TemplateBase):
 
         self.state.set('actions', 'start', 'ok')
 
+
     def stop(self):
         """
         stop tfchain daemon
@@ -206,6 +229,7 @@ class BlockCreator(TemplateBase):
         self.state.delete('status', 'running')
         self.state.delete('actions', 'start')
         self.state.delete('wallet', 'unlock')
+
 
     def upgrade(self, tfchainFlist=None):
         """upgrade the container with an updated flist
@@ -232,6 +256,7 @@ class BlockCreator(TemplateBase):
         # restart daemon in new container
         self.start()
 
+
     @retry((RuntimeError), tries=3, delay=2, backoff=2)
     def wallet_address(self):
         """
@@ -243,6 +268,7 @@ class BlockCreator(TemplateBase):
             self.data['walletAddr'] = self._client_sal.wallet_address
         return self.data['walletAddr']
 
+
     @retry((RuntimeError), tries=3, delay=2, backoff=2)
     def wallet_amount(self):
         """
@@ -251,6 +277,7 @@ class BlockCreator(TemplateBase):
         self.state.check('wallet', 'unlock', 'ok')
         return self._client_sal.wallet_amount()
 
+
     @retry((RuntimeError), tries=3, delay=2, backoff=2)
     def consensus_stat(self):
         """
@@ -258,6 +285,7 @@ class BlockCreator(TemplateBase):
         """
         self.state.check('status', 'running', 'ok')
         return self._client_sal.consensus_stat()
+
 
     @retry((RuntimeError), tries=3, delay=2, backoff=2)
     def report(self):
@@ -272,55 +300,50 @@ class BlockCreator(TemplateBase):
         - address = string
         """
         self.state.check('status', 'running', 'ok')
-        report = self._get_report()
+        report = self._client_sal.get_report()
+
         report["network"] = self.data["network"]
         return report
 
 
-    def _get_report(self):
-        """This is a temporary method, put in the template until the sal version has been fixed"""
-        result = dict()
-        wallet_info = self._client_sal._get_wallet_info()
-        wallet_status = "unlocked" if "Unlocked" in wallet_info.stdout else "locked"
-        result["wallet_status"] = wallet_status
-        if wallet_status == "unlocked":
-            wallet_amount = self._client_sal._parse_wallet_info(wallet_info)
-            result["active_blockstakes"] = int(wallet_amount['BlockStakes'].split(" ",1)[0])
-            result["confirmed_balance"] = int(wallet_amount['Confirmed Balance'].split(" ",1)[0])
-            result["address"] = "not supported by tfchainc"
-        else:
-            result["active_blockstakes"] = -1
-            result["confirmed_balance"] = -1
-            result["address"] = "not supported by tfchainc"
-        consensus = self._client_sal.consensus_stat()
-        result["block_height"] = int(consensus["Height"])
-        gateways = self._client_sal.gateway_stat()
-        result["connected_peers"] = int(gateways["Active peers"])
-        return result
-    
+    def peer_discovery(self, link=None):
+        """ Add new local peers 
+        
+            @link: network interface name
+        """
+
+        client = self._client_sal
+
+        peers = client.discover_local_peers(link=link, port=self.data['rpcPort'])
+
+        # shuffle list of peers
+        shuffle(peers)
+
+        # fetch list of connected peers
+        connected_peers = [addr['netaddress'] for addr in client.gateway_stat()['peers']]
+        
+        # add first disconnected     peer
+        for peer in peers:
+            if peer not in connected_peers:
+                [addr, port] = peer.split(':')
+                client.add_peer(addr, port)
+                return
+
 
     def _monitor(self):
+        """ Unlock wallet if locked """
         self.state.check('actions', 'install', 'ok')
         self.state.check('actions', 'start', 'ok')
-
         try:
             if self._daemon_sal.is_running():
                 self.state.set('status', 'running', 'ok')
-                # TODO: cleanup when sal is distributed with a fixed wallet_status function
-                if hasattr(self._client_sal, '_get_wallet_info'):
-                    if "Unlocked" in self._client_sal._get_wallet_info().stdout:
-                        self.state.set('wallet', 'unlock', 'ok')
-                    else:
-                        # Wallet is locked, should unlock
-                        self.state.delete('wallet', 'unlock')
-                        self._wallet_unlock()
-                else:
-                    try:
-                        self._client_sal.wallet_amount()
-                    except ValueError:
-                        # Wallet is locked, should unlock
-                        self.state.delete('wallet', 'unlock')
-                        self._wallet_unlock()
+
+                # get container status
+                if self._client_sal.wallet_status() == 'locked':
+                    self.state.delete('wallet', 'unlock')
+                
+                self._wallet_unlock()
+
                 return
         except LookupError:
             # container not found, need to call start
@@ -339,3 +362,61 @@ class BlockCreator(TemplateBase):
 
         self.install()
         self.start()
+    
+
+    def create_backup(self, name=''):
+        """
+        Create backup of the persistent files
+
+        @name - name of the archive, if not given default name will be generated based on timestamp
+        """
+        self.state.check('status', 'running', 'ok')
+        self._daemon_sal.stop()
+
+        if not name:
+            # generate backup name
+            name = 'backup{}.tar.gz'.format(int(time.time()))
+
+        cmd = 'tar -zcf {archive} {data} -P'.format(
+            archive=os.path.join(self._BACKUP_DIR, name), data=self._DATA_DIR)
+
+        try:
+            result = self._container_sal.client.system(cmd).get()
+            error_check(result, 'error occurred when creating backup')
+        finally:
+            self._daemon_sal.start()
+            self._wallet_unlock()
+
+
+    def list_backups(self):
+        """ List all backups """
+
+        self.state.check('status', 'running', 'ok')
+        
+        return self._container_sal.client.filesystem.list(self._BACKUP_DIR)
+
+
+    def restore_backup(self, name):
+        """
+        Restore backup of the persistent files
+
+        @name (required) - name of the archive; available archives can be listed with list_backups()
+        """
+        self.state.check('status', 'running', 'ok')
+        self._daemon_sal.stop()
+        cmd = 'tar -zxf {} -P'.format(os.path.join(self._BACKUP_DIR, name))
+
+        try:
+            result = self._container_sal.client.system(cmd).get()
+            error_check(result, 'error occurred when restoring backup')
+        finally:
+            self._daemon_sal.start()
+            self._wallet_unlock()
+
+
+def error_check(result, message):
+    """ Raise error if call wasn't successfull """
+
+    if result.state != 'SUCCESS':
+        err = '{}: {} \n {}'.format(message, result.stderr, result.data)
+        raise RuntimeError(err)    
