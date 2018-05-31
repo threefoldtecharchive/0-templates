@@ -16,6 +16,7 @@ class BlockCreator(TemplateBase):
     template_name = 'block_creator'
 
     _DATA_DIR = '/mnt/data'
+    _BACKUP_DIR = '/mnt/backups'
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
@@ -84,11 +85,11 @@ class BlockCreator(TemplateBase):
 
         mounts = [{
             'source': vol,
-            'target': '/mnt/data'
+            'target': self._DATA_DIR
         },
         {
             'source': vol_backup,
-            'target': '/mnt/backups'
+            'target': self._BACKUP_DIR
         },
         ]
 
@@ -363,38 +364,59 @@ class BlockCreator(TemplateBase):
         self.start()
     
 
-    def create_backup(self, name='backup.tar.gz'):
+    def create_backup(self, name=''):
         """
         Create backup of the persistent files
 
-        @name - name of the archive, default to backup.tar.gz
+        @name - name of the archive, if not given default name will be generated based on version and timestamp
         """
         self.state.check('status', 'running', 'ok')
         self._daemon_sal.stop()
 
+        if not name:
+            # generate backup name
+            name = 'backup{}.tar.gz'.format(int(time.time()))
+
+        cmd = 'tar -zcf {archive} {data} -P'.format(
+            archive=os.path.join(self._BACKUP_DIR, name), data=self._DATA_DIR)
+
         try:
-            result = self._container_sal.client.system('tar -zcf /mnt/backups/{} {} -P'.format(name, self._DATA_DIR)).get()
-            if result.state != 'SUCCESS':
-                err = 'error occurred when creating backup: {} \n {}'.format(result.stderr, result.data)
-                raise RuntimeError(err)
+            result = self._container_sal.client.system(cmd).get()
+            error_check(result, 'error occurred when creating backup')
         finally:
             self._daemon_sal.start()
             self._wallet_unlock()
 
-    def restore_backup(self, name='backup.tar.gz'):
+    def list_backups(self):
+        """ List all backups """
+
+        self.state.check('status', 'running', 'ok')
+        cmd = 'ls {}'.format(self._BACKUP_DIR)
+        result = self.container_sal.client.system(cmd).get()
+        error_check(result, 'error occurred when listing backups')
+
+        return result.stdout
+
+    def restore_backup(self, name):
         """
         Restore backup of the persistent files
 
-        @name - name of the archive, default to backup.tar.gz
+        @name - name of the archive; available archives can be listed with list_backups()
         """
         self.state.check('status', 'running', 'ok')
         self._daemon_sal.stop()
 
         try:
-            result = self._container_sal.client.system('tar -zxf /mnt/backups/{} -P'.format(name)).get()
-            if result.state != 'SUCCESS':
-                err = 'error occurred when restoring backup: {} \n {}'.format(result.stderr, result.data)
-                raise RuntimeError(err)
+            result = self._container_sal.client.system('tar -zxf {}/{} -P'.format(self._BACKUP_DIR, name)).get()
+            error_check(result, 'error occurred when restoring backup')
         finally:
             self._daemon_sal.start()
-            self._wallet_unlock()                
+            self._wallet_unlock()
+
+
+def error_check(result, message):
+    """ Raise error if call wasn't successfull """
+    
+    if result.state != 'SUCCESS':
+        err = '{}: {} \n {}'.format(message, result.stderr, result.data)
+        raise RuntimeError(err)    
