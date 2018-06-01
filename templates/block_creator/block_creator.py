@@ -303,6 +303,12 @@ class BlockCreator(TemplateBase):
         report = self._client_sal.get_report()
 
         report["network"] = self.data["network"]
+        peers = report["connected_peers"]
+        if isinstance(peers, list):
+            report["connected_peers"] = len(peers)
+        else:
+            report["connected_peers"] = int(peers)
+
         return report
 
 
