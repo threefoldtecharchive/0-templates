@@ -26,7 +26,7 @@ class BlockCreator(TemplateBase):
             self.data['walletPassphrase'] = j.data.idgenerator.generateGUID()
 
         self.recurring_action('_monitor', 30)  # every 30 seconds
-        self.recurring_action('peer_discovery', 300) # every 5 minutes
+        #self.recurring_action('peer_discovery', 300) # every 5 minutes
 
 
     @property
