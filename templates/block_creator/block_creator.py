@@ -9,6 +9,7 @@ from zerorobot.template.decorator import retry
 from zerorobot.template.state import StateCheckError
 
 CONTAINER_TEMPLATE_UID = 'github.com/zero-os/0-templates/container/0.0.1'
+PEER_DISCOVERY_TEMPLATE_UID = 'github.com/zero-os/0-templates/peer_discovery/0.0.1'
 
 
 class BlockCreator(TemplateBase):
@@ -26,7 +27,6 @@ class BlockCreator(TemplateBase):
             self.data['walletPassphrase'] = j.data.idgenerator.generateGUID()
 
         self.recurring_action('_monitor', 30)  # every 30 seconds
-        #self.recurring_action('peer_discovery', 300) # every 5 minutes
 
 
     @property
@@ -159,6 +159,8 @@ class BlockCreator(TemplateBase):
                 container.state.check('actions', action, 'ok')
             except StateCheckError:
                 container.schedule_action(action).wait(die=True)
+
+
 
         self.state.set('actions', 'install', 'ok')
 
@@ -312,30 +314,6 @@ class BlockCreator(TemplateBase):
         return report
 
 
-    def peer_discovery(self, link=None):
-        """ Add new local peers 
-        
-            @link: network interface name
-        """
-
-        client = self._client_sal
-
-        peers = client.discover_local_peers(link=link, port=self.data['rpcPort'])
-
-        # shuffle list of peers
-        shuffle(peers)
-
-        # fetch list of connected peers
-        connected_peers = [addr['netaddress'] for addr in client.gateway_stat()['peers']]
-        
-        # add first disconnected     peer
-        for peer in peers:
-            if peer not in connected_peers:
-                [addr, port] = peer.split(':')
-                client.add_peer(addr, port)
-                return
-
-
     def _monitor(self):
         """ Unlock wallet if locked """
         self.state.check('actions', 'install', 'ok')
@@ -368,7 +346,27 @@ class BlockCreator(TemplateBase):
 
         self.install()
         self.start()
-    
+
+
+    def start_peer_discovery(self, interval=43200):
+        """ Create service for peer discovery
+        
+            :param interval: interval of network scanning in seconds. Defalt to 12 hours.
+        """
+
+        self.state.check('action', 'install', 'ok')
+
+        self.api.service.find_or_create(
+            template_uid=self.PEER_DISCOVERY_TEMPLATE_UID,
+            name='peer_discovery',
+            data = {
+                'node': self.data['node'],
+                'containerName': self._container_name,
+                'rpcPort': self.data['rpcPort'],
+                'apiPort': self.data['apiPort'],
+                'interval': interval,
+            })
+
 
     def create_backup(self, name=''):
         """
