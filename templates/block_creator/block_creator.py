@@ -9,7 +9,7 @@ from zerorobot.template.decorator import retry
 from zerorobot.template.state import StateCheckError
 
 CONTAINER_TEMPLATE_UID = 'github.com/zero-os/0-templates/container/0.0.1'
-PEER_DISCOVERY_TEMPLATE_UID = 'github.com/zero-os/0-templates/peer_discovery/0.0.1'
+PEER_DISCOVERY_TEMPLATE_UID = 'github.com/threefoldtoken/0-templates/peer_discovery/0.0.1'
 
 
 class BlockCreator(TemplateBase):
@@ -21,11 +21,17 @@ class BlockCreator(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
+
+        # bind uninstall action to the delete method
+        self.add_delete_callback(self.uninstall)        
         
         wallet_passphrase = self.data.get('walletPassphrase')
         if not wallet_passphrase:
             self.data['walletPassphrase'] = j.data.idgenerator.generateGUID()
 
+        # peer discovery service
+        self._discovery = None
+        
         self.recurring_action('_monitor', 30)  # every 30 seconds
 
 
@@ -160,8 +166,6 @@ class BlockCreator(TemplateBase):
             except StateCheckError:
                 container.schedule_action(action).wait(die=True)
 
-
-
         self.state.set('actions', 'install', 'ok')
 
 
@@ -185,6 +189,9 @@ class BlockCreator(TemplateBase):
         except ValueError:
                 # filesystem doesn't exist, nothing else to do
             pass
+
+        # stop discovery service if was started
+        self.stop_peer_discovery()
 
         self.state.delete('actions', 'install')
         self.state.delete('wallet', 'unlock')
@@ -348,25 +355,40 @@ class BlockCreator(TemplateBase):
         self.start()
 
 
-    def start_peer_discovery(self, interval=43200):
+    def start_peer_discovery(self, interval_scan_network=43200, interval_add_peer=1800):
         """ Create service for peer discovery
         
-            :param interval: interval of network scanning in seconds. Defalt to 12 hours.
+            :param interval_scan_network: interval of scanning network in seconds. 
+             Defalt interval is 24 hours.
+            :param interval_add_peer: interval between adding new peers in seconds. 
+             Default interval is 30 min.
         """
 
-        self.state.check('action', 'install', 'ok')
+        self.state.check('actions', 'install', 'ok')
+        
+        self.logger.info('start peer discovery')
 
-        self.api.service.find_or_create(
-            template_uid=self.PEER_DISCOVERY_TEMPLATE_UID,
-            name='peer_discovery',
+        # create a service for peer discovery
+        self._discovery = self.api.services.find_or_create(
+            template_uid=PEER_DISCOVERY_TEMPLATE_UID,
+            service_name='peer_discovery',
             data = {
                 'node': self.data['node'],
-                'containerName': self._container_name,
+                'container': self._container_name,
                 'rpcPort': self.data['rpcPort'],
                 'apiPort': self.data['apiPort'],
-                'interval': interval,
+                'intervalScanNetwork': interval_scan_network,
+                'intervalAddPeer': interval_add_peer,
             })
+        # install of the service will trigger recuring actions
+        # to scan network for peers and to add peers
+        self._discovery.schedule_action('install').wait(die=True)
 
+    def stop_peer_discovery(self):
+        """ Stop peer discovery """
+        if self._discovery:
+            self._discovery.delete()
+            self._discovery = None
 
     def create_backup(self, name=''):
         """
