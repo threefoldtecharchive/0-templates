@@ -23,7 +23,7 @@ class BlockCreator(TemplateBase):
         super().__init__(name=name, guid=guid, data=data)
 
         # bind uninstall action to the delete method
-        self.add_delete_callback(self.uninstall)        
+        #self.add_delete_callback(self.uninstall)        
         
         wallet_passphrase = self.data.get('walletPassphrase')
         if not wallet_passphrase:
