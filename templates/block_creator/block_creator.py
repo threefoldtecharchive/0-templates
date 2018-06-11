@@ -9,6 +9,7 @@ from zerorobot.template.decorator import retry
 from zerorobot.template.state import StateCheckError
 
 CONTAINER_TEMPLATE_UID = 'github.com/zero-os/0-templates/container/0.0.1'
+PEER_DISCOVERY_TEMPLATE_UID = 'github.com/threefoldtoken/0-templates/peer_discovery/0.0.1'
 
 
 class BlockCreator(TemplateBase):
@@ -20,13 +21,18 @@ class BlockCreator(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
+
+        # bind uninstall action to the delete method
+        self.add_delete_callback(self.uninstall)        
         
         wallet_passphrase = self.data.get('walletPassphrase')
         if not wallet_passphrase:
             self.data['walletPassphrase'] = j.data.idgenerator.generateGUID()
 
+        # peer discovery service
+        self._discovery = None
+        
         self.recurring_action('_monitor', 30)  # every 30 seconds
-        #self.recurring_action('peer_discovery', 300) # every 5 minutes
 
 
     @property
@@ -184,6 +190,9 @@ class BlockCreator(TemplateBase):
                 # filesystem doesn't exist, nothing else to do
             pass
 
+        # stop discovery service if was started
+        self.stop_peer_discovery()
+
         self.state.delete('actions', 'install')
         self.state.delete('wallet', 'unlock')
         self.state.delete('wallet', 'init')
@@ -312,30 +321,6 @@ class BlockCreator(TemplateBase):
         return report
 
 
-    def peer_discovery(self, link=None):
-        """ Add new local peers 
-        
-            @link: network interface name
-        """
-
-        client = self._client_sal
-
-        peers = client.discover_local_peers(link=link, port=self.data['rpcPort'])
-
-        # shuffle list of peers
-        shuffle(peers)
-
-        # fetch list of connected peers
-        connected_peers = [addr['netaddress'] for addr in client.gateway_stat()['peers']]
-        
-        # add first disconnected     peer
-        for peer in peers:
-            if peer not in connected_peers:
-                [addr, port] = peer.split(':')
-                client.add_peer(addr, port)
-                return
-
-
     def _monitor(self):
         """ Unlock wallet if locked """
         self.state.check('actions', 'install', 'ok')
@@ -368,7 +353,42 @@ class BlockCreator(TemplateBase):
 
         self.install()
         self.start()
-    
+
+
+    def start_peer_discovery(self, interval_scan_network=43200, interval_add_peer=1800):
+        """ Create service for peer discovery
+        
+            :param interval_scan_network: interval of scanning network in seconds. 
+             Defalt interval is 24 hours.
+            :param interval_add_peer: interval between adding new peers in seconds. 
+             Default interval is 30 min.
+        """
+
+        self.state.check('actions', 'install', 'ok')
+        
+        self.logger.info('start peer discovery')
+
+        # create a service for peer discovery
+        self._discovery = self.api.services.find_or_create(
+            template_uid=PEER_DISCOVERY_TEMPLATE_UID,
+            service_name='peer_discovery_of_{}'.format(self.name),
+            data = {
+                'node': self.data['node'],
+                'container': self._container_name,
+                'rpcPort': self.data['rpcPort'],
+                'apiPort': self.data['apiPort'],
+                'intervalScanNetwork': interval_scan_network,
+                'intervalAddPeer': interval_add_peer,
+            })
+        # install of the service will trigger recuring actions
+        # to scan network for peers and to add peers
+        self._discovery.schedule_action('install').wait(die=True)
+
+    def stop_peer_discovery(self):
+        """ Stop peer discovery """
+        if self._discovery:
+            self._discovery.delete()
+            self._discovery = None
 
     def create_backup(self, name=''):
         """
