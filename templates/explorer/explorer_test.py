@@ -36,7 +36,9 @@ class TestExplorerTemplate(TestCase):
             'domain': 'explorer.tft.com',
             'network': 'standard',
             'explorerFlist': 'https://hub.gig.tech/tfchain/caddy-explorer-latest.flist',
-            'tfchainFlist': 'https://hub.gig.tech/tfchain/ubuntu-16.04-tfchain-latest.flist'
+            'tfchainFlist': 'https://hub.gig.tech/tfchain/ubuntu-16.04-tfchain-latest.flist',
+            'macAddress': '',
+            'parentInterface': '',
         }
         config.DATA_DIR = tempfile.mkdtemp(prefix='0-templates_')
         config.DATA_DIR = tempfile.mkdtemp(prefix='0-templates_')
@@ -102,7 +104,7 @@ class TestExplorerTemplate(TestCase):
         explorer = self.type(name='explorer', data=self.valid_data)
         explorer.api.services.find_or_create = MagicMock()
         explorer._explorer_sal.start = MagicMock()
-        explorer._node_sal.client.nft.open_port = MagicMock()
+        explorer._node_sal.client.ip.route.list = MagicMock(return_value=[{'gw': str, 'dev':str}])
         fs = MagicMock(path='/var/cache')
         sp = MagicMock()
         sp.get = MagicMock(return_value=fs)
@@ -121,8 +123,17 @@ class TestExplorerTemplate(TestCase):
                 {'source': 'https://hub.gig.tech/tfchain/caddy-explorer-latest.flist',
                 'target': '/mnt/explorer'}
             ],
-            'ports': ['80:80', '443:443'],
         }
+
+        container_data = {
+            'mounts': [
+                {'source': '/var/cache/explorer', 'target': '/mnt/data'},
+                {'source': '/var/cache/caddy-certs', 'target': '/.caddy'},
+                {'source': 'https://hub.gig.tech/tfchain/caddy-explorer-latest.flist', 'target': '/mnt/explorer'}
+                ],
+                'node': 'node', 'nics': [{'type': 'macvlan', 'config': {'dhcp': True}, 'id': str, 'name': 'stoffel'}], 
+                'flist': 'https://hub.gig.tech/tfchain/ubuntu-16.04-tfchain-latest.flist'
+            }
         explorer.api.services.find_or_create.assert_called_once_with(
             'github.com/zero-os/0-templates/container/0.0.1',
             explorer._container_name,
@@ -145,7 +156,7 @@ class TestExplorerTemplate(TestCase):
         explorer.api.services.find_or_create = MagicMock()
         explorer._node_sal.client.nft.open_port = MagicMock()
         explorer._explorer_sal.start = MagicMock()
-
+        explorer.data['parentInterface'] = str
         explorer.start()
 
         explorer.state.check('actions', 'start', 'ok')
