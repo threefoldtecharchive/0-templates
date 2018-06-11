@@ -371,7 +371,7 @@ class BlockCreator(TemplateBase):
         # create a service for peer discovery
         self._discovery = self.api.services.find_or_create(
             template_uid=PEER_DISCOVERY_TEMPLATE_UID,
-            service_name='peer_discovery',
+            service_name='peer_discovery_of_{}'.format(self.name),
             data = {
                 'node': self.data['node'],
                 'container': self._container_name,
