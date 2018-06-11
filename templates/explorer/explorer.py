@@ -47,6 +47,9 @@ class Explorer(TemplateBase):
         }
         return j.clients.zero_os.sal.tfchain.explorer(**kwargs)
 
+    def set_mac_address(self, mac_address):
+        self.data['macAddress'] = mac_address
+
     def _get_container(self):
         sp = self._node_sal.storagepools.get('zos-cache')
         try:
@@ -69,14 +72,28 @@ class Explorer(TemplateBase):
              'target': '/mnt/explorer'}
         ]
 
+        parent_if = self.data.get("parentInterface")
+        if not parent_if:
+            candidates = list()
+            for route in self._node_sal.client.ip.route.list():
+                if route['gw']:
+                    candidates.append(route)
+            if not candidates:
+                raise RuntimeError("Could not find interface for macvlan parent")
+            elif len(candidates) > 1:
+                raise RuntimeError("Found multiple eligible interfaces for macvlan parent: %s" % ", ".join(c['dev'] for c in candidates))
+            parent_if = candidates[0]['dev']
+
+        nic = {'type': 'macvlan', 'id': parent_if, 'name': 'stoffel', 'config': { 'dhcp': True }}
+        if self.data['macAddress']:
+            nic['hwaddr'] = self.data['macAddress']
+
         container_data = {
             'flist': self.data['tfchainFlist'],
             'node': self.data['node'],
-            'nics': [{'type': 'default'}],
+            'nics': [nic],
             'mounts': mounts,
-            'ports': ['80:80', '443:443'],
         }
-
         return self.api.services.find_or_create(CONTAINER_TEMPLATE_UID, self._container_name, data=container_data)
 
     def install(self):

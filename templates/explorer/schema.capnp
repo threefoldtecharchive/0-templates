@@ -8,5 +8,6 @@ struct Schema {
     network @4: Text="standard"; # network to join
     tfchainFlist @5: Text="https://hub.gig.tech/tfchain/ubuntu-16.04-tfchain-latest.flist"; # flist to use for tfchain
     explorerFlist @6: Text="https://hub.gig.tech/tfchain/caddy-explorer-latest.flist"; # flist to use for explorer
-
+    macAddress @7: Text; # mac address for the macvlan interface
+    parentInterface @8: Text="";     # parent interface for macvlan, if not set then discovered automatically
 }
