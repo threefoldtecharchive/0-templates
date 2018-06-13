@@ -25,4 +25,7 @@ struct Schema {
  
     # parent interface for macvlan, if not set then discovered automatically
     parentInterface @8: Text=""; 
+
+    # mac address for the macvlan interface
+    macAddress @9: Text=""; 
 }

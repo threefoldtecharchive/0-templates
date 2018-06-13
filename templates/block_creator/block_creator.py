@@ -112,10 +112,13 @@ class BlockCreator(TemplateBase):
                 raise RuntimeError("Found multiple eligible interfaces for macvlan parent: %s" % ", ".join(c['dev'] for c in candidates))
             parent_if = candidates[0]['dev']
 
+        nic = {'type': 'macvlan', 'id': parent_if, 'name': 'stoffel', 'config': { 'dhcp': True }}
+        if self.data['macAddress']:
+            nic['hwaddr'] = self.data['macAddress']
         container_data = {
             'flist': self.data['tfchainFlist'],
             'node': self.data['node'],
-            'nics': [{'type': 'macvlan', 'id': parent_if, 'name': 'stoffel', 'config': { 'dhcp': True }}],
+            'nics': [nic],
             'mounts': mounts
         }
         return self.api.services.find_or_create(CONTAINER_TEMPLATE_UID, self._container_name, data=container_data)
