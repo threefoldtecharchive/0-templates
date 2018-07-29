@@ -4,13 +4,13 @@ set -e
 # settings
 export BRANCH="development"
 
-for target in /usr/local /opt /opt/cfg /opt/code/github/jumpscale /opt/var/capnp /opt/var/log $HOME/js9host/cfg; do
+for target in /usr/local /opt /opt/cfg /opt/code/github/threefoldtech /opt/var/capnp /opt/var/log $HOME/js9host/cfg; do
     mkdir -p $target
     sudo chown -R $USER:$USER $target
 done
 
 
-pushd /opt/code/github/jumpscale
+pushd /opt/code/github/threefoldtech
 
 # cloning source code
 for target in core9 lib9; do
