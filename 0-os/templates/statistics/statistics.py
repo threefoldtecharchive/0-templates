@@ -1,10 +1,8 @@
 import os
 import datetime
-import json
 from js9 import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
-from zerorobot.template.decorator import retry
 from zerorobot.template.state import StateCheckError
 from zerorobot.template.decorator import timeout
 
@@ -25,7 +23,7 @@ class Statistics(TemplateBase):
         return self._node_            
 
     def install(self):
-        db=j.clients.influxdb.get(self.data['instanceName'],create=False)
+        db=j.clients.influxdb.get(self.data['influxdbClient'],create=False)
         dbs =db.config
         if dbs.data['database'] != 'statistics':
             db.create_database('statistics')
@@ -43,7 +41,7 @@ class Statistics(TemplateBase):
         stats_task = self._node.schedule_action('stats')
             # Gather stats info
         stats_task.wait(die=True)      
-        db=j.clients.influxdb.get(self.data['instanceName'],create=False)
+        db=j.clients.influxdb.get(self.data['influxdbClient'],create=False)
         current_date= datetime.datetime.now()
         for _, stat in stats_task.result.items():
             points = stat['history']['300']

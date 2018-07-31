@@ -16,7 +16,7 @@ class TestStatisticsTemplate(ZrobotBaseTest):
     def setUpClass(cls):
         super().preTest(os.path.dirname(__file__), Statistics)
         cls.data = {
-            'instanceName': 'influxdb_test'
+            'influxdbClient': 'influxdb_test'
         }
 
     def setUp(self):
