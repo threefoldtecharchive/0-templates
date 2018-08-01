@@ -1,4 +1,4 @@
-from js9 import j
+from jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 
@@ -37,7 +37,7 @@ class Gateway(TemplateBase):
 
     @property
     def _node_sal(self):
-        return j.clients.zos.sal.get_node(NODE_CLIENT)
+        return j.sal_zos.node.get(NODE_CLIENT)
 
     @property
     def _gateway_sal(self):

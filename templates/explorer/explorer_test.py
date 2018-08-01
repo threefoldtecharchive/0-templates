@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from js9 import j
+from jumpscale import j
 #from explorer import Explorer, CONTAINER_TEMPLATE_UID
 from zerorobot import service_collection as scol
 from zerorobot import config, template_collection
@@ -54,7 +54,7 @@ class TestExplorerTemplate(TestCase):
             shutil.rmtree(config.DATA_DIR)
 
     def setUp(self):
-        self.client_get = patch('js9.j.clients', MagicMock()).start()
+        self.client_get = patch('jumpscale.j.clients', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()
@@ -91,7 +91,7 @@ class TestExplorerTemplate(TestCase):
         """
         Test node_sal property
         """
-        get_node = patch('js9.j.clients.zero_os.sal.get_node', MagicMock(return_value='node_sal')).start()
+        get_node = patch('jumpscale.j.clients.zero_os.sal.get_node', MagicMock(return_value='node_sal')).start()
         explorer = self.type(name='explorer', data=self.valid_data)
         node_sal = explorer._node_sal
         get_node.assert_called_with(explorer.data['node'])
@@ -135,7 +135,7 @@ class TestExplorerTemplate(TestCase):
                 'flist': 'https://hub.gig.tech/tfchain/ubuntu-16.04-tfchain-latest.flist'
             }
         explorer.api.services.find_or_create.assert_called_once_with(
-            'github.com/zero-os/0-templates/container/0.0.1',
+            'github.com/threefoldtech/0-templates/container/0.0.1',
             explorer._container_name,
             data=container_data
             )
@@ -355,7 +355,7 @@ class TestExplorerTemplate(TestCase):
 
         explorer.state.check('status', 'running', 'ok')
         explorer.api.services.get.assert_called_with(
-            template_uid='github.com/zero-os/0-templates/container/0.0.1', 
+            template_uid='github.com/threefoldtech/0-templates/container/0.0.1', 
             name=explorer._container_name
         )
         container.delete.assert_called_once_with()

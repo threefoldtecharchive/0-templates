@@ -7,7 +7,7 @@ import pytest
 from gateway import Gateway, NODE_CLIENT
 from zerorobot.template.state import StateCheckError
 
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest
+from JumpscaleZrobot.test.utils import ZrobotBaseTest
 
 
 class TestGatewayTemplate(ZrobotBaseTest):
@@ -27,7 +27,7 @@ class TestGatewayTemplate(ZrobotBaseTest):
             'certificates': [],
             'ztIdentity': '',
         }
-        patch('js9.j.clients.zos.sal', MagicMock()).start()
+        patch('jumpscale.j.sal_zos', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()
@@ -41,7 +41,7 @@ class TestGatewayTemplate(ZrobotBaseTest):
         """
         Test _node_sal property
         """
-        get_node = patch('js9.j.clients.zos.sal.get_node', MagicMock(return_value='node_sal')).start()
+        get_node = patch('jumpscale.j.sal_zos.node.get', MagicMock(return_value='node_sal')).start()
         gw = Gateway('gw', data=self.valid_data)
 
         assert gw._node_sal == 'node_sal'

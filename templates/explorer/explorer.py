@@ -1,4 +1,4 @@
-from js9 import j
+from jumpscale import j
 import os
 import time
 from zerorobot.template.base import TemplateBase
@@ -6,7 +6,7 @@ from zerorobot.template.state import StateCheckError
 from zerorobot.service_collection import ServiceNotFoundError
 
 
-CONTAINER_TEMPLATE_UID = 'github.com/zero-os/0-templates/container/0.0.1'
+CONTAINER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/container/0.0.1'
 
 
 class Explorer(TemplateBase):

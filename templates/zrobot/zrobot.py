@@ -1,12 +1,12 @@
 import os
 
-from js9 import j
+from jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 from zerorobot.service_collection import ServiceNotFoundError
 
 FLIST_ZROBOT_DEFAULT = 'https://hub.gig.tech/gig-official-apps/zero-os-0-robot-latest.flist'
-CONTAINER_TEMPLATE = 'github.com/zero-os/0-templates/container/0.0.1'
+CONTAINER_TEMPLATE = 'github.com/threefoldtech/0-templates/container/0.0.1'
 NODE_CLIENT = 'local'
 
 
@@ -29,7 +29,7 @@ class Zrobot(TemplateBase):
     
     @property
     def node_sal(self):
-        return j.clients.zos.sal.get_node(NODE_CLIENT)
+        return j.sal_zos.node.get(NODE_CLIENT)
 
     @property
     def _container_name(self):
@@ -82,7 +82,7 @@ class Zrobot(TemplateBase):
             {'source': ssh_vol,
              'target': '/root/.ssh'},
             {'source': jsconfig_vol,
-             'target': '/root/js9host/cfg'},
+             'target': '/root/jumpscalehost/cfg'},
             {'source': data_vol,
              'target': '/opt/var/data/zrobot/zrobot_data'},
             {'source': '/var/run/redis.sock',  # mount zero-os redis socket into container, so the robot can talk to the os directly
@@ -100,7 +100,7 @@ class Zrobot(TemplateBase):
     def zrobot_sal(self):
         container_sal = self.node_sal.containers.get(self._container_name)
         interval = self.data.get('autoPushInterval') or None
-        return j.clients.zos.sal.get_zerorobot(
+        return j.sal_zos.zrobot.get(
             container=container_sal,
             port=6600,
             template_repos=self.data['templates'],

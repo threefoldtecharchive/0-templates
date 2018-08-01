@@ -3,13 +3,13 @@ import math
 import time
 import requests
 
-from js9 import j
+from jumpscale import j
 
 from zerorobot.template.base import TemplateBase
 
-VM_TEMPLATE_UID = 'github.com/jumpscale/digital_me/vm/0.0.1'
-MINIO_TEMPLATE_UID = 'github.com/zero-os/0-templates/minio/0.0.1'
-NS_TEMPLATE_UID = 'github.com/zero-os/0-templates/namespace/0.0.1'
+VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/dm_vm/0.0.1'
+MINIO_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/minio/0.0.1'
+NS_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/namespace/0.0.1'
 
 
 class S3(TemplateBase):

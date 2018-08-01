@@ -6,7 +6,7 @@ from vdisk import Vdisk
 from zerorobot.template.state import StateCheckError
 from zerorobot.service_collection import ServiceNotFoundError
 
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest, task_mock
+from JumpscaleZrobot.test.utils import ZrobotBaseTest, task_mock
 
 
 class TestVdiskTemplate(ZrobotBaseTest):
@@ -25,7 +25,7 @@ class TestVdiskTemplate(ZrobotBaseTest):
         }
 
     def setUp(self):
-        patch('js9.j.clients.zos.sal', MagicMock()).start()
+        patch('jumpscale.j.sal_zos', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()

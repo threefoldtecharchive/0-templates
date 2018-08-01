@@ -2,13 +2,13 @@ import os
 import time
 from random import shuffle
 
-from js9 import j
+from jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry
 from zerorobot.template.state import StateCheckError
 
-CONTAINER_TEMPLATE_UID = 'github.com/zero-os/0-templates/container/0.0.1'
+CONTAINER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/container/0.0.1'
 PEER_DISCOVERY_TEMPLATE_UID = 'github.com/threefoldtoken/0-templates/peer_discovery/0.0.1'
 
 

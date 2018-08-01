@@ -4,9 +4,9 @@ import os
 import pytest
 
 from erp_registeration import ErpRegisteration
-from js9 import j
+from jumpscale import j
 
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest
+from JumpscaleZrobot.test.utils import ZrobotBaseTest
 
 
 class TestErpRegisterationTemplate(ZrobotBaseTest):
@@ -66,7 +66,7 @@ class TestErpRegisterationTemplate(ZrobotBaseTest):
         """
         Test _get_erp_client
         """
-        client_get = patch('js9.j.clients.erppeek.get', MagicMock()).start()
+        client_get = patch('jumpscale.j.clients.erppeek.get', MagicMock()).start()
         erp = ErpRegisteration(name='erp', data=self.valid_data)
         erp._get_erp_client()
         data = {
@@ -82,7 +82,7 @@ class TestErpRegisterationTemplate(ZrobotBaseTest):
         Test _get_bot_client
         :return:
         """
-        client_get = patch('js9.j.clients.telegram_bot.get', MagicMock()).start()
+        client_get = patch('jumpscale.j.clients.telegram_bot.get', MagicMock()).start()
         erp = ErpRegisteration(name='erp', data=self.valid_data)
         erp._get_bot_client()
         data = {

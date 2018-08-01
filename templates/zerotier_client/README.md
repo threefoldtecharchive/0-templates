@@ -1,4 +1,4 @@
-## template: github.com/zero-os/0-templates/zerotier_client/0.0.1
+## template: github.com/threefoldtech/0-templates/zerotier_client/0.0.1
 
 ### Description:
 This template is responsible for configuring the zerotier client on jumpscale. Initializing a service from this templates creates a client with the correct configuration.
@@ -29,7 +29,7 @@ robot = j.clients.zrobot.robots['local']
 args = {
     'token': 'Ximdhaua',
 }
-zt = robot.services.create('github.com/zero-os/0-templates/zerotier_client/0.0.1', 'client', args)
+zt = robot.services.create('github.com/threefoldtech/0-templates/zerotier_client/0.0.1', 'client', args)
 zt.schedule_action('delete')
 ```
 
@@ -39,7 +39,7 @@ To create zerotier_client `client`:
 
 ```yaml
 services:
-    - github.com/zero-os/0-templates/zerotier_client/0.0.1__client:
+    - github.com/threefoldtech/0-templates/zerotier_client/0.0.1__client:
           token: 'Ximdhaua'
 ```
 
@@ -47,7 +47,7 @@ to delete zerotier_client `client`:
 
 ```yaml
 actions:
-    - template: 'github.com/zero-os/0-templates/zerotier_client/0.0.1'
+    - template: 'github.com/threefoldtech/0-templates/zerotier_client/0.0.1'
       service: 'client'
       actions: ['delete']
 ```

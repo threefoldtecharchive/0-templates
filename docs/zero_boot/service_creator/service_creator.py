@@ -2,7 +2,7 @@ import sys
 import csv
 from argparse import ArgumentParser
 
-from js9 import j
+from jumpscale import j
 
 def main(argv):
     parser = ArgumentParser()

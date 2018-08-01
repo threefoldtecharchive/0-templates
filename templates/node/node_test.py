@@ -6,7 +6,7 @@ import pytest
 from node import Node, NODE_CLIENT
 from zerorobot.template.state import StateCheckError
 
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest, mock_decorator
+from JumpscaleZrobot.test.utils import ZrobotBaseTest, mock_decorator
 
 
 patch("zerorobot.template.decorator.timeout", MagicMock(return_value=mock_decorator)).start()
@@ -21,7 +21,7 @@ class TestNodeTemplate(ZrobotBaseTest):
         super().preTest(os.path.dirname(__file__), Node)
 
     def setUp(self):
-        self.client_get = patch('js9.j.clients', MagicMock()).start()
+        self.client_get = patch('jumpscale.j.clients', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()
@@ -30,7 +30,7 @@ class TestNodeTemplate(ZrobotBaseTest):
         """
         Test node_sal property
         """
-        get_node = patch('js9.j.clients.zos.sal.get_node', MagicMock(return_value='node_sal')).start()
+        get_node = patch('jumpscale.j.sal_zos.node.get', MagicMock(return_value='node_sal')).start()
         node = Node(name='node')
         node_sal = node.node_sal
         get_node.assert_called_with(NODE_CLIENT)

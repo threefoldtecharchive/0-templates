@@ -1,4 +1,4 @@
-## template: github.com/zero-os/0-templates/zerodb/0.0.1
+## template: github.com/threefoldtech/0-templates/zerodb/0.0.1
 
 ### Description:
 This template is responsible for managing 0-db.
@@ -61,7 +61,7 @@ args = {
     'mode': 'user',
     'admin': 'password',
 }
-zdb = robot.services.create('github.com/zero-os/0-templates/zerodb/0.0.1', 'zerodb1', data=args)
+zdb = robot.services.create('github.com/threefoldtech/0-templates/zerodb/0.0.1', 'zerodb1', data=args)
 zdb.schedule_action('install')
 
 zdb.schedule_action('start')
@@ -81,14 +81,14 @@ To install zerodb `zerodb1`:
 
 ```yaml
 services:
-    - github.com/zero-os/0-templates/zerodb/0.0.1__zerodb1:
+    - github.com/threefoldtech/0-templates/zerodb/0.0.1__zerodb1:
           sync: True
           mode: 'user'
           admin: 'password'
           path: '/mnt/data/'
           
 actions:
-    - template: 'github.com/zero-os/0-templates/zerodb/0.0.1'
+    - template: 'github.com/threefoldtech/0-templates/zerodb/0.0.1'
       service: 'zerodb1'
       actions: ['install']
 
@@ -99,7 +99,7 @@ To start  zerodb `zerodb1`:
 
 ```yaml
 actions:
-    - template: 'github.com/zero-os/0-templates/zerodb/0.0.1'
+    - template: 'github.com/threefoldtech/0-templates/zerodb/0.0.1'
       service: 'zerodb1'
       actions: ['start']
 
@@ -110,7 +110,7 @@ To stop  zerodb `zerodb1`:
 
 ```yaml
 actions:
-    - template: 'github.com/zero-os/0-templates/zerodb/0.0.1'
+    - template: 'github.com/threefoldtech/0-templates/zerodb/0.0.1'
       service: 'zerodb1'
       actions: ['stop']
 

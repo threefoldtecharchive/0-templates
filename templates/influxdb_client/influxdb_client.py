@@ -1,5 +1,5 @@
 
-from js9 import j
+from jumpscale import j
 from zerorobot.template.base import TemplateBase
 
 class InfluxdbClient(TemplateBase):

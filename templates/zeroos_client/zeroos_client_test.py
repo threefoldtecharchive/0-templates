@@ -5,7 +5,7 @@ import pytest
 
 from zeroos_client import ZeroosClient
 
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest
+from JumpscaleZrobot.test.utils import ZrobotBaseTest
 
 
 class TestZeroosClientTemplate(ZrobotBaseTest):
@@ -24,8 +24,8 @@ class TestZeroosClientTemplate(ZrobotBaseTest):
         }
 
     def setUp(self):
-        self.list = patch('js9.j.clients.zos.list', MagicMock(return_value=[])).start()
-        self.get = patch('js9.j.clients.zos.get', MagicMock()).start()
+        self.list = patch('jumpscale.j.clients.zos.list', MagicMock(return_value=[])).start()
+        self.get = patch('jumpscale.j.clients.zos.get', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()
@@ -36,7 +36,7 @@ class TestZeroosClientTemplate(ZrobotBaseTest):
             ZeroosClient(name="zos", data={'host': '', 'unixSocket': '', 'port': ''})
 
     def test_create(self):
-        get = patch('js9.j.clients.zos.get', MagicMock()).start()
+        get = patch('jumpscale.j.clients.zos.get', MagicMock()).start()
         ZeroosClient(name="zos", data=self.valid_data)
         client_data = {
             'host': self.valid_data['host'],
@@ -52,13 +52,13 @@ class TestZeroosClientTemplate(ZrobotBaseTest):
         get.assert_called_with("zos", data=client_data)
 
     def test_create_already_exists(self):
-        patch('js9.j.clients.zos.list', MagicMock(return_value=['zos'])).start()
+        patch('jumpscale.j.clients.zos.list', MagicMock(return_value=['zos'])).start()
         ZeroosClient(name='zos', data=self.valid_data)
 
         assert self.get.called is False
 
     def test_delete(self):
-        delete = patch('js9.j.clients.zos.delete', MagicMock()).start()
+        delete = patch('jumpscale.j.clients.zos.delete', MagicMock()).start()
         service = ZeroosClient(name='zos', data=self.valid_data)
         service.delete()
 

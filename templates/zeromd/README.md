@@ -33,7 +33,7 @@ services:
           - node2
           - node3
 
-    - github.com/zero-os/0-templates/zeromd/0.0.1__zeromd:
+    - github.com/threefoldtech/0-templates/zeromd/0.0.1__zeromd:
         node: node
         port: 666
         ardb.cluster: 'ardbcluster'

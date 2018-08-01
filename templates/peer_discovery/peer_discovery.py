@@ -1,6 +1,6 @@
 from random import shuffle
 
-from js9 import j
+from jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 
