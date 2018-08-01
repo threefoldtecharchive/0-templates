@@ -11,7 +11,7 @@ class InfluxdbClient(TemplateBase):
 
     def install(self):
         self.influxdb = j.clients.influxdb.get(
-            instance = self.data['instanceName'],
+            self.name,
             data={
             'host' : self.data['host'],
             'password':self.data['passwd'],
@@ -22,5 +22,5 @@ class InfluxdbClient(TemplateBase):
         self.state.set('actions', 'install', 'ok')
 
     def delete(self):
-        self.influxdb = j.clients.influxdb.delete(self.data['instanceName'])
+        self.influxdb = j.clients.influxdb.delete(self.name)
         self.state.delete('actions', 'install')

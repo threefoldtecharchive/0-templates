@@ -4,7 +4,7 @@
 This template is responsible for get statistics of node then add it in InfluxDB to Visualization in grafana
 ### Schema:
 
-- `influxdbClient`: instance name that created from influxdb_Client template .
+- `influxdbClient`: instance name that created from influxdb_Client template (the name of the service itself).
 
 ### Actions
 - `install`: get the reporting every 5 minutes

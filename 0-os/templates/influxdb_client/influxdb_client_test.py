@@ -15,7 +15,6 @@ class TestInfluxdbClientTemplate(ZrobotBaseTest):
     def setUpClass(cls):
         super().preTest(os.path.dirname(__file__), InfluxdbClient)
         cls.data = {
-            'instanceName': 'main',
             'host': 'localhost',
             'port': '8086',
             'login': 'root',
