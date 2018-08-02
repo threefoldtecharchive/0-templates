@@ -37,7 +37,7 @@ class BlockCreator(TemplateBase):
 
     @property
     def _node_sal(self):
-        return j.clients.zero_os.sal.get_node(self.data['node'])
+        return j.sal_zos.node.get(self.data['node'])
 
 
     @property
@@ -60,7 +60,7 @@ class BlockCreator(TemplateBase):
             'data_dir': self._DATA_DIR,
             'network': self.data.get('network', 'standard')
         }
-        return j.clients.zero_os.sal.tfchain.daemon(**kwargs)
+        return j.sal_zos.tfchain.get().daemon(**kwargs)
 
 
     @property
@@ -71,7 +71,7 @@ class BlockCreator(TemplateBase):
             'api_addr': 'localhost:%s' % self.data['apiPort'],
             'wallet_passphrase': self.data['walletPassphrase'],
         }
-        return j.clients.zero_os.sal.tfchain.client(**kwargs)
+        return j.sal_zos.tfchain.get().client(**kwargs)
 
 
     def _get_container(self):

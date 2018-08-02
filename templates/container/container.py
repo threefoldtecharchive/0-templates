@@ -34,7 +34,7 @@ class Container(TemplateBase):
 
     def install(self):
         # convert "src:dst" to {src:dst}
-        ports = j.sal_zos.format_ports(self.data['ports'])
+        ports = j.sal_zos.utils.get().format_ports(self.data['ports'])
 
         mounts = {}
         for mount in self.data['mounts']:

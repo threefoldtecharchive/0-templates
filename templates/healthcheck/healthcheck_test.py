@@ -14,7 +14,7 @@ class TestHealthcheckTemplate(ZrobotBaseTest):
         cls.valid_data = {'node': 'node', 'alerta': ['alerta']}
 
     def setUp(self):
-        patch('jumpscale.j.clients', MagicMock()).start()
+        patch('jumpscale.j.sal_zos', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()

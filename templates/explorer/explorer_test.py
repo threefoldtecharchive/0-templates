@@ -7,12 +7,13 @@ import os
 import pytest
 
 from jumpscale import j
-#from explorer import Explorer, CONTAINER_TEMPLATE_UID
+from explorer import Explorer, CONTAINER_TEMPLATE_UID
 from zerorobot import service_collection as scol
 from zerorobot import config, template_collection
 from zerorobot.template_uid import TemplateUID
 from zerorobot.template.state import StateCheckError
 
+from JumpscaleZrobot.test.utils import ZrobotBaseTest
 
 def mockdecorator(func):
     def wrapper(*args, **kwargs):
@@ -25,10 +26,11 @@ patch("zerorobot.template.decorator.retry", MagicMock(return_value=mockdecorator
 patch("gevent.sleep", MagicMock()).start()
 
 
-class TestExplorerTemplate(TestCase):
+class TestExplorerTemplate(ZrobotBaseTest):
 
     @classmethod
     def setUpClass(cls):
+        super().preTest(os.path.dirname(__file__), Explorer)
         cls.valid_data = {
             'node': 'node',
             'rpcPort': 23112,
@@ -40,21 +42,9 @@ class TestExplorerTemplate(TestCase):
             'macAddress': '',
             'parentInterface': '',
         }
-        config.DATA_DIR = tempfile.mkdtemp(prefix='0-templates_')
-        config.DATA_DIR = tempfile.mkdtemp(prefix='0-templates_')
-        cls.type = template_collection._load_template(
-            "https://github.com/threefoldtoken/0-templates",
-            os.path.dirname(__file__)
-        )
-        #Explorer.template_uid = TemplateUID.parse('github.com/threefoldtoken/0-templates/%s/%s' % (Explorer.template_name, Explorer.version))
-
-    @classmethod
-    def tearDownClass(cls):
-        if os.path.exists(config.DATA_DIR):
-            shutil.rmtree(config.DATA_DIR)
 
     def setUp(self):
-        self.client_get = patch('jumpscale.j.clients', MagicMock()).start()
+        patch('jumpscale.j.sal_zos', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()
@@ -65,14 +55,14 @@ class TestExplorerTemplate(TestCase):
         """
         with pytest.raises(ValueError,
                            message='template should fail to instantiate if data dict is missing the domain'):
-            explorer = self.type(name='explorer')
+            explorer = Explorer(name='explorer')
             explorer.validate()
 
     def test_create_with_valid_data(self):
         """
         Test create explorer service
         """
-        explorer = self.type(name='explorer', data=self.valid_data)
+        explorer = Explorer(name='explorer', data=self.valid_data)
         explorer.validate()
         assert explorer.data == self.valid_data
 
@@ -82,7 +72,7 @@ class TestExplorerTemplate(TestCase):
         """
         valid_data = self.valid_data.copy()
         valid_data['network'] = 'testnet'
-        explorer = self.type(name='explorer', data=valid_data)
+        explorer = Explorer(name='explorer', data=valid_data)
         explorer.validate()
 
         assert explorer.data == valid_data
@@ -91,8 +81,8 @@ class TestExplorerTemplate(TestCase):
         """
         Test node_sal property
         """
-        get_node = patch('jumpscale.j.clients.zero_os.sal.get_node', MagicMock(return_value='node_sal')).start()
-        explorer = self.type(name='explorer', data=self.valid_data)
+        get_node = patch('jumpscale.j.sal_zos.node.get', MagicMock(return_value='node_sal')).start()
+        explorer = Explorer(name='explorer', data=self.valid_data)
         node_sal = explorer._node_sal
         get_node.assert_called_with(explorer.data['node'])
         assert node_sal == 'node_sal'
@@ -101,7 +91,7 @@ class TestExplorerTemplate(TestCase):
         """
         Test node install
         """
-        explorer = self.type(name='explorer', data=self.valid_data)
+        explorer = Explorer(name='explorer', data=self.valid_data)
         explorer.api.services.find_or_create = MagicMock()
         explorer._explorer_sal.start = MagicMock()
         explorer._node_sal.client.ip.route.list = MagicMock(return_value=[{'gw': str, 'dev':str}])
@@ -146,12 +136,15 @@ class TestExplorerTemplate(TestCase):
     def test_start_not_installed(self):
         with pytest.raises(StateCheckError,
                            message='start action should raise an error if explorer is not installed'):
-            explorer = self.type(name='explorer', data=self.valid_data)
+            explorer = Explorer(name='explorer', data=self.valid_data)
             explorer.start()
 
     def test_start_installed(self):
-        explorer = self.type(name='explorer', data=self.valid_data)
-
+        explorer = Explorer(name='explorer', data=self.valid_data)
+        fs = MagicMock(path='/var/cache')
+        sp = MagicMock()
+        sp.get = MagicMock(return_value=fs)
+        explorer._node_sal.storagepools.get = MagicMock(return_value=sp)
         explorer.state.set('actions', 'install', 'ok')
         explorer.api.services.find_or_create = MagicMock()
         explorer._node_sal.client.nft.open_port = MagicMock()
@@ -166,7 +159,7 @@ class TestExplorerTemplate(TestCase):
         explorer._explorer_sal.start.assert_called_once_with()
 
     def test_uninstall(self):
-        explorer = self.type(name='explorer', data=self.valid_data)
+        explorer = Explorer(name='explorer', data=self.valid_data)
 
         container = MagicMock()
         container.schedule_action = MagicMock()
@@ -193,7 +186,7 @@ class TestExplorerTemplate(TestCase):
         container.delete.assert_called_once_with()
 
     def test_uninstall_container_not_exists(self):
-        explorer = self.type(name='explorer', data=self.valid_data)
+        explorer = Explorer(name='explorer', data=self.valid_data)
 
         explorer.stop = MagicMock(side_effect=LookupError)
         explorer.api.services.find_or_create = MagicMock()
@@ -214,7 +207,7 @@ class TestExplorerTemplate(TestCase):
         fs.assert_not_called()
 
     def test_stop(self):
-        explorer = self.type(name='explorer', data=self.valid_data)
+        explorer = Explorer(name='explorer', data=self.valid_data)
 
         explorer.state.set('actions', 'install', 'ok')
 
@@ -239,7 +232,7 @@ class TestExplorerTemplate(TestCase):
         container.delete.assert_not_called()
 
     def test_stop_container_not_exists(self):
-        explorer = self.type(name='explorer', data=self.valid_data)
+        explorer = Explorer(name='explorer', data=self.valid_data)
 
         explorer.state.set('actions', 'install', 'ok')
 
@@ -264,7 +257,7 @@ class TestExplorerTemplate(TestCase):
         container.delete.assert_not_called()
 
     def test_upgrade(self):
-        explorer = self.type(name='explorer', data=self.valid_data)
+        explorer = Explorer(name='explorer', data=self.valid_data)
         explorer.stop = MagicMock()
         explorer.start = MagicMock()
 
@@ -274,7 +267,7 @@ class TestExplorerTemplate(TestCase):
         explorer.start.assert_called_once_with()
 
     def test_consensus_stat(self):
-        explorer = self.type(name='explorer', data=self.valid_data)
+        explorer = Explorer(name='explorer', data=self.valid_data)
         explorer.state.set('status', 'running', 'ok')
 
         explorer._explorer_sal.consensus_stat = MagicMock()
@@ -284,7 +277,7 @@ class TestExplorerTemplate(TestCase):
         explorer._explorer_sal.consensus_stat.assert_called_once_with()
 
     def test_consensus_stat_not_running(self):
-        explorer = self.type(name='explorer', data=self.valid_data)
+        explorer = Explorer(name='explorer', data=self.valid_data)
 
         explorer._explorer_sal.consensus_stat = MagicMock()
 
@@ -294,7 +287,7 @@ class TestExplorerTemplate(TestCase):
         explorer._explorer_sal.consensus_stat.assert_not_called()
 
     def test_gateway(self):
-        explorer = self.type(name='explorer', data=self.valid_data)
+        explorer = Explorer(name='explorer', data=self.valid_data)
         explorer.state.set('status', 'running', 'ok')
 
         explorer._explorer_sal.gateway_stat = MagicMock()
@@ -304,7 +297,7 @@ class TestExplorerTemplate(TestCase):
         explorer._explorer_sal.gateway_stat.assert_called_once_with()
 
     def test_gateway_not_running(self):
-        explorer = self.type(name='explorer', data=self.valid_data)
+        explorer = Explorer(name='explorer', data=self.valid_data)
 
         explorer._explorer_sal.gateway_stat = MagicMock()
 
@@ -314,18 +307,18 @@ class TestExplorerTemplate(TestCase):
         explorer._explorer_sal.gateway_stat.assert_not_called()
 
     def test_monitor_not_intalled(self):
-        explorer = self.type(name='explorer', data=self.valid_data)
+        explorer = Explorer(name='explorer', data=self.valid_data)
         with pytest.raises(StateCheckError):
             explorer._monitor()
 
     def test_monitor_not_started(self):
-        explorer = self.type(name='explorer', data=self.valid_data)
+        explorer = Explorer(name='explorer', data=self.valid_data)
         explorer.state.set('actions', 'start', 'ok')
         with pytest.raises(StateCheckError):
             explorer._monitor()
 
     def test_monitor_is_running(self):
-        explorer = self.type(name='explorer', data=self.valid_data)
+        explorer = Explorer(name='explorer', data=self.valid_data)
 
         explorer.state.set('actions', 'install', 'ok')
         explorer.state.set('actions', 'start', 'ok')
@@ -337,7 +330,7 @@ class TestExplorerTemplate(TestCase):
         explorer.api.services.get.assert_not_called()
 
     def test_monitor_not_running(self):
-        explorer = self.type(name='explorer', data=self.valid_data)
+        explorer = Explorer(name='explorer', data=self.valid_data)
 
         explorer.state.set('actions', 'install', 'ok')
         explorer.state.set('actions', 'start', 'ok')

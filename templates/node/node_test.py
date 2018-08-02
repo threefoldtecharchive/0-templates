@@ -21,7 +21,7 @@ class TestNodeTemplate(ZrobotBaseTest):
         super().preTest(os.path.dirname(__file__), Node)
 
     def setUp(self):
-        self.client_get = patch('jumpscale.j.clients', MagicMock()).start()
+        patch('jumpscale.j.sal_zos', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()

@@ -31,7 +31,7 @@ class TestBootstrapTemplate(ZrobotBaseTest):
         }
 
     def setUp(self):
-        patch('jumpscale.j.clients.zerotier.get', MagicMock()).start()
+        patch('jumpscale.j.clients', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()
