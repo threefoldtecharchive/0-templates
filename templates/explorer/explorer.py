@@ -24,7 +24,7 @@ class Explorer(TemplateBase):
 
     @property
     def _node_sal(self):
-        return j.sal_zos.node.get(self.data['node'])
+        return j.clients.zos.get(self.data['node'])
 
     @property
     def _container_sal(self):

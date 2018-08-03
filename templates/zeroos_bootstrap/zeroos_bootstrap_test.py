@@ -126,7 +126,7 @@ class TestBootstrapTemplate(ZrobotBaseTest):
             'ssl': True,
             'timeout': 120,
         }
-        patch('jumpscale.j.sal_zos.node.get', MagicMock(return_value='node')).start()
+        patch('jumpscale.j.clients.zos.get', MagicMock(return_value='node')).start()
         node = bootstrap._get_node_sal(ip)
 
         zero_os.called_once_with(instance='bootstrap', data=data, create=True, die=True)

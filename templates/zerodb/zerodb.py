@@ -22,7 +22,7 @@ class Zerodb(TemplateBase):
     @property
     def _node_sal(self):
         # hardcoded local instance, this service is only intended to be install by the node robot
-        return j.sal_zos.node.get(NODE_CLIENT)
+        return j.clients.zos.get(NODE_CLIENT)
 
     @property
     def _zerodb_sal(self):

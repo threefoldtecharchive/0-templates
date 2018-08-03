@@ -22,7 +22,7 @@ class Container(TemplateBase):
 
     @property
     def node_sal(self):
-        return j.sal_zos.node.get(NODE_CLIENT)
+        return j.clients.zos.get(NODE_CLIENT)
 
     @property
     def container_sal(self):

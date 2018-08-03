@@ -31,7 +31,7 @@ class TestHealthcheckTemplate(ZrobotBaseTest):
         Test node_sal property
         """
         node_sal_return = 'node_sal'
-        get_node = patch('jumpscale.j.sal_zos.node.get', MagicMock(return_value=node_sal_return)).start()
+        get_node = patch('jumpscale.j.clients.zos.get', MagicMock(return_value=node_sal_return)).start()
         healthcheck = Healthcheck(name='healthcheck', data=self.valid_data)
         node_sal = healthcheck.node_sal
         get_node.assert_called_with(NODE_CLIENT)

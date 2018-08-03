@@ -36,7 +36,7 @@ class Vdisk(TemplateBase):
         """
         connection to the node
         """
-        return j.sal_zos.node.get(NODE_CLIENT)
+        return j.clients.zos.get(NODE_CLIENT)
 
     @property
     def _zerodb(self):

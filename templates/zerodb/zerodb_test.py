@@ -41,7 +41,7 @@ class TestZerodbTemplate(ZrobotBaseTest):
         """
         Test _node_sal property
         """
-        get_node = patch('jumpscale.j.sal_zos.node.get', MagicMock(return_value='node_sal')).start()
+        get_node = patch('jumpscale.j.clients.zos.get', MagicMock(return_value='node_sal')).start()
         zdb = Zerodb('zdb', data=self.valid_data)
 
         assert zdb._node_sal == 'node_sal'
@@ -283,7 +283,7 @@ class TestZerodbTemplate(ZrobotBaseTest):
         """
         zdb = Zerodb('zdb', data=self.valid_data)
         node_sal = MagicMock(public_addr='127.0.0.1')
-        patch('jumpscale.j.sal_zos.node.get', MagicMock(return_value=node_sal)).start()
+        patch('jumpscale.j.clients.zos.get', MagicMock(return_value=node_sal)).start()
         assert zdb.connection_info() == {
             'ip': node_sal.public_addr,
             'port': zdb.data['nodePort'],

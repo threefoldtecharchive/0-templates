@@ -30,7 +30,7 @@ class TestNodeTemplate(ZrobotBaseTest):
         """
         Test node_sal property
         """
-        get_node = patch('jumpscale.j.sal_zos.node.get', MagicMock(return_value='node_sal')).start()
+        get_node = patch('jumpscale.j.clients.zos.get', MagicMock(return_value='node_sal')).start()
         node = Node(name='node')
         node_sal = node.node_sal
         get_node.assert_called_with(NODE_CLIENT)

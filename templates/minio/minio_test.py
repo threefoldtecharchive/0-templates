@@ -66,7 +66,7 @@ class TestMinioTemplate(ZrobotBaseTest):
         """
         Test node_sal property
         """
-        get_node = patch('jumpscale.j.sal_zos.node.get', MagicMock(return_value='node_sal')).start()
+        get_node = patch('jumpscale.j.clients.zos.get', MagicMock(return_value='node_sal')).start()
         minio = Minio('minio', data=self.valid_data)
 
         assert minio.node_sal == 'node_sal'

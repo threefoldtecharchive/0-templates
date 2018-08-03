@@ -42,7 +42,7 @@ class Node(TemplateBase):
         """
         connection to the node
         """
-        return j.sal_zos.node.get(NODE_CLIENT)
+        return j.clients.zos.get(NODE_CLIENT)
 
     def _monitor(self):
         self.logger.info('Monitoring node %s' % self.name)

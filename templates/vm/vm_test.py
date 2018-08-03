@@ -33,7 +33,7 @@ class TestVmTemplate(ZrobotBaseTest):
         cls.vnc_port = 5900
 
     def setUp(self):
-        patch('jumpscale.j.sal_zos.node.get', MagicMock()).start()
+        patch('jumpscale.j.clients.zos.get', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()
@@ -60,10 +60,10 @@ class TestVmTemplate(ZrobotBaseTest):
         """
         vm = Vm('vm', data=self.valid_data)
         node_sal_return = 'node_sal'
-        patch('jumpscale.j.sal_zos.node.get',  MagicMock(return_value=node_sal_return)).start()
+        patch('jumpscale.j.clients.zos.get',  MagicMock(return_value=node_sal_return)).start()
 
         assert vm._node_sal == node_sal_return
-        j.sal_zos.node.get.assert_called_with(NODE_CLIENT)
+        j.clients.zos.get.assert_called_with(NODE_CLIENT)
 
     def test_vm_sal(self):
         """

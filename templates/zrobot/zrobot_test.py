@@ -26,8 +26,8 @@ class TestZrobotTemplate(ZrobotBaseTest):
             'flist': 'https://hub.gig.tech/gig-official-apps/zero-os-0-robot-latest.flist',
         }
 
-    def setUp(self): 
-        patch('jumpscale.j.sal_zos.node.get', MagicMock()).start()
+    def setUp(self):
+        patch('jumpscale.j.clients.zos.get', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()
@@ -58,11 +58,11 @@ class TestZrobotTemplate(ZrobotBaseTest):
         """
         zrobot = Zrobot('zrobot', data=self.valid_data)
         node_sal_return = 'node_sal'
-        patch('jumpscale.j.sal_zos.node.get',  MagicMock(return_value=node_sal_return)).start()
+        patch('jumpscale.j.clients.zos.get',  MagicMock(return_value=node_sal_return)).start()
         node_sal = zrobot.node_sal
 
         assert node_sal == node_sal_return
-        j.sal_zos.node.get.assert_called_with(NODE_CLIENT)
+        j.clients.zos.get.assert_called_with(NODE_CLIENT)
 
     def test_zrobot_sal(self):
         """
@@ -105,7 +105,7 @@ class TestZrobotTemplate(ZrobotBaseTest):
         zrobot = Zrobot('zrobot', data=self.valid_data)
         container = MagicMock()
         zrobot._get_container = MagicMock(return_value=container)
-        patch('jumpscale.j.sal_zos.node.get',  MagicMock()).start()
+        patch('jumpscale.j.clients.zos.get',  MagicMock()).start()
         patch('jumpscale.j.sal_zos.zrobot.get',  MagicMock()).start()
         zrobot.state.set('actions', 'install', 'ok')
         zrobot.install(True)
@@ -120,7 +120,7 @@ class TestZrobotTemplate(ZrobotBaseTest):
         zrobot = Zrobot('zrobot', data=self.valid_data)
         container = MagicMock()
         zrobot._get_container = MagicMock(return_value=container)
-        patch('jumpscale.j.sal_zos.node.get',  MagicMock()).start()
+        patch('jumpscale.j.clients.zos.get',  MagicMock()).start()
         patch('jumpscale.j.sal_zos.zrobot.get',  MagicMock()).start()
         zrobot.install()
         zrobot.state.check('actions', 'install', 'ok')
@@ -136,7 +136,7 @@ class TestZrobotTemplate(ZrobotBaseTest):
         zrobot._get_container = MagicMock(return_value=container)
         container.container_sal = MagicMock()
         container_sal = container.container_sal
-        patch('jumpscale.j.sal_zos.node.get',  MagicMock()).start()
+        patch('jumpscale.j.clients.zos.get',  MagicMock()).start()
         patch('jumpscale.j.sal_zos.zrobot.get',  MagicMock()).start()
         zrobot.install()
         zrobot.state.check('actions', 'install', 'ok')
@@ -148,7 +148,7 @@ class TestZrobotTemplate(ZrobotBaseTest):
         zrobot = Zrobot('zrobot', data=self.valid_data)
         container = MagicMock()
         zrobot._get_container = MagicMock(return_value=container)
-        patch('jumpscale.j.sal_zos.node.get',  MagicMock()).start()
+        patch('jumpscale.j.clients.zos.get',  MagicMock()).start()
         patch('jumpscale.j.sal_zos.zrobot.get',  MagicMock()).start()
         zrobot.start()
         zrobot.state.check('actions', 'start', 'ok')

@@ -32,7 +32,7 @@ class TestContainerTemplate(ZrobotBaseTest):
         }
 
     def setUp(self):
-        patch('jumpscale.j.sal_zos.node.get', MagicMock()).start()
+        patch('jumpscale.j.clients.zos.get', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()
@@ -54,7 +54,7 @@ class TestContainerTemplate(ZrobotBaseTest):
         """
         Test the node_sal property
         """
-        get_node = patch('jumpscale.j.sal_zos.node.get', MagicMock(return_value='node')).start()
+        get_node = patch('jumpscale.j.clients.zos.get', MagicMock(return_value='node')).start()
         container = Container('container', data=self.valid_data)
         node_sal = container.node_sal
         assert get_node.called

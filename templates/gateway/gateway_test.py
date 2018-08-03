@@ -41,7 +41,7 @@ class TestGatewayTemplate(ZrobotBaseTest):
         """
         Test _node_sal property
         """
-        get_node = patch('jumpscale.j.sal_zos.node.get', MagicMock(return_value='node_sal')).start()
+        get_node = patch('jumpscale.j.clients.zos.get', MagicMock(return_value='node_sal')).start()
         gw = Gateway('gw', data=self.valid_data)
 
         assert gw._node_sal == 'node_sal'

@@ -26,10 +26,10 @@ class Zrobot(TemplateBase):
             raise ValueError("Need to specify sshkey when specifying dataRepo")
         if self.data.get('flist') is None or self.data.get('flist') == '':
             self.data['flist'] = FLIST_ZROBOT_DEFAULT
-    
+
     @property
     def node_sal(self):
-        return j.sal_zos.node.get(NODE_CLIENT)
+        return j.clients.zos.get(NODE_CLIENT)
 
     @property
     def _container_name(self):
@@ -90,7 +90,7 @@ class Zrobot(TemplateBase):
         ]
 
         return self.api.services.find_or_create(CONTAINER_TEMPLATE, self._container_name, data)
-    
+
     @property
     def sshkey_path(self):
         if self.data.get('sshkey'):
@@ -114,7 +114,7 @@ class Zrobot(TemplateBase):
 
     def get_port(self):
         """returns the port of the created robot
-        
+
         Returns:
             int -- portnumber of host
         """
@@ -179,7 +179,7 @@ class Zrobot(TemplateBase):
         self.start()
 
     def uninstall(self):
-        
+
         try:
             container = self.api.services.get(name=self._container_name)
             self.zrobot_sal.stop()

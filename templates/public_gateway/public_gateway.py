@@ -40,7 +40,7 @@ class PublicGateway(TemplateBase):
 
     @property
     def _node_sal(self):
-        return j.sal_zos.node.get(NODE_CLIENT)
+        return j.clients.zos.get(NODE_CLIENT)
 
     @property
     def _gateway_service(self):

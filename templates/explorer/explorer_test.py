@@ -81,7 +81,7 @@ class TestExplorerTemplate(ZrobotBaseTest):
         """
         Test node_sal property
         """
-        get_node = patch('jumpscale.j.sal_zos.node.get', MagicMock(return_value='node_sal')).start()
+        get_node = patch('jumpscale.j.clients.zos.get', MagicMock(return_value='node_sal')).start()
         explorer = Explorer(name='explorer', data=self.valid_data)
         node_sal = explorer._node_sal
         get_node.assert_called_with(explorer.data['node'])
@@ -121,7 +121,7 @@ class TestExplorerTemplate(ZrobotBaseTest):
                 {'source': '/var/cache/caddy-certs', 'target': '/.caddy'},
                 {'source': 'https://hub.gig.tech/tfchain/caddy-explorer-latest.flist', 'target': '/mnt/explorer'}
                 ],
-                'node': 'node', 'nics': [{'type': 'macvlan', 'config': {'dhcp': True}, 'id': str, 'name': 'stoffel'}], 
+                'node': 'node', 'nics': [{'type': 'macvlan', 'config': {'dhcp': True}, 'id': str, 'name': 'stoffel'}],
                 'flist': 'https://hub.gig.tech/tfchain/ubuntu-16.04-tfchain-latest.flist'
             }
         explorer.api.services.find_or_create.assert_called_once_with(
@@ -348,7 +348,7 @@ class TestExplorerTemplate(ZrobotBaseTest):
 
         explorer.state.check('status', 'running', 'ok')
         explorer.api.services.get.assert_called_with(
-            template_uid='github.com/threefoldtech/0-templates/container/0.0.1', 
+            template_uid='github.com/threefoldtech/0-templates/container/0.0.1',
             name=explorer._container_name
         )
         container.delete.assert_called_once_with()

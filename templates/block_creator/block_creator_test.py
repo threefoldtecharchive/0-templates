@@ -73,7 +73,7 @@ class TestBlockCreatorTemplate(ZrobotBaseTest):
         """
         Test node_sal property
         """
-        get_node = patch('jumpscale.j.sal_zos.node.get', MagicMock(return_value='node_sal')).start()
+        get_node = patch('jumpscale.j.clients.zos.get', MagicMock(return_value='node_sal')).start()
         bc = BlockCreator(name='blockcreator', data=self.valid_data)
         node_sal = bc._node_sal
         get_node.assert_called_with(bc.data['node'])
@@ -110,7 +110,7 @@ class TestBlockCreatorTemplate(ZrobotBaseTest):
         }
         # test creation of container
         bc.api.services.find_or_create.assert_called_once_with(
-            'github.com/threefoldtech/0-templates/container/0.0.1', 
+            'github.com/threefoldtech/0-templates/container/0.0.1',
             bc._container_name,
             data=container_data)
 
@@ -288,7 +288,7 @@ class TestBlockCreatorTemplate(ZrobotBaseTest):
         sp = MagicMock()
         sp.get = MagicMock(return_value=fs)
         bc._node_sal.storagepools.get = MagicMock(return_value=sp)
-        
+
         bc.stop = MagicMock()
         bc.start = MagicMock()
 
@@ -298,7 +298,7 @@ class TestBlockCreatorTemplate(ZrobotBaseTest):
 
         bc.api.services.get = MagicMock(return_value=container)
         bc._node_sal.client.nft.drop_port = MagicMock()
-        
+
         with self.assertRaisesRegex(RuntimeError, 'Could not find interface for macvlan parent'):
             bc.upgrade()
 
@@ -319,7 +319,7 @@ class TestBlockCreatorTemplate(ZrobotBaseTest):
         bc._node_sal.client.nft.drop_port = MagicMock()
         list_of_candidates = [{'gw': '1.1.1.1', 'dev': 'one'}, {'gw': '1.1.1.2', 'dev':'two'}]
         bc._node_sal.client.ip.route.list = MagicMock(return_value=list_of_candidates)
-        
+
         with self.assertRaisesRegex(RuntimeError, 'Found multiple eligible interfaces for macvlan parent: one, two'):
             bc.upgrade()
 
@@ -336,7 +336,7 @@ class TestBlockCreatorTemplate(ZrobotBaseTest):
 
         bc.api.services.get = MagicMock(return_value=container)
         bc._node_sal.client.nft.drop_port = MagicMock()
-        
+
         list_of_candidates = [{'gw': '1.1.1.1', 'dev': 'one'}]
         bc._node_sal.client.ip.route.list = MagicMock(return_value=list_of_candidates)
         fs = MagicMock(path='/var/cache')
@@ -383,7 +383,7 @@ class TestBlockCreatorTemplate(ZrobotBaseTest):
 
     def test_wallet_amount_wallet_not_unlocked(self):
         bc = BlockCreator(name='blockcreator', data=self.valid_data)
-        
+
         bc.state.set('status', 'running', 'ok')
 
         bc._client_sal.wallet_amount = MagicMock()
@@ -468,7 +468,7 @@ class TestBlockCreatorTemplate(ZrobotBaseTest):
     def test_create_backup_call_fail(self):
         bc = BlockCreator(name='blockcreator', data=self.valid_data)
         bc.state.set('status', 'running', 'ok')
-        
+
         result_mock = MagicMock(state='ERROR', stderr='error message', data='error data')
         bc._container_sal.client.system = MagicMock(return_value=MagicMock(get=MagicMock(return_value=result_mock)))
         with self.assertRaisesRegex(RuntimeError, 'error occurred when creating backup: error message \n '):
@@ -479,7 +479,7 @@ class TestBlockCreatorTemplate(ZrobotBaseTest):
         bc = BlockCreator(name='blockcreator', data=self.valid_data)
 
         with self.assertRaises(StateCheckError):
-            bc.create_backup('name')        
+            bc.create_backup('name')
 
 
     def test_restore_backup_success(self):
@@ -497,7 +497,7 @@ class TestBlockCreatorTemplate(ZrobotBaseTest):
 
     def test_restore_backup_fail_call(self):
         bc = BlockCreator(name='blockcreator', data=self.valid_data)
-        bc.state.set('status', 'running', 'ok')        
+        bc.state.set('status', 'running', 'ok')
         result_mock = MagicMock(state='ERROR', stderr='error message', data='error data')
         bc._container_sal.client.system = MagicMock(return_value=MagicMock(get=MagicMock(return_value=result_mock)))
         with self.assertRaisesRegex(RuntimeError, 'error occurred when restoring backup: error message \n '):
@@ -505,6 +505,6 @@ class TestBlockCreatorTemplate(ZrobotBaseTest):
 
     def test_restore_backup_fail_state(self):
         bc = BlockCreator(name='blockcreator', data=self.valid_data)
-       
+
         with self.assertRaises(StateCheckError):
             bc.restore_backup('name')
