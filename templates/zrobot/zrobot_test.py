@@ -70,7 +70,7 @@ class TestZrobotTemplate(ZrobotBaseTest):
         """
         zrobot = Zrobot('zrobot', data=self.valid_data)
         zrobot_sal_return = 'zrobot_sal'
-        patch('jumpscale.j.sal_zos.zrobot.get',  MagicMock(return_value=zrobot_sal_return)).start()
+        patch('jumpscale.j.clients.zrobot.get',  MagicMock(return_value=zrobot_sal_return)).start()
         zrobot_sal = zrobot.zrobot_sal
         container_sal = zrobot.node_sal.containers.get(zrobot._container_name)
         kwargs = {
@@ -82,10 +82,10 @@ class TestZrobotTemplate(ZrobotBaseTest):
             'config_repo': self.valid_data['configRepo'],
             'config_key': zrobot.sshkey_path,
             'auto_push': True,
-            'auto_push_interval':1,
+            'auto_push_interval': 1,
         }
         assert zrobot_sal == zrobot_sal_return
-        j.sal_zos.zrobot.get.assert_called_with(**kwargs)
+        j.clients.zrobot.get.assert_called_with(**kwargs)
 
     def test_already_installed_no_force(self):
         """
@@ -106,7 +106,7 @@ class TestZrobotTemplate(ZrobotBaseTest):
         container = MagicMock()
         zrobot._get_container = MagicMock(return_value=container)
         patch('jumpscale.j.clients.zos.get',  MagicMock()).start()
-        patch('jumpscale.j.sal_zos.zrobot.get',  MagicMock()).start()
+        patch('jumpscale.j.clients.zrobot.get',  MagicMock()).start()
         zrobot.state.set('actions', 'install', 'ok')
         zrobot.install(True)
         zrobot.state.check('actions', 'install', 'ok')
@@ -121,7 +121,7 @@ class TestZrobotTemplate(ZrobotBaseTest):
         container = MagicMock()
         zrobot._get_container = MagicMock(return_value=container)
         patch('jumpscale.j.clients.zos.get',  MagicMock()).start()
-        patch('jumpscale.j.sal_zos.zrobot.get',  MagicMock()).start()
+        patch('jumpscale.j.clients.zrobot.get',  MagicMock()).start()
         zrobot.install()
         zrobot.state.check('actions', 'install', 'ok')
         zrobot.state.check('actions', 'start', 'ok')
@@ -137,7 +137,7 @@ class TestZrobotTemplate(ZrobotBaseTest):
         container.container_sal = MagicMock()
         container_sal = container.container_sal
         patch('jumpscale.j.clients.zos.get',  MagicMock()).start()
-        patch('jumpscale.j.sal_zos.zrobot.get',  MagicMock()).start()
+        patch('jumpscale.j.clients.zrobot.get',  MagicMock()).start()
         zrobot.install()
         zrobot.state.check('actions', 'install', 'ok')
         zrobot.state.check('actions', 'start', 'ok')
@@ -149,7 +149,7 @@ class TestZrobotTemplate(ZrobotBaseTest):
         container = MagicMock()
         zrobot._get_container = MagicMock(return_value=container)
         patch('jumpscale.j.clients.zos.get',  MagicMock()).start()
-        patch('jumpscale.j.sal_zos.zrobot.get',  MagicMock()).start()
+        patch('jumpscale.j.clients.zrobot.get',  MagicMock()).start()
         zrobot.start()
         zrobot.state.check('actions', 'start', 'ok')
         container.schedule_action.assert_called_once_with('start')
@@ -165,7 +165,7 @@ class TestZrobotTemplate(ZrobotBaseTest):
     def test_stop(self):
         zrobot = Zrobot('zrobot', data=self.valid_data)
         zrobot.api.services.get = MagicMock()
-        patch('jumpscale.j.sal_zos.zrobot.get',  MagicMock()).start()
+        patch('jumpscale.j.clients.zrobot.get',  MagicMock()).start()
         zrobot.state.set('actions', 'start', 'ok')
         zrobot.state.delete = MagicMock(return_value=True)
         zrobot.stop()
@@ -175,7 +175,7 @@ class TestZrobotTemplate(ZrobotBaseTest):
         zrobot = Zrobot('zrobot', data=self.valid_data)
         container = MagicMock()
         zrobot.api.services.get = MagicMock(return_value=container)
-        patch('jumpscale.j.sal_zos.zrobot.get',  MagicMock()).start()
+        patch('jumpscale.j.clients.zrobot.get',  MagicMock()).start()
         zrobot.state.set('actions', 'install', 'ok')
         zrobot.state.delete = MagicMock(return_value=True)
         zrobot.uninstall()
@@ -189,7 +189,7 @@ class TestZrobotTemplate(ZrobotBaseTest):
         """
         zrobot = Zrobot('zrobot', data=self.valid_data)
         zrobot.api.services.get = MagicMock()
-        patch('jumpscale.j.sal_zos.zrobot.get',  MagicMock()).start()
+        patch('jumpscale.j.clients.zrobot.get',  MagicMock()).start()
         zrobot.state.set('actions', 'install', 'ok')
         zrobot.state.set('actions', 'start', 'ok')
         zrobot._monitor()
@@ -201,7 +201,7 @@ class TestZrobotTemplate(ZrobotBaseTest):
         """
         zrobot = Zrobot('zrobot', data=self.valid_data)
         zrobot.api.services.get = MagicMock(side_effect=scol.ServiceNotFoundError())
-        patch('jumpscale.j.sal_zos.zrobot.get',  MagicMock()).start()
+        patch('jumpscale.j.clients.zrobot.get',  MagicMock()).start()
         zrobot.state.set('actions', 'install', 'ok')
         zrobot.state.set('actions', 'start', 'ok')
         zrobot.state.delete = MagicMock(return_value=True)

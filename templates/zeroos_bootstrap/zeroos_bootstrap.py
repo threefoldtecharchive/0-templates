@@ -94,17 +94,17 @@ class ZeroosBootstrap(TemplateBase):
         }
 
         # ensure client config
-        cl = j.clients.zos.get(
+        # get a node object from the zero-os SAL
+        node = j.clients.zos.get(
             instance=instance,
             data=data,
             create=True,
             die=True,
             interactive=False)
 
-        cl.config.save()
+        node.client.config.save()
 
-        # get a node object from the zero-os SAL
-        return j.clients.zos.get(instance)
+        return node
 
     @timeout(60, error_message="can't connect, unauthorizing member")
     def _ping_node(self, node_sal, zerotier_ip):

@@ -100,12 +100,12 @@ class Zrobot(TemplateBase):
     def zrobot_sal(self):
         container_sal = self.node_sal.containers.get(self._container_name)
         interval = self.data.get('autoPushInterval') or None
-        return j.sal_zos.zrobot.get(
+        return j.clients.zrobot.get(
             container=container_sal,
             port=6600,
             template_repos=self.data['templates'],
             data_repo=self.data.get('dataRepo'),
-            config_repo = self.data.get('configRepo'),
+            config_repo=self.data.get('configRepo'),
             config_key=self.sshkey_path,
             organization=(self.data.get('organization') or None),
             auto_push=True if interval else False,
@@ -205,7 +205,7 @@ class Zrobot(TemplateBase):
         self.state.check('actions', 'start', 'ok')
 
         try:
-            self.api.services.get(name=self._container_name) # check that container service exists
+            self.api.services.get(name=self._container_name)  # check that container service exists
             if self.zrobot_sal and self.zrobot_sal.is_running():
                 self.state.set('status', 'running', 'ok')
                 return
