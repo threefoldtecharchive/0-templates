@@ -175,7 +175,7 @@ Create **private** Git repository for your Zero-Robot data...
 
 Copy the ssh/https addresses of the Git repositories in environment variables:
 ```bash
-data_repo="ssh://git@docs.greenitglobe.com:10022/yves/robotdata.git"
+data_repo="ssh://git@docs.grid.tf:10022/yves/robotdata.git"
 dm_templates_repo="https://github.com/jumpscale/digital_me.git"
 zos_templates_repo="https://github.com/zero-os/0-templates"
 ```
