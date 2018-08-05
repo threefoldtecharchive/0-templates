@@ -27,7 +27,7 @@ class TestZerodbTemplate(ZrobotBaseTest):
             'ztIdentity': '',
             'nics': [],
         }
-        patch('jumpscale.j.sal_zos', MagicMock()).start()
+        patch('jumpscale.j.clients', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()

@@ -115,7 +115,7 @@ class TestBootstrapTemplate(ZrobotBaseTest):
         """
         Test _get_node_sal
         """
-        zero_os = patch('jumpscale.j.clients.zos.get', MagicMock()).start()
+        client = MagicMock()
         bootstrap = ZeroosBootstrap('bootstrap', data=self.valid_data)
         ip = '127.0.0.1'
         data = {
@@ -126,11 +126,11 @@ class TestBootstrapTemplate(ZrobotBaseTest):
             'ssl': True,
             'timeout': 120,
         }
-        patch('jumpscale.j.clients.zos.get', MagicMock(return_value='node')).start()
+        zero_os = patch('jumpscale.j.clients.zos.get', MagicMock(return_value=client)).start()
         node = bootstrap._get_node_sal(ip)
 
         zero_os.called_once_with(instance='bootstrap', data=data, create=True, die=True)
-        assert node == 'node'
+        assert node == client
 
     def test_ping_node(self):
         """
