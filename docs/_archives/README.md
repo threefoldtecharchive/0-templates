@@ -1,1 +1,0 @@
-Document in this folder are old or not up to date anymore.

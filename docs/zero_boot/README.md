@@ -46,7 +46,7 @@ The examples in this guide uses the ZeroRobot dsl API and Jumpscale which can be
 
 Open Jumpscale
 ```sh
-jumpscale
+js_shell
 ```
 
 Or import Jumpscale when using as a script
