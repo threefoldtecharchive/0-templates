@@ -96,6 +96,7 @@ class TestContainerTemplate(ZrobotBaseTest):
         container = Container('container', data=self.valid_data)
         container.api.services.get = MagicMock()
         container.node_sal.containers.create = MagicMock()
+        patch('jumpscale.j.sal_zos.utils.format_ports', MagicMock(return_value={80: 80})).start()
 
         container.install()
 
