@@ -3,7 +3,7 @@ import pytest
 from unittest import mock
 from unittest.mock import MagicMock
 
-from js9 import j
+from jumpscale import j
 from zerorobot.template.state import StateCheckError
 
 from JumpScale9Zrobot.test.utils import ZrobotBaseTest
