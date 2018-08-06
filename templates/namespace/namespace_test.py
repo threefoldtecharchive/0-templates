@@ -6,7 +6,7 @@ from namespace import Namespace
 from zerorobot.template.state import StateCheckError
 from zerorobot.service_collection import ServiceNotFoundError
 
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest, task_mock
+from JumpscaleZrobot.test.utils import ZrobotBaseTest, task_mock
 
 
 class TestNamespaceTemplate(ZrobotBaseTest):

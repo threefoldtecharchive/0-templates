@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 from jumpscale import j
 from zerorobot.template.state import StateCheckError
 
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest
+from JumpscaleZrobot.test.utils import ZrobotBaseTest
 from zeroboot_pool import ZerobootPool
 
 class TestZerobootPoolTemplate(ZrobotBaseTest):

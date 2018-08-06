@@ -3,7 +3,7 @@ import time
 import os
 import traceback
 
-from js9 import j
+from jumpscale import j
 
 WIPE=False      # wipe all drives during cleanup
 WIPE_KEY=True   # wipe ssh key used for connecting to the VM
@@ -101,7 +101,7 @@ def run(run_nr, key):
                 "port": 6379,
             }
         )
-        host = j.clients.zos.sal.get_node(instance=hostname)
+        host = j.clients.zos.get(instance=hostname)
 
         print("reserved host: %s" % hostname)
         hosts.append({'name': hostname, 'host':host, 'ip':ip})
@@ -189,7 +189,7 @@ def run(run_nr, key):
                     raise RuntimeError('Maximum retries of connecting to container reached')
                 print("Waiting before next ssh ping")
                 time.sleep(10)
-    
+
         pf = ssh_service.prefab
 
         # execute `lsb_release -a` over prefab
@@ -201,7 +201,7 @@ def run(run_nr, key):
             vm_service.delete()
 
         print("----")
-    
+
     return max_res_reached
 
 def cleanup():

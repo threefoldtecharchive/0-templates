@@ -6,7 +6,7 @@ from zerorobot.template.state import StateCheckError
 from zerorobot.service_collection import ServiceNotFoundError
 
 
-CONTAINER_TEMPLATE_UID = 'github.com/zero-os/0-templates/container/0.0.1'
+CONTAINER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/container/0.0.1'
 
 
 class Explorer(TemplateBase):
@@ -24,7 +24,7 @@ class Explorer(TemplateBase):
 
     @property
     def _node_sal(self):
-        return j.clients.zero_os.sal.get_node(self.data['node'])
+        return j.clients.zos.get(self.data['node'])
 
     @property
     def _container_sal(self):
@@ -45,7 +45,7 @@ class Explorer(TemplateBase):
             'domain': self.data['domain'],
             'network': self.data.get('network', 'standard')
         }
-        return j.clients.zero_os.sal.tfchain.explorer(**kwargs)
+        return j.sal_zos.tfchain.get().explorer(**kwargs)
 
     def set_mac_address(self, mac_address):
         self.data['macAddress'] = mac_address

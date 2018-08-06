@@ -5,7 +5,7 @@ import copy
 import netaddr
 
 from public_gateway import PublicGateway
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest
+from JumpscaleZrobot.test.utils import ZrobotBaseTest
 
 class AlwaysTrue:
     def __eq__(self, other):
@@ -23,7 +23,7 @@ class TestPublicGatewayTemplate(ZrobotBaseTest):
                 'portforwards': [{'srcport': 34022, 'dstip': '192.168.1.1', 'dstport': 22, 'name': 'ssh'}],
                 'httpproxies': [{'name': 'httpproxy', 'host': 'myhost.com', 'destinations': ['http://192.168.1.1:8000']}]
         }
-        patch('js9.j.clients.zos.sal', MagicMock()).start()
+        patch('jumpscale.j.sal_zos', MagicMock()).start()
         self.service, self.gwservice = self._mock_service(self.valid_data)
 
     def tearDown(self):

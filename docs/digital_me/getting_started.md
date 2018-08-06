@@ -302,7 +302,7 @@ zos_client.ping()
 
 Get the SAL interface of your ThreeFold node and list the containers, you should see the `zrobot` container:
 ```python
-zos_sal = j.clients.zos.sal.get_node(instance=zos_instance_name)
+zos_sal = j.clients.zos.get(instance=zos_instance_name)
 zos_sal.containers.list()
 ```
 
@@ -323,7 +323,7 @@ And finally in another JumpScale interactive shell, stream the Zero-Robot output
 j.clients.zos.list()
 zos_instance_name = 'my node'
 #zos_client = j.clients.zos.get(instance=zos_instance_name)
-zos_sal = j.clients.zos.sal.get_node(instance=zos_instance_name)
+zos_sal = j.clients.zos.get(instance=zos_instance_name)
 zrobot_container = zos_sal.containers.get(name='zrobot')
 
 subscription = zrobot_container.client.subscribe(job='zrobot')
@@ -366,7 +366,7 @@ zos_client.kvm.destroy(uuid=uuid2)
 ```python
 j.clients.zos.list()
 zos_instance_name = 'my node'
-zos_sal = j.clients.zos.sal.get_node(instance=zos_instance_name)
+zos_sal = j.clients.zos.get(instance=zos_instance_name)
 zos_sal.containers.list()
 c1 = zos_sal.containers.get(name='gw_23640ca4-aaf8-4859-8a5e-a0f588854a6f')
 c2 = zos_sal.containers.get(name='zdb_zdb_local_sdb')
@@ -690,7 +690,7 @@ Out[5]:
   'container': {'arguments': {'root': 'https://hub.gig.tech/gig-official-apps/zero-os-0-robot-autostart-latest.flist',
     'mount': {'/var/cache/zrobot/config': '/opt/code/local/stdorg/config',
      '/var/cache/zrobot/data': '/opt/var/data/zrobot/zrobot_data',
-     '/var/cache/zrobot/jsconfig': '/root/js9host/cfg',
+     '/var/cache/zrobot/jsconfig': '/root/jumpscale/cfg',
      '/var/cache/zrobot/ssh': '/root/.ssh',
      '/var/run/redis.sock': '/tmp/redis.sock'},
     'host_network': False,

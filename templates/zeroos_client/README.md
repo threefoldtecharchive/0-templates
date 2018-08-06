@@ -1,4 +1,4 @@
-## template: github.com/zero-os/0-templates/zeroos_client/0.0.1
+## template: github.com/threefoldtech/0-templates/zeroos_client/0.0.1
 
 ### Description:
 This template is responsible for configuring a zeroos client on jumpscale.

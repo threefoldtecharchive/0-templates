@@ -7,7 +7,7 @@ from zerodb import Zerodb, NODE_CLIENT
 from zerorobot.template.state import StateCheckError
 from zerorobot.service_collection import ServiceNotFoundError
 
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest
+from JumpscaleZrobot.test.utils import ZrobotBaseTest
 
 
 class TestZerodbTemplate(ZrobotBaseTest):
@@ -27,7 +27,7 @@ class TestZerodbTemplate(ZrobotBaseTest):
             'ztIdentity': '',
             'nics': [],
         }
-        patch('js9.j.clients.zos.sal', MagicMock()).start()
+        patch('jumpscale.j.clients', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()
@@ -41,7 +41,7 @@ class TestZerodbTemplate(ZrobotBaseTest):
         """
         Test _node_sal property
         """
-        get_node = patch('js9.j.clients.zos.sal.get_node', MagicMock(return_value='node_sal')).start()
+        get_node = patch('jumpscale.j.clients.zos.get', MagicMock(return_value='node_sal')).start()
         zdb = Zerodb('zdb', data=self.valid_data)
 
         assert zdb._node_sal == 'node_sal'
@@ -283,7 +283,7 @@ class TestZerodbTemplate(ZrobotBaseTest):
         """
         zdb = Zerodb('zdb', data=self.valid_data)
         node_sal = MagicMock(public_addr='127.0.0.1')
-        patch('js9.j.clients.zos.sal.get_node', MagicMock(return_value=node_sal)).start()
+        patch('jumpscale.j.clients.zos.get', MagicMock(return_value=node_sal)).start()
         assert zdb.connection_info() == {
             'ip': node_sal.public_addr,
             'port': zdb.data['nodePort'],

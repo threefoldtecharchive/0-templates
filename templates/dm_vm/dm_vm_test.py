@@ -6,20 +6,20 @@ import os
 
 import pytest
 
-from js9 import j
-from vm import Vm, ZT_TEMPLATE_UID, VDISK_TEMPLATE_UID, VM_TEMPLATE_UID
+from jumpscale import j
+from dm_vm import DmVm, ZT_TEMPLATE_UID, VDISK_TEMPLATE_UID, VM_TEMPLATE_UID
 from zerorobot.template.state import StateCheckError
 from zerorobot import config
 from zerorobot.template_uid import TemplateUID
 
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest
+from JumpscaleZrobot.test.utils import ZrobotBaseTest
 
 
 class TestVmTemplate(ZrobotBaseTest):
 
     @classmethod
     def setUpClass(cls):
-        super().preTest(os.path.dirname(__file__), Vm)
+        super().preTest(os.path.dirname(__file__), DmVm)
         cls.valid_data = {
             'cpu': 1,
             'image': 'ubuntu',
@@ -42,8 +42,8 @@ class TestVmTemplate(ZrobotBaseTest):
         cls.vnc_port = 5900
 
     def setUp(self):
-        patch('js9.j.clients', MagicMock()).start()
-        self.vm = Vm('vm', data=self.valid_data)
+        patch('jumpscale.j.clients', MagicMock()).start()
+        self.vm = DmVm('vm', data=self.valid_data)
         self.vm._node_api = MagicMock()
 
     def tearDown(self):
@@ -54,26 +54,26 @@ class TestVmTemplate(ZrobotBaseTest):
         Test creating a vm with invalid data
         """
         with pytest.raises(ValueError, message='template should fail to instantiate if data dict is missing the nodeId'):
-            vm = Vm(name='vm', data={})
+            vm = DmVm(name='vm', data={})
             vm.validate()
 
         with pytest.raises(ValueError, message='template should fail to instantiate if image is not valid'):
-            vm = Vm(name='vm', data={'nodeId': 'main', 'image': 'test'})
+            vm = DmVm(name='vm', data={'nodeId': 'main', 'image': 'test'})
             vm.validate()
 
         with pytest.raises(ValueError, message='template should fail to instantiate if zerotier dict is missing id'):
-            vm = Vm(name='vm', data={'nodeId': 'main', 'image': 'ubuntu', 'zerotier': {'id': ''}})
+            vm = DmVm(name='vm', data={'nodeId': 'main', 'image': 'ubuntu', 'zerotier': {'id': ''}})
             vm.validate()
 
         with pytest.raises(ValueError, message='template should fail to instantiate if zerotier dict is missing ztClient'):
-            vm = Vm(name='vm', data={'nodeId': 'main', 'image': 'ubuntu', 'zerotier': {'id': 'id'}})
+            vm = DmVm(name='vm', data={'nodeId': 'main', 'image': 'ubuntu', 'zerotier': {'id': 'id'}})
             vm.validate()
 
         with pytest.raises(ValueError, message='template should fail to instantiate if there are no nodes'):
 
             capacity = MagicMock()
             capacity.api.ListCapacity.return_value = ([],)
-            patch('js9.j.clients.grid_capacity.get.return_value', capacity).start()
+            patch('jumpscale.j.clients.grid_capacity.get.return_value', capacity).start()
             self.vm.validate()
 
     def test_valid_data(self):
@@ -82,8 +82,8 @@ class TestVmTemplate(ZrobotBaseTest):
         """
         capacity = MagicMock()
         capacity.api.GetCapacity.return_value = (MagicMock(robot_address='url'), None)
-        patch('js9.j.clients.grid_capacity.get.return_value', capacity).start()
-        vm = Vm('vm', data=self.valid_data)
+        patch('jumpscale.j.clients.grid_capacity.get.return_value', capacity).start()
+        vm = DmVm('vm', data=self.valid_data)
         vm.validate()
         j.clients.zrobot.get.assert_called_with(self.valid_data['nodeId'], data={'url': 'url'})
         assert vm.data == self.valid_data
@@ -102,7 +102,7 @@ class TestVmTemplate(ZrobotBaseTest):
         disk = self.valid_data['disks'][0]
         capacity = MagicMock()
         capacity.api.GetCapacity.return_value = (MagicMock(robot_address='url'), None)
-        patch('js9.j.clients.grid_capacity.get.return_value', capacity).start()
+        patch('jumpscale.j.clients.grid_capacity.get.return_value', capacity).start()
 
         self.vm.validate()
         zt_client = MagicMock()

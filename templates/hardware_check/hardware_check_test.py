@@ -5,7 +5,9 @@ import pytest
 
 from hardware_check import HardwareCheck
 from jumpscale import j
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest
+
+from JumpscaleZrobot.test.utils import ZrobotBaseTest
+
 
 
 class TestHardwareCheckTemplate(ZrobotBaseTest):
@@ -17,7 +19,7 @@ class TestHardwareCheckTemplate(ZrobotBaseTest):
             'chatId': 'chatId',
             'supported': [{'hddCount': 2, 'ram': 8, 'cpu': 'cpu', 'ssdCount': 2, 'name': 'name'}],
             'botToken': 'botToken'}
-        patch('js9.j.tools')
+        patch('jumpscale.j.tools')
 
     def tearDown(self):
         patch.stopall()
@@ -66,7 +68,7 @@ class TestHardwareCheckTemplate(ZrobotBaseTest):
         """
         test _get_bot_client
         """
-        client_get = patch('js9.j.clients.telegram_bot.get', MagicMock()).start()
+        client_get = patch('jumpscale.j.clients.telegram_bot.get', MagicMock()).start()
         hw = HardwareCheck(name='hw', data=self.valid_data)
         hw._get_bot_client()
         data = {
@@ -165,7 +167,7 @@ class TestHardwareCheckTemplate(ZrobotBaseTest):
         Test check is successful when hardware is supported
         :return:
         """
-        patch('js9.j.clients.zos.get', MagicMock()).start()
+        patch('jumpscale.j.clients.zos.get', MagicMock()).start()
         hw = HardwareCheck(name='hw', data=self.valid_data)
         supported = self.valid_data['supported'][0]
         hw._disk = MagicMock(return_value=(supported['hddCount'], supported['ssdCount']))
@@ -182,7 +184,7 @@ class TestHardwareCheckTemplate(ZrobotBaseTest):
         """
         Test that check fails if any of hardware specs arent supported
         """
-        patch('js9.j.clients.zos.get', MagicMock()).start()
+        patch('jumpscale.j.clients.zos.get', MagicMock()).start()
         hw = HardwareCheck(name='hw', data=self.valid_data)
         supported = self.valid_data['supported'][0]
         hw._disk = MagicMock(return_value=(supported['hddCount'], supported['ssdCount']))

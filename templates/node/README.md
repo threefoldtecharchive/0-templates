@@ -1,4 +1,4 @@
-## template: github.com/zero-os/0-templates/node/0.0.1
+## template: github.com/threefoldtech/0-templates/node/0.0.1
 
 ### Description:
 This template is responsible for managing a zero-os node.
@@ -37,7 +37,7 @@ This action will return the name of the ZDB service used and the name of the nam
 
 Install node:
 ```yaml
-github.com/zero-os/0-templates/node/0.0.1__525400123456:
+github.com/threefoldtech/0-templates/node/0.0.1__525400123456:
   hostname: "myzeros"
 
 actions:
@@ -47,7 +47,7 @@ actions:
 Reboot Node:
 ```yaml
 actions:
-  template: github.com/zero-os/0-templates/node/0.0.1
+  template: github.com/threefoldtech/0-templates/node/0.0.1
   name: 525400123456
   actions: ['reboot']
 ```
@@ -55,7 +55,7 @@ actions:
 Create Namespace:
 ```yaml
 actions:
-  template: github.com/zero-os/0-templates/node/0.0.1
+  template: github.com/threefoldtech/0-templates/node/0.0.1
   name: 525400123456
   actions: ['create_zdb_namespace']
   args:

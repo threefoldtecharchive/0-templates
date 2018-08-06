@@ -46,7 +46,7 @@ class BlockCreatorStatusReporter(TemplateBase):
     def _node(self):
         if not self._node_:
             try:
-                self._node_ = self.api.services.get(template_uid='github.com/zero-os/0-templates/node/0.0.1', name=self.data['node'])
+                self._node_ = self.api.services.get(template_uid='github.com/threefoldtech/0-templates/node/0.0.1', name=self.data['node'])
             except ServiceNotFoundError:
                 pass
         return self._node_            

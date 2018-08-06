@@ -3,7 +3,7 @@ from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 from zerorobot.service_collection import ServiceNotFoundError
 
-ZERODB_TEMPLATE_UID = 'github.com/zero-os/0-templates/zerodb/0.0.1'
+ZERODB_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerodb/0.0.1'
 
 
 class Namespace(TemplateBase):

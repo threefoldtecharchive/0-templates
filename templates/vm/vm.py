@@ -4,7 +4,7 @@ from zerorobot.template.state import StateCheckError
 import copy
 
 NODE_CLIENT = 'local'
-VDISK_TEMPLATE_UID = 'github.com/zero-os/0-templates/vdisk/0.0.1'
+VDISK_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vdisk/0.0.1'
 
 
 class Vm(TemplateBase):
@@ -37,7 +37,7 @@ class Vm(TemplateBase):
         """
         connection to the zos node
         """
-        return j.clients.zos.sal.get_node(NODE_CLIENT)
+        return j.clients.zos.get(NODE_CLIENT)
 
     def _monitor(self):
         self.logger.info('Monitor vm %s' % self.name)

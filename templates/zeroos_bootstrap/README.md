@@ -1,4 +1,4 @@
-## template: github.com/zero-os/0-templates/zeroos_bootstrap/0.0.1
+## template: github.com/threefoldtech/0-templates/zeroos_bootstrap/0.0.1
 
 ### Description:
 This template is responsible for bootstraping zero-os nodes.
@@ -20,7 +20,7 @@ This template is responsible for bootstraping zero-os nodes.
 
 ```yaml
 services:
-    - github.com/zero-os/0-templates/zeroos_bootstrap/0.0.1__bootstrap:
+    - github.com/threefoldtech/0-templates/zeroos_bootstrap/0.0.1__bootstrap:
           zerotierClient: 'main'
           zerotierNetID: '12ac4a1e7122ed7a'
           redisPassword: <jwt_token>

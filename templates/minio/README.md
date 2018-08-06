@@ -1,4 +1,4 @@
-## template: github.com/zero-os/0-templates/minio/0.0.1
+## template: github.com/threefoldtech/0-templates/minio/0.0.1
 
 ### Description:
 This template is responsible for managing [minio](https://minio.io/) server instance.
@@ -47,7 +47,7 @@ args = {
     'namespace': 'namespace',
     'privateKey': 'ab345678901234567890123456789012s',
 }
-minio = api.services.create('github.com/zero-os/0-templates/minio/0.0.1', 'minio', args)
+minio = api.services.create('github.com/threefoldtech/0-templates/minio/0.0.1', 'minio', args)
 minio.schedule_action('install')
 minio.schedule_action('start')
 minio.schedule_action('stop')
@@ -61,7 +61,7 @@ To install instance `minio` on node `547c5d299411`
 
 ```yaml
 services:
-    - github.com/zero-os/0-templates/minio/0.0.1__minio:
+    - github.com/threefoldtech/0-templates/minio/0.0.1__minio:
           node: 547c5d299411
           zerodbs:
             - 192.168.122.87:9900
@@ -73,7 +73,7 @@ services:
           privateKey: ab345678901234567890123456789012
 
 actions:
-    - template: github.com/zero-os/0-templates/minio/0.0.1
+    - template: github.com/threefoldtech/0-templates/minio/0.0.1
       service: 'minio'
       actions: ['install']
 ```
@@ -82,7 +82,7 @@ To start instance `minio`:
 
 ```yaml
 actions:
-    - template: 'github.com/zero-os/0-templates/minio/0.0.1'
+    - template: 'github.com/threefoldtech/0-templates/minio/0.0.1'
       service: 'minio'
       actions: ['start']
 ```
@@ -91,7 +91,7 @@ To stop instance `minio`:
 
 ```yaml
 actions:
-    - template: 'github.com/zero-os/0-templates/minio/0.0.1'
+    - template: 'github.com/threefoldtech/0-templates/minio/0.0.1'
       service: 'minio'
       actions: ['stop']
 ```
@@ -100,7 +100,7 @@ To uninstall instance `minio`:
 
 ```yaml
 actions:
-    - template: 'github.com/zero-os/0-templates/minio/0.0.1'
+    - template: 'github.com/threefoldtech/0-templates/minio/0.0.1'
       service: 'minio'
       actions: ['uninstall']
 ```

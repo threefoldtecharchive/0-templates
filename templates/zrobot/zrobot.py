@@ -6,7 +6,7 @@ from zerorobot.template.state import StateCheckError
 from zerorobot.service_collection import ServiceNotFoundError
 
 FLIST_ZROBOT_DEFAULT = 'https://hub.gig.tech/gig-official-apps/zero-os-0-robot-latest.flist'
-CONTAINER_TEMPLATE = 'github.com/zero-os/0-templates/container/0.0.1'
+CONTAINER_TEMPLATE = 'github.com/threefoldtech/0-templates/container/0.0.1'
 NODE_CLIENT = 'local'
 
 
@@ -26,10 +26,10 @@ class Zrobot(TemplateBase):
             raise ValueError("Need to specify sshkey when specifying dataRepo")
         if self.data.get('flist') is None or self.data.get('flist') == '':
             self.data['flist'] = FLIST_ZROBOT_DEFAULT
-    
+
     @property
     def node_sal(self):
-        return j.clients.zos.sal.get_node(NODE_CLIENT)
+        return j.clients.zos.get(NODE_CLIENT)
 
     @property
     def _container_name(self):
@@ -82,7 +82,7 @@ class Zrobot(TemplateBase):
             {'source': ssh_vol,
              'target': '/root/.ssh'},
             {'source': jsconfig_vol,
-             'target': '/root/js9host/cfg'},
+             'target': '/root/jumpscalehost/cfg'},
             {'source': data_vol,
              'target': '/opt/var/data/zrobot/zrobot_data'},
             {'source': '/var/run/redis.sock',  # mount zero-os redis socket into container, so the robot can talk to the os directly
@@ -90,7 +90,7 @@ class Zrobot(TemplateBase):
         ]
 
         return self.api.services.find_or_create(CONTAINER_TEMPLATE, self._container_name, data)
-    
+
     @property
     def sshkey_path(self):
         if self.data.get('sshkey'):
@@ -100,12 +100,12 @@ class Zrobot(TemplateBase):
     def zrobot_sal(self):
         container_sal = self.node_sal.containers.get(self._container_name)
         interval = self.data.get('autoPushInterval') or None
-        return j.clients.zos.sal.get_zerorobot(
+        return j.clients.zrobot.get(
             container=container_sal,
             port=6600,
             template_repos=self.data['templates'],
             data_repo=self.data.get('dataRepo'),
-            config_repo = self.data.get('configRepo'),
+            config_repo=self.data.get('configRepo'),
             config_key=self.sshkey_path,
             organization=(self.data.get('organization') or None),
             auto_push=True if interval else False,
@@ -114,7 +114,7 @@ class Zrobot(TemplateBase):
 
     def get_port(self):
         """returns the port of the created robot
-        
+
         Returns:
             int -- portnumber of host
         """
@@ -179,7 +179,7 @@ class Zrobot(TemplateBase):
         self.start()
 
     def uninstall(self):
-        
+
         try:
             container = self.api.services.get(name=self._container_name)
             self.zrobot_sal.stop()
@@ -205,7 +205,7 @@ class Zrobot(TemplateBase):
         self.state.check('actions', 'start', 'ok')
 
         try:
-            self.api.services.get(name=self._container_name) # check that container service exists
+            self.api.services.get(name=self._container_name)  # check that container service exists
             if self.zrobot_sal and self.zrobot_sal.is_running():
                 self.state.set('status', 'running', 'ok')
                 return

@@ -1,4 +1,4 @@
-## template: github.com/zero-os/0-templates/vdisk/0.0.1
+## template: github.com/threefoldtech/0-templates/vdisk/0.0.1
 
 ### Description:
 This template is responsible for managing a vdisk
@@ -30,7 +30,7 @@ args = {
     'diskType': 'hdd',
     'label': 'label',
 }
-vdisk = robot.services.create('github.com/zero-os/0-templates/vdisk/0.0.1', 'vdisk_one', data=args)
+vdisk = robot.services.create('github.com/threefoldtech/0-templates/vdisk/0.0.1', 'vdisk_one', data=args)
 vdisk.schedule_action('install')
 vdisk.schedule_action('info')
 ```
@@ -42,13 +42,13 @@ To create vdisk `vdisk_one`:
 
 ```yaml
 services:
-    - github.com/zero-os/0-templates/vdisk/0.0.1__vdisk_one:
+    - github.com/threefoldtech/0-templates/vdisk/0.0.1__vdisk_one:
           size: 10
           diskType: 'hdd'
           label: 'label'
           
 actions:
-    - template: 'github.com/zero-os/0-templates/vdisk/0.0.1'
+    - template: 'github.com/threefoldtech/0-templates/vdisk/0.0.1'
       service: 'vdisk_one'
       actions: ['install']
 
@@ -59,7 +59,7 @@ To get info for vdisk `vdisk_one`:
 
 ```yaml
 actions:
-    - template: 'github.com/zero-os/0-templates/vdisk/0.0.1'
+    - template: 'github.com/threefoldtech/0-templates/vdisk/0.0.1'
       service: 'vdisk_one'
       actions: ['info']
 

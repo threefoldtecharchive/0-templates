@@ -4,7 +4,7 @@ import pytest
 
 from minio import Minio, MINIO_FLIST, NODE_CLIENT
 from zerorobot.template.state import StateCheckError
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest
+from JumpscaleZrobot.test.utils import ZrobotBaseTest
 
 
 class TestMinioTemplate(ZrobotBaseTest):
@@ -30,7 +30,8 @@ class TestMinioTemplate(ZrobotBaseTest):
         }
 
     def setUp(self):
-        patch('js9.j.clients.zos.sal', MagicMock()).start()
+        patch('jumpscale.j.sal_zos', MagicMock()).start()
+        patch('jumpscale.j.clients', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()
@@ -66,7 +67,7 @@ class TestMinioTemplate(ZrobotBaseTest):
         """
         Test node_sal property
         """
-        get_node = patch('js9.j.clients.zos.sal.get_node', MagicMock(return_value='node_sal')).start()
+        get_node = patch('jumpscale.j.clients.zos.get', MagicMock(return_value='node_sal')).start()
         minio = Minio('minio', data=self.valid_data)
 
         assert minio.node_sal == 'node_sal'
@@ -76,7 +77,7 @@ class TestMinioTemplate(ZrobotBaseTest):
         """
         Test node_sal property
         """
-        minio_sal = patch('js9.j.clients.zos.sal.get_minio', MagicMock(return_value='minio_sal')).start()
+        minio_sal = patch('jumpscale.j.sal_zos.get_minio', MagicMock(return_value='minio_sal')).start()
         minio = Minio('minio', data=self.valid_data)
         minio._get_zdbs = MagicMock()
 

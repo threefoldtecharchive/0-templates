@@ -5,7 +5,7 @@ from jumpscale import j
 from influxdb_client import InfluxdbClient
 from zerorobot.template.state import StateCheckError
 
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest, mock_decorator
+from JumpscaleZrobot.test.utils import ZrobotBaseTest, mock_decorator
 
 patch("zerorobot.template.decorator.timeout", MagicMock(return_value=mock_decorator)).start()
 patch("zerorobot.template.decorator.retry", MagicMock(return_value=mock_decorator)).start()
@@ -24,7 +24,7 @@ class TestInfluxdbClientTemplate(ZrobotBaseTest):
             }
 
     def setUp(self):
-        self.client_get = patch('js9.j.clients', MagicMock()).start()
+        self.client_get = patch('jumpscale.j.clients', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()
@@ -36,7 +36,7 @@ class TestInfluxdbClientTemplate(ZrobotBaseTest):
         stat = InfluxdbClient('influxdb_client',data=self.data)
         db = MagicMock()
         db.config = MagicMock(data=self.data)
-        patch('js9.j.clients.influxdb.get', MagicMock(return_value=db)).start()
+        patch('jumpscale.j.clients.influxdb.get', MagicMock(return_value=db)).start()
         stat.install()
         stat.state.check('actions', 'install', 'ok')
         
@@ -47,7 +47,7 @@ class TestInfluxdbClientTemplate(ZrobotBaseTest):
         stat = InfluxdbClient('influxdb_client',data=self.data)
         db = MagicMock()
         db.config = MagicMock(data={})
-        patch('js9.j.clients.influxdb.get', MagicMock(return_value={})).start()
+        patch('jumpscale.j.clients.influxdb.get', MagicMock(return_value={})).start()
         stat.delete()
         try:
             stat.state.check('actions', 'install', 'ok')

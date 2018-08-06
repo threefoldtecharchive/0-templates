@@ -7,7 +7,7 @@ from container import Container
 from zerorobot.template.state import StateCheckError
 from zerorobot import service_collection as scol
 
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest
+from JumpscaleZrobot.test.utils import ZrobotBaseTest
 
 
 class TestContainerTemplate(ZrobotBaseTest):
@@ -32,7 +32,7 @@ class TestContainerTemplate(ZrobotBaseTest):
         }
 
     def setUp(self):
-        patch('js9.j.clients.zos.sal.get_node', MagicMock()).start()
+        patch('jumpscale.j.clients.zos.get', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()
@@ -54,7 +54,7 @@ class TestContainerTemplate(ZrobotBaseTest):
         """
         Test the node_sal property
         """
-        get_node = patch('js9.j.clients.zos.sal.get_node', MagicMock(return_value='node')).start()
+        get_node = patch('jumpscale.j.clients.zos.get', MagicMock(return_value='node')).start()
         container = Container('container', data=self.valid_data)
         node_sal = container.node_sal
         assert get_node.called
@@ -96,6 +96,7 @@ class TestContainerTemplate(ZrobotBaseTest):
         container = Container('container', data=self.valid_data)
         container.api.services.get = MagicMock()
         container.node_sal.containers.create = MagicMock()
+        patch('jumpscale.j.sal_zos.utils.format_ports', MagicMock(return_value={80: 80})).start()
 
         container.install()
 

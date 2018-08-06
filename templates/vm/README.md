@@ -1,4 +1,4 @@
-## template: github.com/zero-os/0-templates/vm/0.0.1
+## template: github.com/threefoldtech/0-templates/vm/0.0.1
 
 ### Description:
 This template is responsible for managing a vm on a zero-os node.
@@ -72,14 +72,14 @@ data = {
     'ports':[{'source': 22, 'target': 22, 'name': 'ssh'}],
     'configs': [{'path': '/root/.ssh/authorized_keys', 'content': 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDC8tBgGU1', 'name': 'sshkey'}]
 }
-vm = robot.services.create('github.com/zero-os/0-templates/vm/0.0.1','vm1', data)
+vm = robot.services.create('github.com/threefoldtech/0-templates/vm/0.0.1','vm1', data)
 vm.schedule_action('install')
 ```
 
 #### Blueprint (cli interface):
 ```yaml
 services:
-    - github.com/zero-os/0-templates/vm/0.0.1__vm1:
+    - github.com/threefoldtech/0-templates/vm/0.0.1__vm1:
         flist: 'https://hub.gig.tech/gig-bootable/ubuntu:latest.flist'
         memory: 256
         cpu: 1

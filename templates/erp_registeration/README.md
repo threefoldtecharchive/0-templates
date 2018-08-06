@@ -1,4 +1,4 @@
-## template: github.com/zero-os/0-templates/erp_registeration/0.0.1
+## template: github.com/threefoldtech/0-templates/erp_registeration/0.0.1
 
 ### Description:
 This template is responsible for registering a node in odoo if it wasn't already registered.
@@ -33,7 +33,7 @@ args = {
     'botToken': 'XomAJANa',
     'chatId': '1823737123',
 }
-erp = robot.services.create('github.com/zero-os/0-templates/erp_registeration/0.0.1', 'erp', args)
+erp = robot.services.create('github.com/threefoldtech/0-templates/erp_registeration/0.0.1', 'erp', args)
 erp.schedule_action('register', args={'node_id':'node1'})
 ```
 
@@ -43,7 +43,7 @@ To create instance `erp` then register `node1`
 
 ```yaml
 services:
-    - github.com/zero-os/0-templates/erp_registeration/0.0.1__erp:
+    - github.com/threefoldtech/0-templates/erp_registeration/0.0.1__erp:
           url: 'odoo_url'
           db: 'test'
           username: 'user'
@@ -51,7 +51,7 @@ services:
           botToken: 'XomAJANa'
           chatId: '1823737123'
 actions:
-    - template: 'github.com/zero-os/0-templates/erp_registeration/0.0.1'
+    - template: 'github.com/threefoldtech/0-templates/erp_registeration/0.0.1'
       service: 'erp'
       actions: ['register']
       args:

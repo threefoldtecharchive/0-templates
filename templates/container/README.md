@@ -1,4 +1,4 @@
-## template: github.com/zero-os/0-templates/container/0.0.1
+## template: github.com/threefoldtech/0-templates/container/0.0.1
 
 ### Description:
 This template is responsible for creating a container on zero-os nodes
@@ -74,7 +74,7 @@ container_data = {
     'mounts': [{'source': '/mnt/zdb/one', 'target': '/zdb'}],
     'nics': [{'type': 'default'}],
 }
-container = robot.services.create('github.com/zero-os/0-templates/container/0.0.1', 'zerodbcontainer', data=container_data)
+container = robot.services.create('github.com/threefoldtech/0-templates/container/0.0.1', 'zerodbcontainer', data=container_data)
 container.schedule_action('install')
 
 container.schedule_action('start')
@@ -87,7 +87,7 @@ To install container `zerodbcontainer` on node `525400123456`:
 
 ```yaml
 services:
-    - github.com/zero-os/0-templates/container/0.0.1__zerodbcontainer:
+    - github.com/threefoldtech/0-templates/container/0.0.1__zerodbcontainer:
           flist: 'https://hub.gig.tech/maxux/zero-db.flist'
           storage: 'ardb://hub.gig.tech:16379'
           nics:
@@ -96,7 +96,7 @@ services:
             - source: '/mnt/zdb/one'
               target: '/zdb'
 actions:
-    - template: 'github.com/zero-os/0-templates/container/0.0.1'
+    - template: 'github.com/threefoldtech/0-templates/container/0.0.1'
       service: 'zerodbcontainer'
       actions: ['install']
 
@@ -107,7 +107,7 @@ To start container `zerodbcontainer`:
 
 ```yaml
 actions:
-    - template: 'github.com/zero-os/0-templates/container/0.0.1'
+    - template: 'github.com/threefoldtech/0-templates/container/0.0.1'
       service: 'zerodbcontainer'
       actions: ['start']
 
@@ -118,7 +118,7 @@ To stop container `zerodbcontainer`:
 
 ```yaml
 actions:
-    - template: 'github.com/zero-os/0-templates/container/0.0.1'
+    - template: 'github.com/threefoldtech/0-templates/container/0.0.1'
       service: 'zerodbcontainer'
       actions: ['stop']
 

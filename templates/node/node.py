@@ -5,10 +5,10 @@ from zerorobot.template.decorator import retry, timeout
 from zerorobot.template.state import StateCheckError
 import netaddr
 
-CONTAINER_TEMPLATE_UID = 'github.com/zero-os/0-templates/container/0.0.1'
-VM_TEMPLATE_UID = 'github.com/zero-os/0-templates/vm/0.0.1'
-BOOTSTRAP_TEMPLATE_UID = 'github.com/zero-os/0-templates/zeroos_bootstrap/0.0.1'
-ZDB_TEMPLATE_UID = 'github.com/zero-os/0-templates/zerodb/0.0.1'
+CONTAINER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/container/0.0.1'
+VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vm/0.0.1'
+BOOTSTRAP_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zeroos_bootstrap/0.0.1'
+ZDB_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerodb/0.0.1'
 NODE_CLIENT = 'local'
 
 
@@ -42,7 +42,7 @@ class Node(TemplateBase):
         """
         connection to the node
         """
-        return j.clients.zos.sal.get_node(NODE_CLIENT)
+        return j.clients.zos.get(NODE_CLIENT)
 
     def _monitor(self):
         self.logger.info('Monitoring node %s' % self.name)

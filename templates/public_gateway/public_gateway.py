@@ -4,7 +4,7 @@ import netaddr
 from zerorobot.template.base import TemplateBase
 
 NODE_CLIENT = 'local'
-GATEWAY_TEMPLATE_UID = 'github.com/zero-os/0-templates/gateway/0.0.1'
+GATEWAY_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/gateway/0.0.1'
 
 
 class PublicGateway(TemplateBase):
@@ -40,7 +40,7 @@ class PublicGateway(TemplateBase):
 
     @property
     def _node_sal(self):
-        return j.clients.zos.sal.get_node(NODE_CLIENT)
+        return j.clients.zos.get(NODE_CLIENT)
 
     @property
     def _gateway_service(self):

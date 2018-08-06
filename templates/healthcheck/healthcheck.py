@@ -3,7 +3,7 @@ from jumpscale import j
 from zerorobot.template.base import TemplateBase
 
 
-NODE_TEMPLATE_UID = 'github.com/zero-os/0-templates/node/0.0.1'
+NODE_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node/0.0.1'
 NODE_CLIENT = 'local'
 
 
@@ -22,7 +22,7 @@ class Healthcheck(TemplateBase):
         """
         connection to the node
         """
-        return j.clients.zos.sal.get_node(NODE_CLIENT)
+        return j.clients.zos.get(NODE_CLIENT)
 
     def _monitor(self):
         self.logger.info('Monitoring node %s health check' % self.name)

@@ -37,7 +37,7 @@ class TestPeerDiscoveryTemplate(TestCase):
             shutil.rmtree(config.DATA_DIR)
 
     def setUp(self):
-        self.client_get = patch('js9.j.clients', MagicMock()).start()
+        self.client_get = patch('jumpscale.j.clients', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()
