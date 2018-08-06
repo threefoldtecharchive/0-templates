@@ -43,11 +43,11 @@ class Namespace(TemplateBase):
 
         node = self.api.services.get(template_account='zero-os', template_name='node')
         kwargs = {
-            'disktype': self.data['diskType'].upper(),
+            'disktype': self.data['diskType'],
             'mode': self.data['mode'],
             'password': self.data['password'],
             'public': self.data['public'],
-            'size': self.data['size'],
+            'ns_size': self.data['size'],
             'name': self.data['nsName'],
         }
         # use the method on the node service to create the zdb and the namespace.

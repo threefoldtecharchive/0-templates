@@ -61,11 +61,11 @@ class Vdisk(TemplateBase):
 
         node = self.api.services.get(template_account='zero-os', template_name='node')
         kwargs = {
-            'disktype': self.data['diskType'].upper(),
+            'disktype': self.data['diskType'],
             'mode': 'user',
             'password': self.data['password'],
             'public': False,
-            'size': int(self.data['size']),
+            'ns_size': int(self.data['size']),
         }
         # use the method on the node service to create the zdb and the namespace.
         # this action hold the logic of the capacity planning for the zdb and namespaces
