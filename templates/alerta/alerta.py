@@ -1,5 +1,5 @@
 import requests
-from js9 import j
+from jumpscale import j
 from zerorobot.template.base import TemplateBase
 
 OK_STATES = ['OK', 'SKIPPED']

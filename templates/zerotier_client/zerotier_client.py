@@ -1,4 +1,4 @@
-from js9 import j
+from jumpscale import j
 from urllib.parse import urlparse
 from zerorobot.template.base import TemplateBase
 

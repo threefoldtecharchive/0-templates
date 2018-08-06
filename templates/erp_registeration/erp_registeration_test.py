@@ -4,7 +4,7 @@ import os
 import pytest
 
 from erp_registeration import ErpRegisteration
-from js9 import j
+from jumpscale import j
 
 from JumpScale9Zrobot.test.utils import ZrobotBaseTest
 

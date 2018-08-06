@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from js9 import j
+from jumpscale import j
 #from explorer import Explorer, CONTAINER_TEMPLATE_UID
 from zerorobot import service_collection as scol
 from zerorobot import config, template_collection

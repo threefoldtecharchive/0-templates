@@ -1,4 +1,4 @@
-from js9 import j
+from jumpscale import j
 import os
 import time
 from zerorobot.template.base import TemplateBase

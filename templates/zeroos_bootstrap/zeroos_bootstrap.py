@@ -1,6 +1,6 @@
 from gevent import sleep
 
-from js9 import j
+from jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import timeout
 from zerorobot.template.state import StateCheckError

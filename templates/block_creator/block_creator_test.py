@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from js9 import j
+from jumpscale import j
 
 from zerorobot import config, template_collection
 from zerorobot.template_uid import TemplateUID

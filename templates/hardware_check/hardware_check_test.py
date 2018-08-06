@@ -4,7 +4,7 @@ import os
 import pytest
 
 from hardware_check import HardwareCheck
-from js9 import j
+from jumpscale import j
 from JumpScale9Zrobot.test.utils import ZrobotBaseTest
 
 

@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 import os
 import pytest
 
-from js9 import j
+from jumpscale import j
 from vm import Vm, NODE_CLIENT
 from zerorobot.template.state import StateCheckError
 

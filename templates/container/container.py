@@ -1,6 +1,6 @@
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
-from js9 import j
+from jumpscale import j
 
 
 NODE_TEMPLATE_UID = 'github.com/zero-os/0-templates/node/0.0.1'

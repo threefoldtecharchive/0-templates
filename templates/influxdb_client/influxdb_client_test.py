@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 import os
 import pytest
-from js9 import j
+from jumpscale import j
 from influxdb_client import InfluxdbClient
 from zerorobot.template.state import StateCheckError
 

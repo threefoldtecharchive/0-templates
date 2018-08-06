@@ -2,7 +2,7 @@ import os
 import time
 from random import shuffle
 
-from js9 import j
+from jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry
