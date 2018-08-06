@@ -1,4 +1,4 @@
-## template: github.com/zero-os/0-templates/hardware_check/0.0.1
+## template: github.com/threefoldtech/0-templates/hardware_check/0.0.1
 
 ### Description:
 This template is responsible for checking if the hardware specs of a node matches the expected specs and sending a message to a telegram chat with the result of the check.
@@ -40,7 +40,7 @@ args = {
     'botToken': 'thisisabottoken',
     'chatId': '1823737123',
 }
-hw_check= robot.services.create('github.com/zero-os/0-templates/hardware_check/0.0.1', 'hw_check', args)
+hw_check= robot.services.create('github.com/threefoldtech/0-templates/hardware_check/0.0.1', 'hw_check', args)
 hw_check.schedule_action('check', args={'node_name':'node1'})
 ```
 
@@ -51,7 +51,7 @@ To check if node `node1` has supported hardware specs
 
 ```yaml
 services:
-    - github.com/zero-os/0-templates/hardware_check/0.0.1__hc:
+    - github.com/threefoldtech/0-templates/hardware_check/0.0.1__hc:
         supported:
           - hddCount: 2
             ssdCount: 2
@@ -62,7 +62,7 @@ services:
         chatId': '1823737123'
 
 actions:
-    - template: github.com/zero-os/0-templates/hardware_check/0.0.1
+    - template: github.com/threefoldtech/0-templates/hardware_check/0.0.1
       service: 'hc'
       actions: ['check']
       args:

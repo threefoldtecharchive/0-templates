@@ -1,9 +1,9 @@
-from js9 import j
+from jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 
 
-NODE_TEMPLATE_UID = 'github.com/zero-os/0-templates/node/0.0.1'
+NODE_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node/0.0.1'
 NODE_CLIENT = 'local'
 
 
@@ -22,7 +22,7 @@ class Zerodb(TemplateBase):
     @property
     def _node_sal(self):
         # hardcoded local instance, this service is only intended to be install by the node robot
-        return j.clients.zos.sal.get_node(NODE_CLIENT)
+        return j.clients.zos.get(NODE_CLIENT)
 
     @property
     def _zerodb_sal(self):

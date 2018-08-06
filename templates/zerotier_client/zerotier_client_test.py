@@ -3,7 +3,7 @@ import os
 import pytest
 
 from zerotier_client import ZerotierClient
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest
+from JumpscaleZrobot.test.utils import ZrobotBaseTest
 
 
 class TestZerotierClientTemplate(ZrobotBaseTest):
@@ -13,8 +13,8 @@ class TestZerotierClientTemplate(ZrobotBaseTest):
         super().preTest(os.path.dirname(__file__), ZerotierClient)
 
     def setUp(self):
-        self.list = patch('js9.j.clients.zerotier.list', MagicMock(return_value=[])).start()
-        self.get = patch('js9.j.clients.zerotier.get', MagicMock()).start()
+        self.list = patch('jumpscale.j.clients.zerotier.list', MagicMock(return_value=[])).start()
+        self.get = patch('jumpscale.j.clients.zerotier.get', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()
@@ -31,7 +31,7 @@ class TestZerotierClientTemplate(ZrobotBaseTest):
             ZerotierClient(name="zttest", data={'token': ''})
 
     def test_create(self):
-        get = patch('js9.j.clients.zerotier.get', MagicMock()).start()
+        get = patch('jumpscale.j.clients.zerotier.get', MagicMock()).start()
         data = {'token': 'foo'}
         ZerotierClient(name="zttest", data=data)
 
@@ -39,13 +39,13 @@ class TestZerotierClientTemplate(ZrobotBaseTest):
         get.assert_called_with("zttest", data={'token_': data['token']})
 
     def test_create_already_exists(self):
-        patch('js9.j.clients.zerotier.list', MagicMock(return_value=['zttest'])).start()
+        patch('jumpscale.j.clients.zerotier.list', MagicMock(return_value=['zttest'])).start()
         ZerotierClient(name='zttest', data={'token': 'foo'})
 
         assert self.get.called is False
 
     def test_uninstall(self):
-        uninstall = patch('js9.j.clients.zerotier.delete', MagicMock()).start()
+        uninstall = patch('jumpscale.j.clients.zerotier.delete', MagicMock()).start()
         service = ZerotierClient(name='zttest', data={'token': 'foo'})
         service.uninstall()
 

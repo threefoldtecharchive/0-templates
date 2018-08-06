@@ -1,4 +1,4 @@
-from js9 import j
+from jumpscale import j
 
 from zerorobot.template.base import TemplateBase
 
@@ -28,7 +28,7 @@ class Minio(TemplateBase):
 
     @property
     def node_sal(self):
-        return j.clients.zos.sal.get_node(NODE_CLIENT)
+        return j.clients.zos.get(NODE_CLIENT)
 
     @property
     def minio_sal(self):
@@ -46,12 +46,12 @@ class Minio(TemplateBase):
             'restic_password': self.data['resticPassword'],
             'meta_private_key': self.data['metaPrivateKey'],
         }
-        return j.clients.zos.sal.get_minio(**kwargs)
+        return j.sal_zos.get_minio(**kwargs)
 
     @property
     def restic_sal(self):
         bucket = '{repo}{bucket}'.format(repo=self.data['resticRepo'], bucket=self.guid)
-        return j.clients.zos.sal.get_restic(self.minio_sal.container, bucket)
+        return j.sal_zos.get_restic(self.minio_sal.container, bucket)
 
     def _backup_minio(self):
         self.state.check('actions', 'start', 'ok')

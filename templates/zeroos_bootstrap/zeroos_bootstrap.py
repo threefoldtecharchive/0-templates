@@ -1,13 +1,13 @@
 from gevent import sleep
 
-from js9 import j
+from jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import timeout
 from zerorobot.template.state import StateCheckError
 
-NODE_TEMPLATE_UID = 'github.com/zero-os/0-templates/node/0.0.1'
-ERP_TEMPLATE_UID = 'github.com/zero-os/0-templates/erp_registeration/0.0.1'
-HARDWARE_CHECK_TEMPLATE_UID = 'github.com/zero-os/0-templates/hardware_check/0.0.1'
+NODE_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node/0.0.1'
+ERP_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/erp_registeration/0.0.1'
+HARDWARE_CHECK_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/hardware_check/0.0.1'
 
 
 class ZeroosBootstrap(TemplateBase):
@@ -94,17 +94,17 @@ class ZeroosBootstrap(TemplateBase):
         }
 
         # ensure client config
-        cl = j.clients.zos.get(
+        # get a node object from the zero-os SAL
+        node = j.clients.zos.get(
             instance=instance,
             data=data,
             create=True,
             die=True,
             interactive=False)
 
-        cl.config.save()
+        node.client.config.save()
 
-        # get a node object from the zero-os SAL
-        return j.clients.zos.sal.get_node(instance)
+        return node
 
     @timeout(60, error_message="can't connect, unauthorizing member")
     def _ping_node(self, node_sal, zerotier_ip):

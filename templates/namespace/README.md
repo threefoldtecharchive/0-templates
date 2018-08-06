@@ -1,4 +1,4 @@
-## template: github.com/zero-os/0-templates/namespace/0.0.1
+## template: github.com/threefoldtech/0-templates/namespace/0.0.1
 
 ### Description:
 This template is responsible for managing a 0-db namespace
@@ -39,7 +39,7 @@ args = {
     'size': 10,
     'password': 'password',
 }
-namespace = robot.services.create('github.com/zero-os/0-templates/namespace/0.0.1', 'namespace_one', data=args)
+namespace = robot.services.create('github.com/threefoldtech/0-templates/namespace/0.0.1', 'namespace_one', data=args)
 namespace.schedule_action('install')
 namespace.schedule_action('info')
 ```
@@ -51,12 +51,12 @@ To create namespace `namespace_one`:
 
 ```yaml
 services:
-    - github.com/zero-os/0-templates/namespace/0.0.1__namespace_one:
+    - github.com/threefoldtech/0-templates/namespace/0.0.1__namespace_one:
           size: 10
           password: 'password'
           
 actions:
-    - template: 'github.com/zero-os/0-templates/namespace/0.0.1'
+    - template: 'github.com/threefoldtech/0-templates/namespace/0.0.1'
       service: 'namespace_one'
       actions: ['install']
 
@@ -67,7 +67,7 @@ To get info for namespace `namespace_one`:
 
 ```yaml
 actions:
-    - template: 'github.com/zero-os/0-templates/namespace/0.0.1'
+    - template: 'github.com/threefoldtech/0-templates/namespace/0.0.1'
       service: 'namespace_one'
       actions: ['info']
 

@@ -1,8 +1,8 @@
-from js9 import j
+from jumpscale import j
 from urllib.parse import urlparse
 from zerorobot.template.base import TemplateBase
 
-ZT_TEMPLATE_UID = 'github.com/zero-os/0-templates/zerotier_client/0.0.1'
+ZT_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerotier_client/0.0.1'
 
 
 class ZerotierClient(TemplateBase):

@@ -1,4 +1,4 @@
-## template: github.com/zero-os/0-templates/public_gateway/0.0.1
+## template: github.com/threefoldtech/0-templates/public_gateway/0.0.1
 
 ### Description:
 This template makes it possible to easily share a gateway

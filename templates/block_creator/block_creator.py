@@ -2,13 +2,13 @@ import os
 import time
 from random import shuffle
 
-from js9 import j
+from jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry
 from zerorobot.template.state import StateCheckError
 
-CONTAINER_TEMPLATE_UID = 'github.com/zero-os/0-templates/container/0.0.1'
+CONTAINER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/container/0.0.1'
 PEER_DISCOVERY_TEMPLATE_UID = 'github.com/threefoldtoken/0-templates/peer_discovery/0.0.1'
 
 
@@ -23,21 +23,21 @@ class BlockCreator(TemplateBase):
         super().__init__(name=name, guid=guid, data=data)
 
         # bind uninstall action to the delete method
-        #self.add_delete_callback(self.uninstall)        
-        
+        #self.add_delete_callback(self.uninstall)
+
         wallet_passphrase = self.data.get('walletPassphrase')
         if not wallet_passphrase:
             self.data['walletPassphrase'] = j.data.idgenerator.generateGUID()
 
         # peer discovery service
         self._discovery = None
-        
+
         self.recurring_action('_monitor', 30)  # every 30 seconds
 
 
     @property
     def _node_sal(self):
-        return j.clients.zero_os.sal.get_node(self.data['node'])
+        return j.clients.zos.get(self.data['node'])
 
 
     @property
@@ -60,7 +60,7 @@ class BlockCreator(TemplateBase):
             'data_dir': self._DATA_DIR,
             'network': self.data.get('network', 'standard')
         }
-        return j.clients.zero_os.sal.tfchain.daemon(**kwargs)
+        return j.sal_zos.tfchain.get().daemon(**kwargs)
 
 
     @property
@@ -71,7 +71,7 @@ class BlockCreator(TemplateBase):
             'api_addr': 'localhost:%s' % self.data['apiPort'],
             'wallet_passphrase': self.data['walletPassphrase'],
         }
-        return j.clients.zero_os.sal.tfchain.client(**kwargs)
+        return j.sal_zos.tfchain.get().client(**kwargs)
 
 
     def _get_container(self):
@@ -236,7 +236,7 @@ class BlockCreator(TemplateBase):
             container.schedule_action('stop').wait(die=True)
         except (ServiceNotFoundError, LookupError):
             container = self._get_container()
-            container.schedule_action('install').wait(die=True)      
+            container.schedule_action('install').wait(die=True)
 
         self.state.delete('status', 'running')
         self.state.delete('actions', 'start')
@@ -335,7 +335,7 @@ class BlockCreator(TemplateBase):
                 # get container status
                 if self._client_sal.wallet_status() == 'locked':
                     self.state.delete('wallet', 'unlock')
-                
+
                 self._wallet_unlock()
 
                 return
@@ -360,15 +360,15 @@ class BlockCreator(TemplateBase):
 
     def start_peer_discovery(self, interval_scan_network=43200, interval_add_peer=1800):
         """ Create service for peer discovery
-        
-            :param interval_scan_network: interval of scanning network in seconds. 
+
+            :param interval_scan_network: interval of scanning network in seconds.
              Defalt interval is 24 hours.
-            :param interval_add_peer: interval between adding new peers in seconds. 
+            :param interval_add_peer: interval between adding new peers in seconds.
              Default interval is 30 min.
         """
 
         self.state.check('actions', 'install', 'ok')
-        
+
         self.logger.info('start peer discovery')
 
         # create a service for peer discovery
@@ -421,7 +421,7 @@ class BlockCreator(TemplateBase):
         """ List all backups """
 
         self.state.check('status', 'running', 'ok')
-        
+
         return self._container_sal.client.filesystem.list(self._BACKUP_DIR)
 
 
@@ -448,4 +448,4 @@ def error_check(result, message):
 
     if result.state != 'SUCCESS':
         err = '{}: {} \n {}'.format(message, result.stderr, result.data)
-        raise RuntimeError(err)    
+        raise RuntimeError(err)

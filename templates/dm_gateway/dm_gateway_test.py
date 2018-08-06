@@ -6,9 +6,9 @@ from urllib.parse import urlparse
 import pytest
 from requests import HTTPError
 
-from gateway import PUBLIC_GW_ROBOTS, Gateway
-from js9 import j
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest
+from dm_gateway import PUBLIC_GW_ROBOTS, DmGateway
+from jumpscale import j
+from JumpscaleZrobot.test.utils import ZrobotBaseTest
 
 PRIVATEZT = '1234567890123456'
 NODEID = 'aabbcceeff'
@@ -23,7 +23,7 @@ class TestGatewayTemplate(ZrobotBaseTest):
 
     @classmethod
     def setUpClass(cls):
-        super().preTest(os.path.dirname(__file__), Gateway)
+        super().preTest(os.path.dirname(__file__), DmGateway)
 
     def setUp(self):
         self.valid_data = {
@@ -35,13 +35,13 @@ class TestGatewayTemplate(ZrobotBaseTest):
             'httpproxies': [],
             'domain': 'domain',
         }
-        patch('js9.j.clients', MagicMock()).start()
+        patch('jumpscale.j.clients', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()
 
     def _mock_service(self, data, mock_capacity=True):
-        self.service = Gateway(name='service', data=data)
+        self.service = DmGateway(name='service', data=data)
         self.robotapi = MagicMock()
         self.vmservice = MagicMock()
         self.service.api.services.get = MagicMock(return_value=self.vmservice)

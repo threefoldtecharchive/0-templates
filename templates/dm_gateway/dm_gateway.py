@@ -4,23 +4,23 @@ from urllib.parse import urlparse
 
 from requests import HTTPError
 
-from js9 import j
+from jumpscale import j
 from zerorobot.template.base import TemplateBase
 
 PUBLIC_GW_ROBOTS = ["http://gw1.robot.threefoldtoken.com:6600", "http://gw2.robot.threefoldtoken.com:6600", "http://gw3.robot.threefoldtoken.com:6600"]
 
-GW_UID = 'github.com/zero-os/0-templates/gateway/0.0.1'
-PGW_UID = 'github.com/zero-os/0-templates/public_gateway/0.0.1'
-ZEROTIERCLIENT_UID = 'github/zero-os/0-templates/zerotier_client/0.0.1'
-DM_VM_UID = 'github.com/jumpscale/digital_me/vm/0.0.1'
+GW_UID = 'github.com/threefoldtech/0-templates/gateway/0.0.1'
+PGW_UID = 'github.com/threefoldtech/0-templates/public_gateway/0.0.1'
+ZEROTIERCLIENT_UID = 'github/threefoldtech/0-templates/zerotier_client/0.0.1'
+DM_VM_UID = 'github.com/threefoldtech/0-templates/dm_vm/0.0.1'
 
 
 BASEPORT = 10000
 
 
-class Gateway(TemplateBase):
+class DmGateway(TemplateBase):
     version = '0.0.1'
-    template_name = 'gateway'
+    template_name = 'dm_gateway'
 
     def __init__(self, name, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)

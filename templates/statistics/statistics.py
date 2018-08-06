@@ -1,6 +1,6 @@
 import os
 import datetime
-from js9 import j
+from jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError

@@ -5,6 +5,7 @@ set -e
 export BRANCH=${1:-"development"}
 
 mkdir -p /opt/code/github/threefoldtech
+sudo chown -R $USER:$USER /opt/code/github/threefoldtech
 pushd /opt/code/github/threefoldtech
 
 # cloning source code

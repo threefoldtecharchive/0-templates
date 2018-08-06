@@ -6,11 +6,14 @@ import os
 
 import pytest
 
-from js9 import j
+from jumpscale import j
 
+from block_creator import BlockCreator
 from zerorobot import config, template_collection
 from zerorobot.template_uid import TemplateUID
 from zerorobot.template.state import StateCheckError
+
+from JumpscaleZrobot.test.utils import ZrobotBaseTest
 
 def mockdecorator(func):
     def wrapper(*args, **kwargs):
@@ -24,10 +27,11 @@ patch("gevent.sleep", MagicMock()).start()
 patch("time.sleep", MagicMock()).start()
 
 
-class TestBlockCreatorTemplate(TestCase):
+class TestBlockCreatorTemplate(ZrobotBaseTest):
 
     @classmethod
     def setUpClass(cls):
+        super().preTest(os.path.dirname(__file__), BlockCreator)
         cls.valid_data = {
             'node': 'node',
             'rpcPort': 23112,
@@ -38,21 +42,12 @@ class TestBlockCreatorTemplate(TestCase):
             'network': 'standard',
             'parentInterface': '',
             'tfchainFlist': 'https://hub.gig.tech/tfchain/ubuntu-16.04-tfchain-latest.flist',
+            'macAddress': '',
         }
-        config.DATA_DIR = tempfile.mkdtemp(prefix='0-templates_')
-        cls.type = template_collection._load_template(
-            "https://github.com/threefoldtoken/0-templates",
-            os.path.dirname(__file__)
-        )
-
-
-    @classmethod
-    def tearDownClass(cls):
-        if os.path.exists(config.DATA_DIR):
-            shutil.rmtree(config.DATA_DIR)
 
     def setUp(self):
-        self.client_get = patch('js9.j.clients', MagicMock()).start()
+        patch('jumpscale.j.sal_zos', MagicMock()).start()
+        patch('jumpscale.j.clients', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()
@@ -61,7 +56,7 @@ class TestBlockCreatorTemplate(TestCase):
         """
         Test create blockcreator service
         """
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
         bc.validate()
         assert bc.data == self.valid_data
 
@@ -71,7 +66,7 @@ class TestBlockCreatorTemplate(TestCase):
         """
         valid_data = self.valid_data.copy()
         valid_data['network'] = 'testnet'
-        bc = self.type(name='blockcreator', data=valid_data)
+        bc = BlockCreator(name='blockcreator', data=valid_data)
         bc.validate()
         assert bc.data == valid_data
 
@@ -79,8 +74,8 @@ class TestBlockCreatorTemplate(TestCase):
         """
         Test node_sal property
         """
-        get_node = patch('js9.j.clients.zero_os.sal.get_node', MagicMock(return_value='node_sal')).start()
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        get_node = patch('jumpscale.j.clients.zos.get', MagicMock(return_value='node_sal')).start()
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
         node_sal = bc._node_sal
         get_node.assert_called_with(bc.data['node'])
         assert node_sal == 'node_sal'
@@ -89,7 +84,7 @@ class TestBlockCreatorTemplate(TestCase):
         """
         Test node install
         """
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
         bc._daemon_sal.start = MagicMock()
         bc.api.services.find_or_create = MagicMock()
         fs = MagicMock(path='/var/cache')
@@ -116,7 +111,7 @@ class TestBlockCreatorTemplate(TestCase):
         }
         # test creation of container
         bc.api.services.find_or_create.assert_called_once_with(
-            'github.com/zero-os/0-templates/container/0.0.1', 
+            'github.com/threefoldtech/0-templates/container/0.0.1',
             bc._container_name,
             data=container_data)
 
@@ -126,11 +121,11 @@ class TestBlockCreatorTemplate(TestCase):
     def test_start_not_installed(self):
         with pytest.raises(StateCheckError,
                            message='start action should raise an error if explorer is not installed'):
-            bc = self.type(name='blockcreator', data=self.valid_data)
+            bc = BlockCreator(name='blockcreator', data=self.valid_data)
             bc.start()
 
     def test_start_installed_wallet_not_inited(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
 
         bc.state.set('actions', 'install', 'ok')
         bc.api.services.find_or_create = MagicMock()
@@ -140,7 +135,10 @@ class TestBlockCreatorTemplate(TestCase):
         bc._client_sal.wallet_unlock = MagicMock()
         list_of_candidates = [{'gw': '1.1.1.1', 'dev': 'one'}]
         bc._node_sal.client.ip.route.list = MagicMock(return_value=list_of_candidates)
-
+        fs = MagicMock(path='/var/cache')
+        sp = MagicMock()
+        sp.get = MagicMock(return_value=fs)
+        bc._node_sal.storagepools.get = MagicMock(return_value=sp)
         bc.start()
 
         bc.state.check('actions', 'start', 'ok')
@@ -154,7 +152,7 @@ class TestBlockCreatorTemplate(TestCase):
         assert bc.data['walletSeed'] != ''
 
     def test_start_installed_wallet_inited(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
 
         bc.state.set('actions', 'install', 'ok')
         bc.state.set('wallet', 'init', 'ok')
@@ -164,6 +162,10 @@ class TestBlockCreatorTemplate(TestCase):
         list_of_candidates = [{'gw': '1.1.1.1', 'dev': 'one'}]
         bc._node_sal.client.ip.route.list = MagicMock(return_value=list_of_candidates)
         bc._client_sal.wallet_unlock = MagicMock()
+        fs = MagicMock(path='/var/cache')
+        sp = MagicMock()
+        sp.get = MagicMock(return_value=fs)
+        bc._node_sal.storagepools.get = MagicMock(return_value=sp)
         bc.start()
 
         bc.state.check('actions', 'start', 'ok')
@@ -177,7 +179,7 @@ class TestBlockCreatorTemplate(TestCase):
         assert bc._client_sal.wallet_unlock.called
 
     def test_uninstall(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
 
         container = MagicMock()
         container.schedule_action = MagicMock()
@@ -209,7 +211,7 @@ class TestBlockCreatorTemplate(TestCase):
         container.delete.assert_called_once_with()
 
     def test_uninstall_container_not_exists(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
 
         bc.stop = MagicMock(side_effect=LookupError)
         bc.api.services.find_or_create = MagicMock()
@@ -235,7 +237,7 @@ class TestBlockCreatorTemplate(TestCase):
         container.schedule_action = MagicMock()
         container.delete = MagicMock()
 
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
         bc.state.set('actions', 'install', 'ok')
 
         bc.api.services.get = MagicMock(return_value=container)
@@ -255,8 +257,11 @@ class TestBlockCreatorTemplate(TestCase):
         container.delete.assert_not_called()
 
     def test_stop_container_not_exists(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
-
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
+        fs = MagicMock(path='/var/cache')
+        sp = MagicMock()
+        sp.get = MagicMock(return_value=fs)
+        bc._node_sal.storagepools.get = MagicMock(return_value=sp)
         bc.state.set('actions', 'install', 'ok')
 
         container = MagicMock()
@@ -279,9 +284,12 @@ class TestBlockCreatorTemplate(TestCase):
         container.delete.assert_not_called()
 
     def test_upgrade_fail_no_candidates(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
-        bc._node_sal.storagepools.get = MagicMock()
-        
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
+        fs = MagicMock(path='/var/cache')
+        sp = MagicMock()
+        sp.get = MagicMock(return_value=fs)
+        bc._node_sal.storagepools.get = MagicMock(return_value=sp)
+
         bc.stop = MagicMock()
         bc.start = MagicMock()
 
@@ -291,14 +299,16 @@ class TestBlockCreatorTemplate(TestCase):
 
         bc.api.services.get = MagicMock(return_value=container)
         bc._node_sal.client.nft.drop_port = MagicMock()
-        
+
         with self.assertRaisesRegex(RuntimeError, 'Could not find interface for macvlan parent'):
             bc.upgrade()
 
     def test_upgrade_fail_too_many_candidates(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
-        bc._node_sal.storagepools.get = MagicMock()
-        
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
+        fs = MagicMock(path='/var/cache')
+        sp = MagicMock()
+        sp.get = MagicMock(return_value=fs)
+        bc._node_sal.storagepools.get = MagicMock(return_value=sp)
         bc.stop = MagicMock()
         bc.start = MagicMock()
 
@@ -310,12 +320,12 @@ class TestBlockCreatorTemplate(TestCase):
         bc._node_sal.client.nft.drop_port = MagicMock()
         list_of_candidates = [{'gw': '1.1.1.1', 'dev': 'one'}, {'gw': '1.1.1.2', 'dev':'two'}]
         bc._node_sal.client.ip.route.list = MagicMock(return_value=list_of_candidates)
-        
+
         with self.assertRaisesRegex(RuntimeError, 'Found multiple eligible interfaces for macvlan parent: one, two'):
             bc.upgrade()
 
     def test_upgrade_success(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
         bc._node_sal.storagepools.get = MagicMock()
 
         bc.stop = MagicMock()
@@ -327,10 +337,13 @@ class TestBlockCreatorTemplate(TestCase):
 
         bc.api.services.get = MagicMock(return_value=container)
         bc._node_sal.client.nft.drop_port = MagicMock()
-        
+
         list_of_candidates = [{'gw': '1.1.1.1', 'dev': 'one'}]
         bc._node_sal.client.ip.route.list = MagicMock(return_value=list_of_candidates)
-        
+        fs = MagicMock(path='/var/cache')
+        sp = MagicMock()
+        sp.get = MagicMock(return_value=fs)
+        bc._node_sal.storagepools.get = MagicMock(return_value=sp)
         bc.upgrade()
 
         bc.stop.assert_called_once_with()
@@ -338,7 +351,7 @@ class TestBlockCreatorTemplate(TestCase):
         bc._node_sal.client.nft.drop_port.assert_called_once_with(23112)
 
     def test_consensus_stat(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
         bc.state.set('status', 'running', 'ok')
 
         bc._client_sal.consensus_stat = MagicMock()
@@ -348,7 +361,7 @@ class TestBlockCreatorTemplate(TestCase):
         bc._client_sal.consensus_stat.assert_called_once_with()
 
     def test_consensus_stat_not_running(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
 
         bc._client_sal.consensus_stat = MagicMock()
 
@@ -358,7 +371,7 @@ class TestBlockCreatorTemplate(TestCase):
         bc._client_sal.consensus_stat.assert_not_called()
 
     def test_wallet_amount(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
         bc.state.set('status', 'running', 'ok')
         bc.state.set('wallet', 'init', 'ok')
         bc.state.set('wallet', 'unlock', 'ok')
@@ -370,8 +383,8 @@ class TestBlockCreatorTemplate(TestCase):
         bc._client_sal.wallet_amount.assert_called_once_with()
 
     def test_wallet_amount_wallet_not_unlocked(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
-        
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
+
         bc.state.set('status', 'running', 'ok')
 
         bc._client_sal.wallet_amount = MagicMock()
@@ -382,7 +395,7 @@ class TestBlockCreatorTemplate(TestCase):
         bc._client_sal.wallet_amount.assert_not_called()
 
     def test_wallet_amount_not_running(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
 
         bc._client_sal.wallet_amount = MagicMock()
 
@@ -392,18 +405,18 @@ class TestBlockCreatorTemplate(TestCase):
         bc._client_sal.wallet_amount.assert_not_called()
 
     def test_monitor_not_intalled(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
         with pytest.raises(StateCheckError):
             bc._monitor()
 
     def test_monitor_not_started(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
         bc.state.set('actions', 'start', 'ok')
         with pytest.raises(StateCheckError):
             bc._monitor()
 
     def test_monitor_is_running(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
 
         bc.state.set('actions', 'install', 'ok')
         bc.state.set('actions', 'start', 'ok')
@@ -416,7 +429,7 @@ class TestBlockCreatorTemplate(TestCase):
         bc.api.services.get.assert_not_called()
 
     def test_monitor_not_running(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
 
         bc.state.set('actions', 'install', 'ok')
         bc.state.set('actions', 'start', 'ok')
@@ -433,14 +446,14 @@ class TestBlockCreatorTemplate(TestCase):
         bc._monitor()
 
         bc.state.check('status', 'running', 'ok')
-        bc.api.services.get.assert_called_with(template_uid='github.com/zero-os/0-templates/container/0.0.1', name=bc._container_name)
+        bc.api.services.get.assert_called_with(template_uid='github.com/threefoldtech/0-templates/container/0.0.1', name=bc._container_name)
         container.delete.assert_called_once_with()
         bc.install.assert_called_once_with()
         bc.start.assert_called_once_with()
 
 
     def test_create_backup_success(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
         bc.state.set('status', 'running', 'ok')
 
         result_mock = MagicMock(state='SUCCESS')
@@ -454,9 +467,9 @@ class TestBlockCreatorTemplate(TestCase):
 
 
     def test_create_backup_call_fail(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
         bc.state.set('status', 'running', 'ok')
-        
+
         result_mock = MagicMock(state='ERROR', stderr='error message', data='error data')
         bc._container_sal.client.system = MagicMock(return_value=MagicMock(get=MagicMock(return_value=result_mock)))
         with self.assertRaisesRegex(RuntimeError, 'error occurred when creating backup: error message \n '):
@@ -464,14 +477,14 @@ class TestBlockCreatorTemplate(TestCase):
 
 
     def test_create_backup_fail_state(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
 
         with self.assertRaises(StateCheckError):
-            bc.create_backup('name')        
+            bc.create_backup('name')
 
 
     def test_restore_backup_success(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
         bc.state.set('status', 'running', 'ok')
         result_mock = MagicMock(state='SUCCESS')
         bc._container_sal.client.system = MagicMock(return_value=MagicMock(get=MagicMock(return_value=result_mock)))
@@ -484,15 +497,15 @@ class TestBlockCreatorTemplate(TestCase):
 
 
     def test_restore_backup_fail_call(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
-        bc.state.set('status', 'running', 'ok')        
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
+        bc.state.set('status', 'running', 'ok')
         result_mock = MagicMock(state='ERROR', stderr='error message', data='error data')
         bc._container_sal.client.system = MagicMock(return_value=MagicMock(get=MagicMock(return_value=result_mock)))
         with self.assertRaisesRegex(RuntimeError, 'error occurred when restoring backup: error message \n '):
             bc.restore_backup('name')
 
     def test_restore_backup_fail_state(self):
-        bc = self.type(name='blockcreator', data=self.valid_data)
-       
+        bc = BlockCreator(name='blockcreator', data=self.valid_data)
+
         with self.assertRaises(StateCheckError):
             bc.restore_backup('name')

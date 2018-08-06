@@ -2,7 +2,7 @@
 
 ### Description:
 
-This Gateway template provides a bridge between your own personal `private` gateway and a (public gateway)[https://github.com/zero-os/0-templates/tree/master/templates/public_gateway]
+This Gateway template provides a bridge between your own personal `private` gateway and a (public gateway)[https://github.com/threefoldtech/0-templates/tree/master/templates/public_gateway]
 It abstracts all the logic required to create public forwards and http(s) proxies.
 
 ### Schema:

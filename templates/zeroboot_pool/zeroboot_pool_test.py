@@ -3,10 +3,10 @@ import pytest
 from unittest import TestCase
 from unittest.mock import MagicMock
 
-from js9 import j
+from jumpscale import j
 from zerorobot.template.state import StateCheckError
 
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest
+from JumpscaleZrobot.test.utils import ZrobotBaseTest
 from zeroboot_pool import ZerobootPool
 
 class TestZerobootPoolTemplate(ZrobotBaseTest):

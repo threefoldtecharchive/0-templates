@@ -36,7 +36,7 @@
 Start and connect the robot using the templates
 ```sh
 # run a zero robot
-zrobot server start -D <zrobot-data-repo> -C <js9-config-repo> -T git@github.com:zero-os/0-boot-templates.git
+zrobot server start -D <zrobot-data-repo> -C <jumpscale-config-repo> -T git@github.com:zero-os/0-boot-templates.git
 
 # connect to the zero robot server
 zrobot robot connect zero-boot http://127.0.0.1:6600
@@ -46,12 +46,12 @@ The examples in this guide uses the ZeroRobot dsl API and Jumpscale which can be
 
 Open Jumpscale
 ```sh
-js9
+js_shell
 ```
 
 Or import Jumpscale when using as a script
 ```py
-from js9 import j
+from jumpscale import j
 ```
 
 Load the ZeroRobot

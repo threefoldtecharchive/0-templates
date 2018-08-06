@@ -2,10 +2,10 @@ import os
 import pytest
 from unittest.mock import MagicMock
 
-from js9 import j
+from jumpscale import j
 from zerorobot.template.state import StateCheckError
 
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest
+from JumpscaleZrobot.test.utils import ZrobotBaseTest
 from zeroboot_reservation import ZerobootReservation
 
 class TestZerobootReservationTemplate(ZrobotBaseTest):

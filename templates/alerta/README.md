@@ -1,4 +1,4 @@
-## template: github.com/zero-os/0-templates/alerta/0.0.1
+## template: github.com/threefoldtech/0-templates/alerta/0.0.1
 
 ### Description:
 
@@ -20,18 +20,18 @@ The alerta service is used by other services to report to alerta(for example, he
 
 ```yaml
 services:
-- github.com/zero-os/0-templates/alerta/0.0.1__reporter:
+- github.com/threefoldtech/0-templates/alerta/0.0.1__reporter:
     url: "http://{address}/api/"
     apikey: "{apikey}"
     envname: "{envname}"
 
-- github.com/zero-os/0-templates/node/0.0.1__525400123456:
+- github.com/threefoldtech/0-templates/node/0.0.1__525400123456:
     redisAddr: 172.17.0.1
     redisPort: 6379
     hostname: "myzeros"
     alerta: ['reporter']
 
 actions:
-  - template: github.com/zero-os/0-templates/node/0.0.1
+  - template: github.com/threefoldtech/0-templates/node/0.0.1
     actions: ['install']
 ```

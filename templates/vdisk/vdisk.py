@@ -1,9 +1,9 @@
-from js9 import j
+from jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 from zerorobot.service_collection import ServiceNotFoundError
 
-ZERODB_TEMPLATE_UID = 'github.com/zero-os/0-templates/zerodb/0.0.1'
+ZERODB_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerodb/0.0.1'
 NODE_CLIENT = 'local'
 
 
@@ -36,7 +36,7 @@ class Vdisk(TemplateBase):
         """
         connection to the node
         """
-        return j.clients.zos.sal.get_node(NODE_CLIENT)
+        return j.clients.zos.get(NODE_CLIENT)
 
     @property
     def _zerodb(self):

@@ -6,7 +6,7 @@ from zeroos_bootstrap import ZeroosBootstrap
 from zerorobot.template.state import StateCheckError
 from zerorobot.service_collection import ServiceNotFoundError
 
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest, mock_decorator
+from JumpscaleZrobot.test.utils import ZrobotBaseTest, mock_decorator
 
 
 patch('zerorobot.template.decorator.timeout', MagicMock(return_value=mock_decorator)).start()
@@ -31,7 +31,7 @@ class TestBootstrapTemplate(ZrobotBaseTest):
         }
 
     def setUp(self):
-        patch('js9.j.clients.zerotier.get', MagicMock()).start()
+        patch('jumpscale.j.clients', MagicMock()).start()
 
     def tearDown(self):
         patch.stopall()
@@ -115,7 +115,7 @@ class TestBootstrapTemplate(ZrobotBaseTest):
         """
         Test _get_node_sal
         """
-        zero_os = patch('js9.j.clients.zos.get', MagicMock()).start()
+        client = MagicMock()
         bootstrap = ZeroosBootstrap('bootstrap', data=self.valid_data)
         ip = '127.0.0.1'
         data = {
@@ -126,11 +126,11 @@ class TestBootstrapTemplate(ZrobotBaseTest):
             'ssl': True,
             'timeout': 120,
         }
-        patch('js9.j.clients.zos.sal.get_node', MagicMock(return_value='node')).start()
+        zero_os = patch('jumpscale.j.clients.zos.get', MagicMock(return_value=client)).start()
         node = bootstrap._get_node_sal(ip)
 
         zero_os.called_once_with(instance='bootstrap', data=data, create=True, die=True)
-        assert node == 'node'
+        assert node == client
 
     def test_ping_node(self):
         """

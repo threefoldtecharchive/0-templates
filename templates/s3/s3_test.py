@@ -3,10 +3,10 @@ import os
 import requests
 import pytest
 
-from js9 import j
+from jumpscale import j
 from s3 import S3
 
-from JumpScale9Zrobot.test.utils import ZrobotBaseTest
+from JumpscaleZrobot.test.utils import ZrobotBaseTest
 
 
 class TestS3Template(ZrobotBaseTest):
@@ -31,14 +31,14 @@ class TestS3Template(ZrobotBaseTest):
             'minioPassword': 'password',
             'minioUrl': 'url',
         }
-        patch('js9.j.clients', MagicMock()).start()
+        patch('jumpscale.j.clients', MagicMock()).start()
         self.s3 = S3('s3', data=self.valid_data)
 
     def tearDown(self):
         patch.stopall()
 
     def test_get_zrobot(self):
-        patch('js9.j.clients.zrobot', MagicMock(robots={'main': 'main'})).start()
+        patch('jumpscale.j.clients.zrobot', MagicMock(robots={'main': 'main'})).start()
         robot = self.s3._get_zrobot('main', 'url')
         assert j.clients.zrobot.get.called_once_with('main', data={'url': 'url'})
         assert robot == 'main'
@@ -53,7 +53,7 @@ class TestS3Template(ZrobotBaseTest):
         with pytest.raises(ValueError, message='template should fail if there are no nodes in the farmer org'):
             resp = MagicMock()
             resp.json.return_value = []
-            patch('js9.j.clients.grid_capacity.get.return_value.api.ListCapacity.return_value', [0, resp]).start()
+            patch('jumpscale.j.clients.grid_capacity.get.return_value.api.ListCapacity.return_value', [0, resp]).start()
             self.s3.validate()
 
     def test_url(self):
