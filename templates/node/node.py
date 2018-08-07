@@ -12,6 +12,10 @@ ZDB_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerodb/0.0.1'
 NODE_CLIENT = 'local'
 
 
+class NoNamespaceAvailability(Exception):
+    pass
+
+
 class Node(TemplateBase):
 
     version = '0.0.1'
@@ -314,7 +318,3 @@ class Node(TemplateBase):
         for t in tasks:
             results.append(t.wait(timeout=timeout, die=die).result)
         return results
-
-
-class NoNamespaceAvailability(Exception):
-    pass
