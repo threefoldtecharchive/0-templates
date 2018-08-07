@@ -269,7 +269,7 @@ class Node(TemplateBase):
                 return bestzdb.name, namespace_name
 
         message = 'Namespace {} already exists on all zerodbs'.format(namespace_name)
-    raise NoNamespaceAvailability(message)
+        raise NoNamespaceAvailability(message)
 
     def reboot(self):
         self._stop_all_containers()
