@@ -41,7 +41,7 @@ class Zerodb(TemplateBase):
         self.state.check('actions', 'install', 'ok')
         self.state.check('actions', 'start', 'ok')
 
-        node = self.api.services.get(template_account='zero-os', template_name='node')
+        node = self.api.services.get(template_account='threefoldtech', template_name='node')
         node.state.check('disks', 'mounted', 'ok')
 
         if not self._zerodb_sal.is_running()[0]:
@@ -60,7 +60,7 @@ class Zerodb(TemplateBase):
             self.data['admin'] = j.data.idgenerator.generateXCharID(25)
 
         if not self.data['path']:
-            node = self.api.services.get(template_account='zero-os', template_name='node')
+            node = self.api.services.get(template_account='threefoldtech', template_name='node')
             kwargs = {
                 'disktype': self.data['diskType'],
                 'size': self.data['size'],

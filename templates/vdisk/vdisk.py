@@ -22,7 +22,7 @@ class Vdisk(TemplateBase):
     def validate(self):
         try:
             # ensure that a node service exists
-            node = self.api.services.get(template_account='zero-os', template_name='node')
+            node = self.api.services.get(template_account='threefoldtech', template_name='node')
             node.state.check('actions', 'install', 'ok')
         except:
             raise RuntimeError("not node service found, can't install the namespace")
@@ -59,7 +59,7 @@ class Vdisk(TemplateBase):
         except StateCheckError:
             pass
 
-        node = self.api.services.get(template_account='zero-os', template_name='node')
+        node = self.api.services.get(template_account='threefoldtech', template_name='node')
         kwargs = {
             'disktype': self.data['diskType'],
             'mode': 'user',

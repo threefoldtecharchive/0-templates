@@ -20,7 +20,7 @@ class Namespace(TemplateBase):
     def validate(self):
         try:
             # ensure that a node service exists
-            node = self.api.services.get(template_account='zero-os', template_name='node')
+            node = self.api.services.get(template_account='threefoldtech', template_name='node')
             node.state.check('actions', 'install', 'ok')
         except:
             raise RuntimeError("Node service not found, can't install the namespace")
@@ -41,7 +41,7 @@ class Namespace(TemplateBase):
         except StateCheckError:
             pass
 
-        node = self.api.services.get(template_account='zero-os', template_name='node')
+        node = self.api.services.get(template_account='threefoldtech', template_name='node')
         kwargs = {
             'disktype': self.data['diskType'],
             'mode': self.data['mode'],
