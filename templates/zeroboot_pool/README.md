@@ -1,4 +1,4 @@
-## template: github.com/zero-os/0-boot-templates/zeroboot_pool/0.0.1
+## template: github.com/threefoldtech/0-templates/templates/zeroboot_pool/0.0.1
 
 ### Description:
 
