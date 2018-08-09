@@ -1,4 +1,4 @@
-## template: github.com/0-templates/templates/zeroboot_client/0.0.1
+## template: github.com/0-templates/zeroboot_client/0.0.1
 
 ### Description:
 
