@@ -21,7 +21,7 @@ class ZerobootClient(TemplateBase):
             raise ValueError("no networkId specified in service data")
 
         sshClient = self.data.get('sshClient')
-        if not network_id:
+        if not sshClient:
             raise ValueError("no sshClient specified in service data")
 
         zerotierClient = self.data.get('zerotierClient')
