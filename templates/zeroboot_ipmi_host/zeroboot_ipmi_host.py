@@ -32,7 +32,7 @@ class ZerobootIpmiHost(TemplateBase):
             ZerobootClient.Network -- Zeroboot network
         """
         if not self.___network:
-            self.___network = self._zeroboot.networks.get(self.data['network'])
+            self.___network = self._zeroboot.networks.get(self.data['ip'])
 
         return self.___network
 
