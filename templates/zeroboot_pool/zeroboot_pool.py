@@ -5,8 +5,8 @@ from jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 
-RESERVATION_TEMPLATE = "github.com/zero-os/0-boot-templates/zeroboot_reservation/0.0.1"
-SUPPORTED_TEMPLATES = ("github.com/zero-os/0-boot-templates/zeroboot_racktivity_host/0.0.1", "github.com/zero-os/0-boot-templates/zeroboot_ipmi_host/0.0.1")
+RESERVATION_TEMPLATE = "github.com/threefoldtech/0-templates/zeroboot_reservation/0.0.1"
+SUPPORTED_TEMPLATES = ("github.com/threefoldtech/0-templates/zeroboot_racktivity_host/0.0.1", "github.com/threefoldtech/0-templates/zeroboot_ipmi_host/0.0.1")
 
 class ZerobootPool(TemplateBase):
 
