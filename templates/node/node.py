@@ -251,7 +251,7 @@ class Node(TemplateBase):
         if mountpoint:
             return self._create_zdb(namespace_name, name, mountpoint, mode, password, public, ns_size, zdb_size, disktype), namespace_name
 
-        zdbinfo = list(filter(lambda info: info[0].data['mode'] == mode and (info[1]['free'] / 1024 ** 3) > zdb_size and info[1]['type'] in disktypes, zdbinfo))
+        zdbinfo = list(filter(lambda info: info[1]['mode'] == mode and (info[1]['free'] / 1024 ** 3) > zdb_size and info[1]['type'] in disktypes, zdbinfo))
         if not zdbinfo:
             message = 'Not enough free space for namespace creation with size {} and type {}'.format(ns_size, ','.join(disktypes))
             raise NoNamespaceAvailability(message)
