@@ -71,7 +71,7 @@ class ZerobootRacktivityHost(TemplateBase):
         return  self.__host
 
     def validate(self):
-        for key in ['zerobootClient', 'racktivities', 'mac', 'ip', 'network', 'hostname']:
+        for key in ['zerobootClient', 'racktivities', 'mac', 'ip', 'hostname']:
             if not self.data.get(key):
                 raise ValueError("data key '%s' not specified." % key)
 
