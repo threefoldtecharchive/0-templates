@@ -9,7 +9,6 @@ Through this template, one can manage the power state and boot configuration of 
 
 - zerobootClient: zeroboot Jumpscale client instance name
 - ipmiClient: ipmi Jumpscale client instance name
-- network: Zeroboot network that contains the host
 - mac: Target mac address
 - ip: Target IP address
 - hostname: Target hostname
