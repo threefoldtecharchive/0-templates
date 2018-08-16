@@ -1,4 +1,4 @@
-## template: github.com/zero-os/0-boot-templates/zeroboot_racktivity_client/0.0.1
+## template: github.com/threefoldtech/0-templates/zeroboot_racktivity_client/0.0.1
 
 ### Description:
 
