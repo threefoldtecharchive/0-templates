@@ -202,7 +202,6 @@ Documentation for the template can be found [here](templates/zeroboot_ipmi_host/
 data = {
   'zerobootClient': 'zboot1-zb', # zeroboot client instance name
   'ipmiClient': 'zboot1-ipmi-h21', # ipmi client instance name
-  'network': '10.10.2.2/24',
   'hostname': 'host-21',
   'mac': '48-24-ae-3b-80-cc',
   'ip': '10.10.2.21',

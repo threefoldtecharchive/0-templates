@@ -54,7 +54,7 @@ class ZerobootRacktivityHost(TemplateBase):
             ZerobootClient.Network -- Zeroboot network
         """
         if not self.__network:
-            self.__network =  self._zeroboot.networks.get(self.data['network'])
+            self.__network =  self._zeroboot.networks.get(self.data['ip'])
 
         return self.__network
 

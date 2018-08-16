@@ -32,7 +32,7 @@ class ZerobootClient(TemplateBase):
             'sshclient_instance': sshClient,
             'zerotier_instance': zerotierClient,
         }
-        _ = j.clients.zboot.get(self.name, data=data, interactive=False)
+        j.clients.zboot.get(self.name, data=data, interactive=False)
 
     def delete(self):
         """

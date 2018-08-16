@@ -32,7 +32,7 @@ class ZerobootIpmiHost(TemplateBase):
             ZerobootClient.Network -- Zeroboot network
         """
         if not self.___network:
-            self.___network = self._zeroboot.networks.get(self.data['network'])
+            self.___network = self._zeroboot.networks.get(self.data['ip'])
 
         return self.___network
 
@@ -60,7 +60,7 @@ class ZerobootIpmiHost(TemplateBase):
         return self.__host
 
     def validate(self):
-        for key in ('zerobootClient', 'ipmiClient', 'mac', 'ip', 'network', 'hostname'):
+        for key in ('zerobootClient', 'ipmiClient', 'mac', 'ip', 'hostname'):
             if not self.data.get(key):
                 raise ValueError("data key '%s' not specified." % key)
 
