@@ -178,13 +178,14 @@ Documentation for the template can be found [here](templates/zeroboot_racktivity
 ```py
 data = {
   'zerobootClient': 'zboot1-zb', # zeroboot client instance name
-  'racktivityClient': 'zboot1-rackt1', # racktivity client instance name
+  'racktivities': [{'client': 'zboot1-rackt1' # racktivity client instance name,
+                    'port': 6 # port on the racktivity device the host is connected to.,
+                    'powermodule': 'p1' # module on the racktivity device the port is on (only for racktivity SE models)
+                    }], 
   'mac': 'd6-05-78-f2-06-8f',
   'ip': '10.10.2.11',
   'hostname': 'host-11',
-  'racktivityPort': 6,  # port on the racktivity device the host is connected to.
-  'racktivityPowerModule': 'P1', # module on the racktivity device the port is on (only for racktivity SE models)
-  'lkrnUrl': '<ipxe_LKRN_file_url>',
+  'lkrnUrl': '<ipxe_LKRN_file_url>'
 }
 h11_service = robot.services.create("github.com/zero-os/0-boot-templates/zeroboot_racktivity_host/0.0.1", "zboot1-h11", data=data)
 ```
