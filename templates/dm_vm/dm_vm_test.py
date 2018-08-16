@@ -137,7 +137,7 @@ class TestVmTemplate(ZrobotBaseTest):
                 {'name': 'test',
                  'type': 'default'
                  }],
-            'flist': 'https://hub.gig.tech/gig-bootable/ubuntu:lts.flist'
+            'flist': 'https://hub.grid.tf/tf-bootable/ubuntu:lts.flist'
         }
         vdisk_create = call(VDISK_TEMPLATE_UID, '_'.join([self.vm.guid, disk['label']]), data=disk)
         vm_create = call(VM_TEMPLATE_UID, self.vm.guid, data=vm_data)

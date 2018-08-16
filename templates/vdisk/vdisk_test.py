@@ -87,7 +87,7 @@ class TestVdiskTemplate(ZrobotBaseTest):
             'mode': 'user',
             'password': vdisk.data['password'],
             'public': False,
-            'size': int(vdisk.data['size']),
+            'ns_size': int(vdisk.data['size']),
         }
         node.schedule_action.assert_called_once_with('create_zdb_namespace', args)
         vdisk.state.check('actions', 'install', 'ok')

@@ -26,6 +26,8 @@ class TestZerodbTemplate(ZrobotBaseTest):
             'namespaces': [],
             'ztIdentity': '',
             'nics': [],
+            'diskType': 'hdd',
+            'size': 2,
         }
         patch('jumpscale.j.clients', MagicMock()).start()
 
@@ -83,6 +85,18 @@ class TestZerodbTemplate(ZrobotBaseTest):
 
         zdb.state.check('actions', 'install', 'ok')
         assert zdb.data['admin'] == 'password'
+
+    def test_install_empty_path(self):
+        """
+        Test install action sets path if empty
+        """
+        data = self.valid_data.copy()
+        data['path'] = ''
+        zdb = Zerodb('zdb', data=data)
+        zdb.api = MagicMock()
+        zdb.api.services.get.return_value.schedule_action.return_value.wait.return_value.result = 'path', 'name'
+        zdb.install()
+        assert zdb.data['path'] == 'path'
 
     def test_start_before_install(self):
         """
