@@ -170,6 +170,19 @@ class Node(TemplateBase):
         self._configure_network()
 
     def zdb_path(self, disktype, size, name, zdbinfo=None):
+        """Create zdb mounpoint and subvolume
+        
+        :param disktype: type of the disk the zerodb will be deployed on
+        :type disktype: string
+        :param size: size of the zerodb
+        :type size: int
+        :param name: zerodb name
+        :type name: string
+        :param zdbinfo: list of zerodb services and their info
+        :param zdbinfo: [(service, dict)], optional
+        :return: zerodb mountpoint, subvolume name
+        :rtype: (string, string)
+        """
         if disktype == 'hdd':
             disktypes = ['HDD', 'ARCHIVE']
             tasks = []
@@ -189,10 +202,10 @@ class Node(TemplateBase):
             disks.sort(key=lambda disk: disk[0].size, reverse=True)
             if not disks:
                 return '', ''
-            print("path,   ", disks[0][1])
             return disks[0][1], disks[0][0].name
         else:
             disktypes = ['SSD', 'NVME']
+            # filter storagepools that have the correct disk type and whose (total size - reserved subvolume quota) >= size
             storagepools = list(filter(lambda sp: self._node_sal.disks.get_device(sp.devices[0]).disk.type.value in disktypes and (sp.size - sp.total_quota() / (1024 ** 3)) >= size,
                                        self._node_sal.storagepools.list()))
             storagepools.sort(key=lambda sp: sp.size - sp.total_quota(), reverse=True)
@@ -202,7 +215,25 @@ class Node(TemplateBase):
             sp = storagepools[0]
             return self._node_sal.zerodbs.create_and_mount_subvolume(sp, name, size)
 
-    def _create_zdb(self, namespace_name, diskname, mountpoint, mode, password, public, ns_size, zdb_size, disktype):
+    def _create_zdb(self, diskname, mountpoint, mode, zdb_size, disktype, namespaces):
+        """Create a zerodb service
+        
+        :param diskname: disk or subvolume name
+        :type diskname: string
+        :param mountpoint: zerodb mountpoint
+        :type mountpoint: string
+        :param mode: zerodb mode
+        :type mode: string
+        :param zdb_size: size of the zerodb
+        :type zdb_size: int
+        :param disktype: type of the disk to deploy the zerodb on
+        :type disktype: string
+        :param namespaces: list of namespaces to create on the zerodb
+        :type namespaces: [dict]
+        :return: zerodb service name
+        :rtype: string
+        """
+
         zdb_name = 'zdb_%s_%s' % (self.name, diskname)
         zdb_data = {
             'path': mountpoint,
@@ -210,14 +241,7 @@ class Node(TemplateBase):
             'sync': False,
             'diskType': disktype,
             'size': zdb_size,
-            'namespaces': [
-                {
-                    'name': namespace_name,
-                    'password': password,
-                    'public': public,
-                    'size': ns_size
-                }
-            ]
+            'namespaces': namespaces
         }
 
         zdb = self.api.services.find_or_create(ZDB_TEMPLATE_UID, zdb_name, zdb_data)
@@ -246,10 +270,15 @@ class Node(TemplateBase):
             tasks.append(zdb.schedule_action('info'))
         results = self._wait_all(tasks, timeout=120, die=True)
         zdbinfo = sorted(list(zip(zdbs, results)), key=lambda x: x[1]['free'],  reverse=True)
-
+        namespace = {
+                    'name': namespace_name,
+                    'size': ns_size,
+                    'password': password,
+                    'public': public,
+        }
         mountpoint, name = self.zdb_path(disktype, zdb_size, zdb_name, zdbinfo)
         if mountpoint:
-            return self._create_zdb(namespace_name, name, mountpoint, mode, password, public, ns_size, zdb_size, disktype), namespace_name
+            return self._create_zdb(name, mountpoint, mode, zdb_size, disktype, [namespace]), namespace_name
 
         zdbinfo = list(filter(lambda info: info[1]['mode'] == mode and (info[1]['free'] / 1024 ** 3) > zdb_size and info[1]['type'] in disktypes, zdbinfo))
         if not zdbinfo:
@@ -257,15 +286,9 @@ class Node(TemplateBase):
             raise NoNamespaceAvailability(message)
 
         for bestzdb, _ in zdbinfo:
-            namespaces = [namespace['name'] for namespace in bestzdb.schedule_action('namespace_list').wait(die=True).result]
+            namespaces = [ns['name'] for ns in bestzdb.schedule_action('namespace_list').wait(die=True).result]
             if namespace_name not in namespaces:
-                kwargs = {
-                    'name': namespace_name,
-                    'size': ns_size,
-                    'password': password,
-                    'public': public,
-                }
-                bestzdb.schedule_action('namespace_create', kwargs).wait(die=True)
+                bestzdb.schedule_action('namespace_create', namespace).wait(die=True)
                 return bestzdb.name, namespace_name
 
         message = 'Namespace {} already exists on all zerodbs'.format(namespace_name)
