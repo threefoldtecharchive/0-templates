@@ -181,7 +181,6 @@ data = {
   'racktivityClient': 'zboot1-rackt1', # racktivity client instance name
   'mac': 'd6-05-78-f2-06-8f',
   'ip': '10.10.2.11',
-  'network': '10.10.2.2/24',
   'hostname': 'host-11',
   'racktivityPort': 6,  # port on the racktivity device the host is connected to.
   'racktivityPowerModule': 'P1', # module on the racktivity device the port is on (only for racktivity SE models)
