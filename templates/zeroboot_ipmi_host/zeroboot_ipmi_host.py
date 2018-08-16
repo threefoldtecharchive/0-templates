@@ -60,7 +60,7 @@ class ZerobootIpmiHost(TemplateBase):
         return self.__host
 
     def validate(self):
-        for key in ('zerobootClient', 'ipmiClient', 'mac', 'ip', 'network', 'hostname'):
+        for key in ('zerobootClient', 'ipmiClient', 'mac', 'ip', 'hostname'):
             if not self.data.get(key):
                 raise ValueError("data key '%s' not specified." % key)
 
