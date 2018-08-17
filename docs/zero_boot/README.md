@@ -8,6 +8,8 @@
 
     Power management using ipmi is supported by the templates. If your hardware supports it, the Racktivity module and setup can be omitted in the [zero-boot howto guide.](https://docs.grid.tf/threefold/info/src/branch/master/howto/zero_boot_hardware.md)
 
+    Keep in mind that 0-Robot running the templates needs to be able to reach the networks of the ipmi/Rackitivty devices to be able to interact with them. This can be done by having a direct route, or using ZeroTier (less stable) e.g: Have the a ZeroTier interface on the 0-robot host and one on the router of the ipmi/Racktivity devices (can be done with OpenWRT) and route the network of the devices to the router in the ZeroTier web-interface or manually add the route on the 0-Robot's host (could have less networking issues this way).
+
 * Inventory environment: The following data from the network will be needed to setup the templates for the environment.
     * Zeroboot (on the router) client needs the following data:
         * hostname/address of the host running it
@@ -76,7 +78,7 @@ For a Zeroboot setup, the following templates are provided in this template repo
 * [zerotier_client](#zerotier_client): Used for the Zeroboot client.
 * [ssh_client](#ssh_client): Used for the Zeroboot client.
 * [zeroboot_client](#zeroboot_client): Used for managing the zeroboot setup using the Jumpscale zboot client.  
-More information about the Jumpscale zboot client can be found [here.](https://github.com/jumpscale/lib9/blob/development/docs/clients/zeroboot_client.md)
+More information about the Jumpscale zboot client can be found [here.](https://github.com/threefoldtech/jumpscale_lib/blob/development/docs/clients/zeroboot_client.md)
 * [racktivity_client](#racktivity_client): Used for power management of a host with a racktivity device.
 * [ipmi_client](#ipmi_client): Used for power management of a host that supports ipmi.
 * [zeroboot_racktivity_host](#zeroboot_racktivity_host): Manages a zeroboot host that has power management using a racktivity device.
@@ -88,7 +90,7 @@ More information about the Jumpscale zboot client can be found [here.](https://g
 
 The zerotier client is needed for the zeroboot client so it can manage the zerotier network.
 
-Documentation for the template can be found [here](templates/zerotier_client/README.md)
+Documentation for the template can be found [here](../../templates/zerotier_client/README.md)
 
 #### Example service creation
 
@@ -103,7 +105,7 @@ zt_service = robot.services.create("github.com/zero-os/0-boot-templates/zerotier
 
 The ssh client is needed for the zeroboot client so it can login into the management host (usually router) and manage the hosts.
 
-Documentation for the template can be found [here](templates/ssh_client/README.md)
+Documentation for the template can be found [here](../../templates/ssh_client/README.md)
 
 #### Example service creation
 
@@ -120,7 +122,7 @@ ssh_service = robot.services.create("github.com/zero-os/0-boot-templates/ssh_cli
 
 The zeroboot client manages a zeroboot environment.
 
-Documentation for the template can be found [here](templates/zeroboot_client/README.md)
+Documentation for the template can be found [here](../../templates/zeroboot_client/README.md)
 
 #### Example service creation
 
@@ -137,7 +139,7 @@ zboot_service = robot.services.create("github.com/zero-os/0-boot-templates/zerob
 
 The Racktivity client power manages a single racktivity device (can manage multiple devices).
 
-Documentation for the template can be found [here](templates/racktivity_client/README.md)
+Documentation for the template can be found [here](../../templates/racktivity_client/README.md)
 
 #### Example service creation
 
@@ -154,7 +156,7 @@ rackt1_service = robot.services.create("github.com/zero-os/0-boot-templates/rack
 
 The ipmi client power manages a single host through ipmi (manages a single host).
 
-Documentation for the template can be found [here](templates/ipmi_client/README.md)
+Documentation for the template can be found [here](../../templates/ipmi_client/README.md)
 
 #### Example service creation
 
@@ -171,7 +173,7 @@ ipmi-h21_service = robot.services.create("github.com/zero-os/0-boot-templates/ip
 
 The Zeroboot racktivity host template manages a zeroboot host that has power management using a Racktivity device.
 
-Documentation for the template can be found [here](templates/zeroboot_racktivity_host/README.md)
+Documentation for the template can be found [here](../../templates/zeroboot_racktivity_host/README.md)
 
 #### Example service creation
 
@@ -194,7 +196,7 @@ h11_service = robot.services.create("github.com/zero-os/0-boot-templates/zeroboo
 
 The Zeroboot ipmi host template manages a zeroboot host that has power management using ipmi.
 
-Documentation for the template can be found [here](templates/zeroboot_ipmi_host/README.md)
+Documentation for the template can be found [here](../../templates/zeroboot_ipmi_host/README.md)
 
 #### Example service creation
 
@@ -216,7 +218,7 @@ The zeroboot pool template keeps track of the zeroboot hosts that are available 
 
 The hosts added to the pool should already have been successfully installed before they can be added, else an exception will the raised.
 
-Documentation for the template can be found [here](templates/zeroboot_pool/README.md)
+Documentation for the template can be found [here](../../templates/zeroboot_pool/README.md)
 
 #### Example service creation
 
@@ -231,7 +233,7 @@ pool_service = robot.services.create("github.com/zero-os/0-boot-templates/zerobo
 
 The zeroboot reservation template manages a reservation of a single host. It reserves an available host from a zeroboot pool service on installation and acts as a proxy for the zeroboot host.
 
-Documentation for the template can be found [here](templates/zeroboot_reservation/README.md)
+Documentation for the template can be found [here](../../templates/zeroboot_reservation/README.md)
 
 #### Example service creation
 
