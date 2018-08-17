@@ -5,6 +5,8 @@
 This template is responsible for managing a zeroboot host with Racktivity power management.
 Through this template, one can manage the power state and boot configuration of the host.
 
+Make sure the robot has a route to the host's Racktivity device.
+
 ### Schema:
 
 - zerobootClient: zeroboot Jumpscale client instance name
