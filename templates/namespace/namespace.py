@@ -20,7 +20,7 @@ class Namespace(TemplateBase):
     def validate(self):
         try:
             # ensure that a node service exists
-            node = self.api.services.get(template_account='zero-os', template_name='node')
+            node = self.api.services.get(template_account='threefoldtech', template_name='node')
             node.state.check('actions', 'install', 'ok')
         except:
             raise RuntimeError("Node service not found, can't install the namespace")
@@ -41,13 +41,13 @@ class Namespace(TemplateBase):
         except StateCheckError:
             pass
 
-        node = self.api.services.get(template_account='zero-os', template_name='node')
+        node = self.api.services.get(template_account='threefoldtech', template_name='node')
         kwargs = {
-            'disktype': self.data['diskType'].upper(),
+            'disktype': self.data['diskType'],
             'mode': self.data['mode'],
             'password': self.data['password'],
             'public': self.data['public'],
-            'size': self.data['size'],
+            'ns_size': self.data['size'],
             'name': self.data['nsName'],
         }
         # use the method on the node service to create the zdb and the namespace.

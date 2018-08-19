@@ -69,7 +69,7 @@ class TestNamespaceTemplate(ZrobotBaseTest):
             'mode': ns.data['mode'],
             'password': ns.data['password'],
             'public': ns.data['public'],
-            'size': ns.data['size'],
+            'ns_size': ns.data['size'],
             'name': ns.data['nsName']
         }
         ns.install()

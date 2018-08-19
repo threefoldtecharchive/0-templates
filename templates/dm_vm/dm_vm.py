@@ -8,8 +8,8 @@ from requests import HTTPError
 VDISK_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vdisk/0.0.1'
 VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vm/0.0.1'
 ZT_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerotier_client/0.0.1'
-BASEFLIST = 'https://hub.gig.tech/gig-bootable/{}.flist'
-ZEROOSFLIST = "https://hub.gig.tech/gig-bootable/zero-os-bootable.flist"
+BASEFLIST = 'https://hub.grid.tf/tf-bootable/{}.flist'
+ZEROOSFLIST = 'https://hub.grid.tf/tf-bootable/zero-os-bootable.flist'
 IPXEURL = 'https://bootstrap.gig.tech/ipxe/{}/{}/development ztid={}'
 
 

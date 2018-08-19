@@ -41,7 +41,7 @@ class Zerodb(TemplateBase):
         self.state.check('actions', 'install', 'ok')
         self.state.check('actions', 'start', 'ok')
 
-        node = self.api.services.get(template_account='zero-os', template_name='node')
+        node = self.api.services.get(template_account='threefoldtech', template_name='node')
         node.state.check('disks', 'mounted', 'ok')
 
         if not self._zerodb_sal.is_running()[0]:
@@ -58,6 +58,17 @@ class Zerodb(TemplateBase):
         # generate admin password
         if not self.data['admin']:
             self.data['admin'] = j.data.idgenerator.generateXCharID(25)
+
+        if not self.data['path']:
+            node = self.api.services.get(template_account='threefoldtech', template_name='node')
+            kwargs = {
+                'disktype': self.data['diskType'],
+                'size': self.data['size'],
+                'name': self.name,
+            }
+            self.data['path'], _ = node.schedule_action('zdb_path', kwargs).wait(die=True).result
+            if not self.data['path']:
+                raise RuntimeError('Failed to find a suitable disk for the zerodb')
 
         self._deploy()
         self.state.set('actions', 'install', 'ok')
