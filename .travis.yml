@@ -7,7 +7,7 @@ python:
   - "3.5"
 
 install:
-  - pip3 install codecov pytest pytest-cov erppeek colorlog psutil unidecode
+  - pip3 install codecov pytest pytest-cov erppeek colorlog psutil unidecode pytoml
   - ./utils/jumpscale_install.sh
   - ./utils/zrobot_install.sh
 
