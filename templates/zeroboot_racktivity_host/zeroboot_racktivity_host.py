@@ -19,7 +19,7 @@ class ZerobootRacktivityHost(TemplateBase):
     @property
     def _zeroboot(self):
         """ Returns zeroboot client
-        
+
         Returns:
             ZerobootClient -- zeroboot JS client
         """
@@ -31,7 +31,7 @@ class ZerobootRacktivityHost(TemplateBase):
     @property
     def _racktivities(self):
         """ Returns list of Racktivity device settings that correspond to the host
-        
+
         Returns:
             [{'client', 'port', 'powermodule'}] -- List of racktivity device settings
         """
@@ -49,7 +49,7 @@ class ZerobootRacktivityHost(TemplateBase):
     @property
     def _network(self):
         """ Returns the zeroboot network of the host
-        
+
         Returns:
             ZerobootClient.Network -- Zeroboot network
         """
@@ -61,7 +61,7 @@ class ZerobootRacktivityHost(TemplateBase):
     @property
     def _host(self):
         """ Returns zeroboot host for this service
-        
+
         Returns:
             ZerobootClient.Host -- Zeroboot Host
         """
@@ -82,7 +82,7 @@ class ZerobootRacktivityHost(TemplateBase):
         for r in self.data['racktivities']:
             if r['client'] not in j.clients.racktivity.list():
                 raise LookupError("No racktivity client instance found named '%s'" % r['client'])
-            
+
             p = r.get('port')
             try:
                 int(p)
@@ -114,7 +114,7 @@ class ZerobootRacktivityHost(TemplateBase):
 
     def host(self):
         """ Returns the hostname of the node
-        
+
         Returns:
             str -- hostname
         """
@@ -124,14 +124,14 @@ class ZerobootRacktivityHost(TemplateBase):
 
     def ip(self):
         """ Returns the ip address of the node
-        
+
         Returns:
             str -- ip address
         """
         self.state.check('actions', 'install', 'ok')
 
         return self.data['ip']
-    
+
     def power_on(self):
         """ Powers on host
         """
@@ -156,7 +156,7 @@ class ZerobootRacktivityHost(TemplateBase):
         """ Power cycles host
         """
         self.state.check('actions', 'install', 'ok')
-        
+
         # don't for loop the racktivities and power cycle them as if they are redundant, the host will stay on
         self.power_off()
         time.sleep(5)
@@ -167,7 +167,7 @@ class ZerobootRacktivityHost(TemplateBase):
 
     def power_status(self, fix_mismatch=True):
         """ Power state of host
-        
+
         Returns:
             bool -- True if on, False if off
         """
@@ -215,7 +215,7 @@ class ZerobootRacktivityHost(TemplateBase):
 
     def _list_power_status(self):
         """ Returns list of powerstatuses of all devices
-        
+
         Returns:
             [bool] -- List of power states of the racktivity clients
         """
@@ -224,7 +224,7 @@ class ZerobootRacktivityHost(TemplateBase):
         for r in self._racktivities:
             state = self._zeroboot.port_info(r['port'], r['client'], r['powermodule'])[1]
             if state is None:
-                raise RuntimeError("Racktivity client (%s) returned invalid power state for host %s" % 
+                raise RuntimeError("Racktivity client (%s) returned invalid power state for host %s" %
                     (r['client'].config.instance, self._host))
 
             result.append(state)
@@ -248,9 +248,9 @@ class ZerobootRacktivityHost(TemplateBase):
 
     def configure_ipxe_boot(self, lkrn_url):
         """ Configure the IPXE boot settings of the host
-        
+
         Arguments:
-            lkrn_url str -- URL that points to a LKRN file to boot from that includes boot parameters. E.g.: https://bootstrap.gig.tech/krn/master/0/
+            lkrn_url str -- URL that points to a LKRN file to boot from that includes boot parameters. E.g.: https://bootstrap.grid.tf/krn/master/0/
         """
         self.state.check('actions', 'install', 'ok')
 

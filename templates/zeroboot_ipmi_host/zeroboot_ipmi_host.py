@@ -18,7 +18,7 @@ class ZerobootIpmiHost(TemplateBase):
     @property
     def _zeroboot(self):
         """ Returns zeroboot client
-        
+
         Returns:
             ZerobootClient -- zeroboot JS client
         """
@@ -27,7 +27,7 @@ class ZerobootIpmiHost(TemplateBase):
     @property
     def _network(self):
         """ Returns the zeroboot network of the host
-        
+
         Returns:
             ZerobootClient.Network -- Zeroboot network
         """
@@ -39,7 +39,7 @@ class ZerobootIpmiHost(TemplateBase):
     @property
     def _ipmi(self):
         """ Returns ipmi client
-        
+
         Returns:
             IpmiClient -- ipmi JS client
         """
@@ -50,7 +50,7 @@ class ZerobootIpmiHost(TemplateBase):
     @property
     def _host(self):
         """ Returns zeroboot host for this service
-        
+
         Returns:
             ZerobootClient.Host -- Zeroboot Host
         """
@@ -96,7 +96,7 @@ class ZerobootIpmiHost(TemplateBase):
 
     def host(self):
         """ Returns the hostname of the node
-        
+
         Returns:
             str -- hostname
         """
@@ -106,14 +106,14 @@ class ZerobootIpmiHost(TemplateBase):
 
     def ip(self):
         """ Returns the ip address of the node
-        
+
         Returns:
             str -- ip address
         """
         self.state.check('actions', 'install', 'ok')
 
         return self.data['ip']
-    
+
     def power_on(self):
         """ Powers on host
         """
@@ -126,7 +126,7 @@ class ZerobootIpmiHost(TemplateBase):
         """ Powers off host
         """
         self.state.check('actions', 'install', 'ok')
-        
+
         self._ipmi.power_off()
         self.data['powerState'] = False
 
@@ -136,13 +136,13 @@ class ZerobootIpmiHost(TemplateBase):
         After a power cycle, the host will always be powered on.
         """
         self.state.check('actions', 'install', 'ok')
-        
+
         self._ipmi.power_cycle()
         self.data['powerState'] = True
 
     def power_status(self):
         """ Power state of host
-        
+
         Returns:
             bool -- True if on, False if off
         """
@@ -174,9 +174,9 @@ class ZerobootIpmiHost(TemplateBase):
 
     def configure_ipxe_boot(self, lkrn_url):
         """ Configure the IPXE boot settings of the host
-        
+
         Arguments:
-            lkrn_url str -- URL that points to a LKRN file to boot from that includes boot parameters. E.g.: https://bootstrap.gig.tech/krn/master/0/
+            lkrn_url str -- URL that points to a LKRN file to boot from that includes boot parameters. E.g.: https://bootstrap.grid.tf/krn/master/0/
         """
         self.state.check('actions', 'install', 'ok')
 

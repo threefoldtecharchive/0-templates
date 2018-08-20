@@ -3,7 +3,7 @@ import argparse, random, time, os
 
 def main(options):
     """Setup testing environment using Zero-Boot client
-    
+
     Arguments:
         options {object} -- argparse option object
             router_address {str} -- address of the router in the zerotier network.
@@ -21,7 +21,7 @@ def main(options):
     """
 
     instance_name = 'test-{}'.format(random.randint(1, 1000))
-    
+
     # configure ssh client
     ssh_data = {
         'addr':options.router_address,
@@ -54,19 +54,19 @@ def main(options):
 
     print("[*] Create testing zerotier")
     testing_zt_network = zerotier.network_create(public=False, subnet='10.147.19.0/24')
-    
-    print("[*] Set ipxe boot url")    
+
+    print("[*] Set ipxe boot url")
     networks = zboot.networks.get()
     host = networks.hosts.get(options.cpu_hostname)
 
-    ipxe_boot_url = 'http://unsecure.bootstrap.gig.tech/ipxe/{branch}/{zerotier}/development'.format(
+    ipxe_boot_url = 'http://unsecure.bootstrap.grid.tf/ipxe/{branch}/{zerotier}/development'.format(
         branch=options.core_0_branch,
         zerotier=testing_zt_network.id
     )
 
     host.configure_ipxe_boot(ipxe_boot_url)
 
-    print("[*] Reboot node %s" % (options.cpu_hostname))    
+    print("[*] Reboot node %s" % (options.cpu_hostname))
     zboot.port_power_cycle([options.cpu_rack_port], rack, options.rack_module_id)
 
     for _ in range(60):
@@ -78,9 +78,9 @@ def main(options):
             time.sleep(10)
     else:
         raise RuntimeError("Node doesn't join the zerotier network")
-    
+
     time.sleep(60)
-    
+
     members = testing_zt_network.members_list()
     cpu_zt_ip = members[0].data['config']['ipAssignments'][0]
 
@@ -90,9 +90,9 @@ def main(options):
 
     os.system('printf "{}" > /tmp/testing_zt_network.txt'.format(testing_zt_network.id))
     os.system('printf "{}" > /tmp/cpu_zt_ip.txt'.format(cpu_zt_ip))
-    
+
 if __name__ == "__main__":
-    
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--router_address", type=str, required=True, help="address of the router in the zerotier network")
     parser.add_argument("--router_username", type=str, required=True, help="username on the router")
@@ -106,6 +106,6 @@ if __name__ == "__main__":
     parser.add_argument("--core_0_branch", type=str, required=True, help="zero-os branch")
     parser.add_argument("--cpu_hostname", type=str, required=True, help="cpu hostname")
     parser.add_argument("--cpu_rack_port", type=int, required=True, help="racktivity device port connected to the target node")
-      
+
     options = parser.parse_args()
     main(options)
