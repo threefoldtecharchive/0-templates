@@ -9,6 +9,7 @@ CONTAINER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/container/0.0.1'
 VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vm/0.0.1'
 BOOTSTRAP_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zeroos_bootstrap/0.0.1'
 ZDB_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerodb/0.0.1'
+CAPACITY_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_capacity/0.0.1'
 NODE_CLIENT = 'local'
 
 
@@ -79,21 +80,17 @@ class Node(TemplateBase):
         except StateCheckError:
             pass
 
-    @retry(RuntimeError, tries=5, delay=5, backoff=2)
     def _register(self):
         """
-        register the node capacity
+        make sure the node_capacity service is installed
         """
         self.state.check('actions', 'install', 'ok')
-        self.logger.info("register node capacity")
-
-        self._node_sal.capacity.register()
-        self._node_sal.capacity.update_reality()
-        self._node_sal.capacity.update_reserved(
-            vms=self.api.services.find(template_name='vm', template_account='zero-os'),
-            vdisks=self.api.services.find(template_name='vdisk', template_account='zero-os'),
-            gateways=self.api.services.find(template_name='gateway', template_account='zero-os'),
-        )
+        services = self.api.services.find(template_uid=CAPACITY_TEMPLATE_UID)
+        if not services:
+            self.api.services.create(template_uid=CAPACITY_TEMPLATE_UID,
+                                     service_name='_node_capacity',
+                                     data={},
+                                     public=True)
 
     def _rename_cache(self):
         """Rename old cache storage pool to new convention if needed"""
@@ -171,7 +168,7 @@ class Node(TemplateBase):
 
     def zdb_path(self, disktype, size, name, zdbinfo=None):
         """Create zdb mounpoint and subvolume
-        
+
         :param disktype: type of the disk the zerodb will be deployed on
         :type disktype: string
         :param size: size of the zerodb
@@ -217,7 +214,7 @@ class Node(TemplateBase):
 
     def _create_zdb(self, diskname, mountpoint, mode, zdb_size, disktype, namespaces):
         """Create a zerodb service
-        
+
         :param diskname: disk or subvolume name
         :type diskname: string
         :param mountpoint: zerodb mountpoint
@@ -271,10 +268,10 @@ class Node(TemplateBase):
         results = self._wait_all(tasks, timeout=120, die=True)
         zdbinfo = sorted(list(zip(zdbs, results)), key=lambda x: x[1]['free'],  reverse=True)
         namespace = {
-                    'name': namespace_name,
-                    'size': ns_size,
-                    'password': password,
-                    'public': public,
+            'name': namespace_name,
+            'size': ns_size,
+            'password': password,
+            'public': public,
         }
         mountpoint, name = self.zdb_path(disktype, zdb_size, zdb_name, zdbinfo)
         if mountpoint:
