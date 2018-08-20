@@ -9,6 +9,7 @@ from zerorobot.template.state import StateCheckError
 from JumpscaleZrobot.test.utils import ZrobotBaseTest
 from zeroboot_racktivity_host import ZerobootRacktivityHost
 
+
 class TestZerobootRacktivityHostTemplate(ZrobotBaseTest):
     @classmethod
     def setUpClass(cls):
@@ -17,14 +18,14 @@ class TestZerobootRacktivityHostTemplate(ZrobotBaseTest):
             'zerobootClient': 'zboot1-zb',
             'racktivities': [
                 {
-                'client': 'zboot1-rack',
-                'port': 6,
-                'powermodule': 'P1',
+                    'client': 'zboot1-rack',
+                    'port': 6,
+                    'powermodule': 'P1',
                 },
                 {
-                'client': 'zboot1-rack',
-                'port': 7,
-                'powermodule': 'P1',
+                    'client': 'zboot1-rack',
+                    'port': 7,
+                    'powermodule': 'P1',
                 },
             ],
             'mac': 'well:this:a:weird:mac:address',
@@ -39,7 +40,7 @@ class TestZerobootRacktivityHostTemplate(ZrobotBaseTest):
         """ Returns the racktivity clients defined in self._valid_data
 
         used for mocking
-        
+
         Returns:
             [string] -- List of Rackitivity clients in self._valid_data
         """
@@ -68,14 +69,14 @@ class TestZerobootRacktivityHostTemplate(ZrobotBaseTest):
                 'data': {
                     'racktivities': [
                         {
-                        'client': 'zboot1-rack',
-                        'port': 6,
-                        'powermodule': 'P1',
+                            'client': 'zboot1-rack',
+                            'port': 6,
+                            'powermodule': 'P1',
                         },
                         {
-                        'client': 'zboot1-rack',
-                        'port': 7,
-                        'powermodule': 'P1',
+                            'client': 'zboot1-rack',
+                            'port': 7,
+                            'powermodule': 'P1',
                         },
                     ],
                     'mac': 'well:this:a:weird:mac:address',
@@ -104,37 +105,14 @@ class TestZerobootRacktivityHostTemplate(ZrobotBaseTest):
                     'zerobootClient': 'zboot1-zb',
                     'racktivities': [
                         {
-                        'client': 'zboot1-rack',
-                        'port': 6,
-                        'powermodule': 'P1',
+                            'client': 'zboot1-rack',
+                            'port': 6,
+                            'powermodule': 'P1',
                         },
                         {
-                        'client': 'zboot1-rack',
-                        'port': 7,
-                        'powermodule': 'P1',
-                        },
-                    ],
-                    'mac': 'well:this:a:weird:mac:address',
-                    'ip': '10.10.1.1',
-                    'hostname': 'test-01',
-                    'lkrnUrl': 'some.ixpe.url',
-                },
-                'message': "Should fail: missing network",
-                'missing': 'network',
-            },
-            {
-                'data': {
-                    'zerobootClient': 'zboot1-zb',
-                    'racktivities': [
-                        {
-                        'client': 'zboot1-rack',
-                        'port': 6,
-                        'powermodule': 'P1',
-                        },
-                        {
-                        'client': 'zboot1-rack',
-                        'port': 7,
-                        'powermodule': 'P1',
+                            'client': 'zboot1-rack',
+                            'port': 7,
+                            'powermodule': 'P1',
                         },
                     ],
                     'mac': 'well:this:a:weird:mac:address',
@@ -150,14 +128,14 @@ class TestZerobootRacktivityHostTemplate(ZrobotBaseTest):
                     'zerobootClient': 'zboot1-zb',
                     'racktivities': [
                         {
-                        'client': 'zboot1-rack',
-                        'port': 6,
-                        'powermodule': 'P1',
+                            'client': 'zboot1-rack',
+                            'port': 6,
+                            'powermodule': 'P1',
                         },
                         {
-                        'client': 'zboot1-rack',
-                        'port': 7,
-                        'powermodule': 'P1',
+                            'client': 'zboot1-rack',
+                            'port': 7,
+                            'powermodule': 'P1',
                         },
                     ],
                     'ip': '10.10.1.1',
@@ -173,14 +151,14 @@ class TestZerobootRacktivityHostTemplate(ZrobotBaseTest):
                     'zerobootClient': 'zboot1-zb',
                     'racktivities': [
                         {
-                        'client': 'zboot1-rack',
-                        'port': 6,
-                        'powermodule': 'P1',
+                            'client': 'zboot1-rack',
+                            'port': 6,
+                            'powermodule': 'P1',
                         },
                         {
-                        'client': 'zboot1-rack',
-                        'port': 7,
-                        'powermodule': 'P1',
+                            'client': 'zboot1-rack',
+                            'port': 7,
+                            'powermodule': 'P1',
                         },
                     ],
                     'network': '10.10.1.0/24',
@@ -196,9 +174,9 @@ class TestZerobootRacktivityHostTemplate(ZrobotBaseTest):
             instance = ZerobootRacktivityHost(name="test", data=tc['data'])
 
             with pytest.raises(
-                    ValueError, message="Unexpected success: %s\n\nData: %s" %(tc['message'], tc['data'])) as excinfo:
+                    ValueError, message="Unexpected success: %s\n\nData: %s" % (tc['message'], tc['data'])) as excinfo:
                 instance.validate()
-            
+
             if tc['missing'] not in str(excinfo):
                 pytest.fail(
                     "Error message did not contain missing field('%s'): %s" % (tc['missing'], str(excinfo)))
@@ -213,8 +191,8 @@ class TestZerobootRacktivityHostTemplate(ZrobotBaseTest):
             'zerobootClient': 'zboot1-zb',
             'racktivities': [
                 {
-                'client': 'zboot1-rack',
-                'powermodule': 'P1',
+                    'client': 'zboot1-rack',
+                    'powermodule': 'P1',
                 },
             ],
             'mac': 'well:this:a:weird:mac:address',
@@ -232,9 +210,9 @@ class TestZerobootRacktivityHostTemplate(ZrobotBaseTest):
             'zerobootClient': 'zboot1-zb',
             'racktivities': [
                 {
-                'client': 'zboot1-rack',
-                'port': 'FOO',
-                'powermodule': 'P1',
+                    'client': 'zboot1-rack',
+                    'port': 'FOO',
+                    'powermodule': 'P1',
                 },
             ],
             'mac': 'well:this:a:weird:mac:address',
@@ -388,7 +366,6 @@ class TestZerobootRacktivityHostTemplate(ZrobotBaseTest):
         expected_calls = []
         for d in reversed(self._valid_data['racktivities']):
             expected_calls.append(zboot.get().port_info(d['port'], mock.ANY, d['powermodule']))
-
 
     def test_monitor_not_installed(self):
         instance = ZerobootRacktivityHost(name="test", data=self._valid_data)
