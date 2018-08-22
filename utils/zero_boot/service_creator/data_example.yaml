@@ -1,4 +1,4 @@
-ipmi_clients:
+ipmi_client:
     instance:
         host: ''
         password: ''
@@ -26,7 +26,7 @@ zeroboot_ipmi_host:
         hostname: ''
         ip: ''
         ipmiClient: ''
-        lkrn_url: ''
+        lkrnUrl: ''
         mac: ''
         network: ''
         zerobootClient: ''
@@ -37,7 +37,7 @@ zeroboot_racktivity_host:
     instance:
         hostname: ''
         ip: ''
-        lkrn_url: ''
+        lkrnUrl: ''
         mac: ''
         network: ''
         racktivities:

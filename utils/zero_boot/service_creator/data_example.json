@@ -28,8 +28,7 @@
             "mac":"",
             "ip": "",
             "hostname":"",
-            "network":"",
-            "lkrn_url": "",
+            "lkrnUrl": "",
             "racktivities": [
                 {
                     "client":"",
@@ -39,7 +38,7 @@
             ]
         }
     },
-    "ipmi_clients": {
+    "ipmi_client": {
         "instance":{
             "username":"",
             "password": "",
@@ -54,7 +53,7 @@
             "ip": "",
             "hostname": "",
             "network": "",
-            "lkrn_url": "",
+            "lkrnUrl": "",
             "ipmiClient": ""
         }
     },
