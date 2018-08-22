@@ -6,7 +6,7 @@
 
 On how to setup a zeroboot environment, check the [zero-boot howto guide.](https://docs.grid.tf/threefold/info/src/branch/master/howto/zero_boot_hardware.md)  
 
-    Power management using ipmi is supported by the templates. If your hardware supports it, the Racktivity module and setup can be omitted in the [zero-boot howto guide.](https://docs.grid.tf/threefold/info/src/branch/master/howto/zero_boot_hardware.md)
+Power management using ipmi is supported by the templates. If your hardware supports it, the Racktivity module and setup can be omitted in the [zero-boot howto guide.](https://docs.grid.tf/threefold/info/src/branch/master/howto/zero_boot_hardware.md)
 
 **Where to host your 0-robot?**
 > Keep in mind that 0-Robot running the templates needs to be able to reach the networks of the ipmi/Rackitivty devices to be able to interact with them. This can be done by having a direct route, or using ZeroTier (less stable) e.g: Have the a ZeroTier interface on the 0-robot host and one on the router of the ipmi/Racktivity devices (can be done with OpenWRT) and route the network of the devices to the router in the ZeroTier web-interface or manually add the route on the 0-Robot's host (could have less networking issues this way).
