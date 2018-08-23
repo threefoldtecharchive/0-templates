@@ -1,0 +1,61 @@
+{
+    "ssh_client":{
+        "instance":{
+            "login":"",
+            "password": "",
+            "host":"",
+            "port":""
+        }
+    },
+    "zeroboot_client":{
+        "instance": {
+            "networkId":"",
+            "sshClient":"",
+            "zerotierClient":""
+        }
+    },
+    "racktivity_client": {
+        "instance": {
+            "username":"",
+            "password":"",
+            "host": "",
+            "port": ""
+        }
+    },
+    "zeroboot_racktivity_host" : {
+        "instance": {
+            "zerobootClient":"",
+            "mac":"",
+            "ip": "",
+            "hostname":"",
+            "lkrnUrl": "",
+            "racktivities": [
+                {
+                    "client":"",
+                    "port":"",
+                    "powermodule":""
+                }
+            ]
+        }
+    },
+    "ipmi_client": {
+        "instance":{
+            "username":"",
+            "password": "",
+            "host":"",
+            "port":""
+        }
+    },
+    "zeroboot_ipmi_host": {
+        "instance" : {
+            "zerobootClient": "",
+            "mac": "",
+            "ip": "",
+            "hostname": "",
+            "network": "",
+            "lkrnUrl": "",
+            "ipmiClient": ""
+        }
+    },
+    "zeroboot_pool": "name of the pool to create"
+}
