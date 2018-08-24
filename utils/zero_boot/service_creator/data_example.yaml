@@ -1,21 +1,21 @@
-ipmi_client:
-    instance:
-        host: ''
-        password: ''
-        port: ''
-        username: ''
-racktivity_client:
-    instance:
-        host: ''
-        password: ''
-        port: ''
-        username: ''
+zeroboot_pool: "name of the pool"
 ssh_client:
     instance:
         host: ''
         login: ''
         password: ''
         port: ''
+ipmi_client:
+    instance:
+        bcm: ''
+        user: ''
+        password:
+racktivity_client:
+    instance:
+        host: ''
+        password: ''
+        port: ''
+        username: ''
 zeroboot_client:
     instance:
         networkId: ''
@@ -28,18 +28,13 @@ zeroboot_ipmi_host:
         ipmiClient: ''
         lkrnUrl: ''
         mac: ''
-        network: ''
         zerobootClient: ''
-zeroboot_pool:
-    instance:
-    - '# list of host to put in that pool'
 zeroboot_racktivity_host:
     instance:
         hostname: ''
         ip: ''
         lkrnUrl: ''
         mac: ''
-        network: ''
         racktivities:
         -   client: ''
             port: ''

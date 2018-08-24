@@ -40,10 +40,9 @@
     },
     "ipmi_client": {
         "instance":{
-            "username":"",
+            "user":"",
             "password": "",
-            "host":"",
-            "port":""
+            "bmc":""
         }
     },
     "zeroboot_ipmi_host": {
