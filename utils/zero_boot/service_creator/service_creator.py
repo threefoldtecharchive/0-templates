@@ -43,7 +43,6 @@ def main(data, robot, pool, clean, debug):
 
     logger.info("start creation of services")
 
-    hosts = []
     for template, instances in input.items():
         for instance, data in instances.items():
             logger.info("create service %s %s" % (template, instance))
@@ -51,14 +50,15 @@ def main(data, robot, pool, clean, debug):
                 "github.com/threefoldtech/0-templates/%s/0.0.1" % template,
                 instance,
                 data=data)
-            if template in ['zeroboot_racktivity_host', 'zeroboot_ipmi_host']:
-                hosts.append(service)
-                try:
-                    service.state.check('actions', 'install', 'ok')
-                    logger.info("\talready installed")
-                except StateCheckError:
-                    logger.info("\tinstall service")
-                    service.schedule_action('install').wait(die=True)
+
+    hosts = robot.services.find(template_name='zeroboot_racktivity_host') + robot.services.find(template_name='zeroboot_ipmi_host')
+    for service in hosts:
+        try:
+            service.state.check('actions', 'install', 'ok')
+            logger.info("\talready installed")
+        except StateCheckError:
+            logger.info("\tinstall service")
+            service.schedule_action('install').wait(die=True)
 
     logger.info("create service zeroboot_pool %s" % pool_name)
     pool = robot.services.find_or_create(
