@@ -108,7 +108,7 @@ class S3(TemplateBase):
                 'ztClient': self.data['vmZerotier']['ztClient'],
             },
             'disks': [{
-                'diskType': 'hdd',
+                'diskType': self.data['storageType'],
                 'size': 5,
                 'mountPoint': '/mnt',
                 'filesystem': 'btrfs',
