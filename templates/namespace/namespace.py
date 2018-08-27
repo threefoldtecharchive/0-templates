@@ -16,8 +16,10 @@ class Namespace(TemplateBase):
         self.add_delete_callback(self.uninstall)
         if not self.data.get('password'):
             self.data['password'] = j.data.idgenerator.generateXCharID(32)
+        self.recurring_action('_monitor', 30)  # every 30 seconds
 
     def validate(self):
+        self.state.delete('status', 'running')
         try:
             # ensure that a node service exists
             node = self.api.services.get(template_account='threefoldtech', template_name='node')
@@ -28,6 +30,16 @@ class Namespace(TemplateBase):
         for param in ['diskType', 'size', 'mode']:
             if not self.data.get(param):
                 raise ValueError("parameter '{}' not valid: {}".format(param, str(self.data[param])))
+
+    def _monitor(self):
+        self.logger.info('Monitor namespace %s' % self.name)
+        self.state.check('actions', 'install', 'ok')
+
+        try:
+            self._zerodb.state.check('status', 'running', 'ok')
+            self.state.set('status', 'running', 'ok')
+        except StateCheckError:
+            self.state.delete('status', 'running')
 
     @property
     def _zerodb(self):
