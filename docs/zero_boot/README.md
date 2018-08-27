@@ -21,7 +21,7 @@ Power management using ipmi is supported by the templates. If your hardware supp
     * For each host/node:
         * hostname
         * ip address
-        * mac address
+        * mac address of the network interface that is connected to the pxe server
         * zeroboot network
         * When using Racktivity power management:
             * Rackivity module hostname/address
@@ -185,7 +185,7 @@ data = {
                     'port': 6 # port on the racktivity device the host is connected to.,
                     'powermodule': 'p1' # module on the racktivity device the port is on (only for racktivity SE models)
                     }], 
-  'mac': 'd6-05-78-f2-06-8f',
+  'mac': 'd6-05-78-f2-06-8f', # mac address of the network interface that is connected to the pxe server
   'ip': '10.10.2.11',
   'hostname': 'host-11',
   'lkrnUrl': '<ipxe_LKRN_file_url>'
@@ -206,7 +206,7 @@ data = {
   'zerobootClient': 'zboot1-zb', # zeroboot client instance name
   'ipmiClient': 'zboot1-ipmi-h21', # ipmi client instance name
   'hostname': 'host-21',
-  'mac': '48-24-ae-3b-80-cc',
+  'mac': '48-24-ae-3b-80-cc', # mac address of the network interface that is connected to the pxe server
   'ip': '10.10.2.21',
   'lkrnUrl': '<ipxe_LKRN_file_url>',
 }
