@@ -189,6 +189,7 @@ class Zerodb(TemplateBase):
     def connection_info(self):
         return {
             'ip': self._node_sal.public_addr,
+            'storage_ip': self._node_sal.storageAddr,
             'port': self.data['nodePort']
         }
 
