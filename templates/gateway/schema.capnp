@@ -10,6 +10,7 @@ struct Schema {
     domain @5: Text;
     certificates @6 :List(Certificate);
     ztIdentity @7: Text; #
+    routes @8: List(Route);
 
     struct Network {
         type @0: NetworkType;
@@ -94,5 +95,12 @@ struct Schema {
       key @1: Text;
       metadata @2: Text;
       cert @3: Text;
+    }
+
+    struct Route{
+        name @0: Text; # logical name of the route
+        device @1: Text; # device name
+        destination @2: Text; # destination network
+        gateway @3: Text; # gateway, optional
     }
 }
