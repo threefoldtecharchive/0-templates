@@ -11,6 +11,7 @@ BOOTSTRAP_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zeroos_bootstrap/
 ZDB_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerodb/0.0.1'
 CAPACITY_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_capacity/0.0.1'
 NETWORK_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/network/0.0.1'
+BRIDGE_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/bridge/0.0.1'
 NODE_CLIENT = 'local'
 
 
@@ -26,6 +27,7 @@ class Node(TemplateBase):
     def __init__(self, name, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self.recurring_action('_monitor', 30)  # every 30 seconds
+        self.recurring_action('_network_monitor', 30)  # every 30 seconds
         self.recurring_action('_register', 10 * 60)  # every 10 minutes
 
     def validate(self):
@@ -81,6 +83,14 @@ class Node(TemplateBase):
         except StateCheckError:
             pass
 
+    def _network_monitor(self):
+        self.state.check('actions', 'install', 'ok')
+
+        # make sure the bridges are installed
+        for service in self.api.services.find(template_uid=BRIDGE_TEMPLATE_UID):
+            self.logger.info("configuring bridge %s" % service.name)
+            service.schedule_action('install').wait(die=True)
+
         # make sure the networks are configured
         for service in self.api.services.find(template_uid=NETWORK_TEMPLATE_UID):
             self.logger.info("configuring network %s" % service.name)
@@ -135,11 +145,6 @@ class Node(TemplateBase):
         # Set host name
         self._node_sal.client.system('hostname %s' % self.data['hostname']).get()
         self._node_sal.client.bash('echo %s > /etc/hostname' % self.data['hostname']).get()
-
-        # configure network
-        for service in self.api.services.find(template_uid=NETWORK_TEMPLATE_UID):
-            self.logger.info("configuring network %s" % service.name)
-            service.schedule_action('configure').wait(die=True)
 
         self.data['uptime'] = self._node_sal.uptime()
         self.state.set('actions', 'install', 'ok')
