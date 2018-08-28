@@ -46,19 +46,6 @@ class TestNodeTemplate(ZrobotBaseTest):
 
         node.state.check('actions', 'install', 'ok')
 
-    def test_network(self):
-        node = Node(name='node')
-        node.data['network'] = {'vlan': 100, 'cidr': '192.168.122.0/24'}
-        node._node_sal.client.info.version = MagicMock(return_value={'branch': 'master', 'revision': 'revision'})
-        node.install()
-        node._node_sal.network.configure.assert_called_with(bonded=False, cidr='192.168.122.0/24', ovs_container_name='ovs', vlan_tag=100)
-
-    def test_configure_network(self):
-        node = Node(name='node')
-        node.configure_network('192.168.122.0/24', 100)
-        node._node_sal.network.configure.assert_called_with(bonded=False, cidr='192.168.122.0/24', ovs_container_name='ovs', vlan_tag=100)
-
-
     def test_node_info_node_running(self):
         """
         Test node info
