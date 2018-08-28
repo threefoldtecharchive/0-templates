@@ -58,7 +58,6 @@ class TestNodeTemplate(ZrobotBaseTest):
         node.configure_network('192.168.122.0/24', 100)
         node._node_sal.network.configure.assert_called_with(bonded=False, cidr='192.168.122.0/24', ovs_container_name='ovs', vlan_tag=100)
 
-
     def test_node_info_node_running(self):
         """
         Test node info
