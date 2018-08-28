@@ -60,6 +60,7 @@ class S3(TemplateBase):
 
     def _get_zrobot(self, name, url):
         j.clients.zrobot.get(name, data={'url': url})
+	# j.clients.zrobot.get(name, data={'url': 'http://172.30.115.224:6600'})
         return j.clients.zrobot.robots[name]
 
     def _vm(self):
@@ -68,6 +69,7 @@ class S3(TemplateBase):
     def _vm_robot_and_ip(self):
         vm = self._vm()
         vminfo = vm.schedule_action('info', args={'timeout': 600}).wait(die=True).result
+        # @todo: handle ip in case of vxlan
         ip = vminfo['zerotier'].get('ip')
 
         if not ip:
@@ -83,6 +85,10 @@ class S3(TemplateBase):
         resp = capacity.api.ListCapacity(query_params={'farmer': self.data['farmerIyoOrg']})[1]
         resp.raise_for_status()
         self._nodes = resp.json()
+        # resp = resp.json()
+        # for i in range(0, len(resp)):
+        #     if resp[i]['node_id'] == 'ac1f6b457bd8':
+        #         self._nodes = [resp[i]]
 
         if not self._nodes:
             raise ValueError('There are no nodes in this farm')
@@ -144,9 +150,12 @@ class S3(TemplateBase):
 
         # Create namespaces to be used as a backend for minio
         node_index = 0
-        for i in range(zdb_count):
+        for _ in range(zdb_count):
             namespace, node_index = self._create_namespace(node_index, storage_key, ns_password)
             result = namespace.schedule_action('connection_info').wait(die=True).result
+            if self.data['nic']['type'] == 'zerotier':
+                zdbs_connection.append('{}:{}'.format(result['storage_ip'], result['port']))
+                continue
             zdbs_connection.append('{}:{}'.format(result['ip'], result['port']))
 
         self._nodes = sorted(self._nodes, key=lambda k: k['total_resources'][storage_key], reverse=True)
@@ -155,9 +164,10 @@ class S3(TemplateBase):
         vm_data = {
             'memory': 2000,
             'image': 'zero-os',
-            'zerotier': {
-                'id': self.data['vmZerotier']['id'],
-                'ztClient': self.data['vmZerotier']['ztClient'],
+            'nic': {
+                'id': self.data['vmNic']['id'],
+                'ztClient': self.data['vmNic']['ztClient'],
+                'type': self.data['vmNic']['type'],
             },
             'disks': [{
                 'diskType': self.data['storageType'],

@@ -5,7 +5,7 @@
 struct Schema {
     memory @0: UInt16 = 128; # Amount of memory in MiB
     cpu @1: UInt16 = 1; # Number of virtual CPUs
-    zerotier @2: Zerotier; # zerotier nic to attach to the vm
+    nic @2: Nic; # zerotier/vxlan nic to attach to the vm
     image @3: Text; # image name specifying if it is a `zero-os` or `ubuntu` image
     disks @4: List(Disk); # list of disks to attach to the vm
     configs @5: List(Config); # list of Config
@@ -38,8 +38,14 @@ struct Schema {
         ssd @1;
     }
 
-   struct Zerotier {
-      id @0: Text;
-      ztClient @1: Text;
-   }
+    struct Nic {
+      id @0: Text; # VxLan id or zerotier network id
+      type @1: NicType;
+      ztClient @2: Text;
+    }
+
+    enum NicType {
+      vxlan @0;
+      zerotier @1;
+    }
 }
