@@ -25,6 +25,7 @@ class TestGatewayTemplate(ZrobotBaseTest):
             'httpproxies': [],
             'domain': 'domain',
             'certificates': [],
+            'routes': [],
             'ztIdentity': '',
         }
         patch('jumpscale.j.clients', MagicMock()).start()
@@ -254,7 +255,7 @@ class TestGatewayTemplate(ZrobotBaseTest):
         Test add_http_proxy action if another proxy has the same host
         """
         with pytest.raises(ValueError,
-                   message='action should raise an error if another http proxy with the same host exist'):
+                           message='action should raise an error if another http proxy with the same host exist'):
             proxy = {'host': 'host', 'destinations': ['destination'],  'types': ['http'], 'name': 'proxy'}
             proxy2 = {'host': 'host', 'destinations': ['destination'],  'types': ['http'], 'name': 'proxy2'}
             self.valid_data['httpproxies'].append(proxy)
@@ -405,7 +406,7 @@ class TestGatewayTemplate(ZrobotBaseTest):
         Test remove_dhcp_host action if network with name doesnt exist
         """
         with pytest.raises(LookupError,
-                   message='action should raise an error if network with this name doesnt exist'):
+                           message='action should raise an error if network with this name doesnt exist'):
             gw = Gateway('gw', data=self.valid_data)
             gw.state.set('actions', 'start', 'ok')
             gw.remove_dhcp_host('network', {'macaddress': 'address2'})
@@ -559,4 +560,3 @@ class TestGatewayTemplate(ZrobotBaseTest):
         gw.state.set('actions', 'start', 'ok')
         gw.stop()
         gw._gateway_sal.stop.called_once_with()
-
