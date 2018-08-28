@@ -244,13 +244,53 @@ class Gateway(TemplateBase):
             self._gateway_sal.deploy()
             raise
 
+    def add_route(self, route):
+        self.logger.info('Add route {}'.format(route['name']))
+        self.state.check('actions', 'start', 'ok')
+
+        for existing_network in self.data['networks']:
+            name, combination = self._compare_objects(existing_network, route, 'dev', 'dest')
+            if name:
+                raise ValueError('route with name {} already exists'.format(name))
+            if combination:
+                raise ValueError('route with same dev/dest combination already exists')
+
+        self.data['routes'].append(route)
+
+        try:
+            self._gateway_sal.deploy()
+        except:
+            self.logger.error('Failed to add route, restoring gateway to previous state')
+            self.data['routes'].remove(route)
+            self._gateway_sal.deploy()
+            raise
+
+    def remove_route(self, name):
+        self.logger.info('Remove route {}'.format(name))
+        self.state.check('actions', 'start', 'ok')
+
+        for route in self.data['routes']:
+            if route['name'] == name:
+                self.data['routes'].remove(route)
+                break
+        else:
+            return
+        try:
+            self._gateway_sal.deploy()
+        except:
+            self.logger.error('Failed to remove route, restoring gateway to previous state')
+            self.data['routes'].append(route)
+            self._gateway_sal.deploy()
+            raise
+
     def info(self):
         data = self._gateway_sal.to_dict(live=True)
         return {
             'name': self.name,
             'portforwards': data['portforwards'],
             'httpproxies': data['httpproxies'],
-            'networks': data['networks']
+            'networks': data['networks'],
+            'routes': data['routes']
         }
 
     def uninstall(self):

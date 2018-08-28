@@ -9,6 +9,7 @@ It configures caddy, dnsmasq, nftables and cloud-init to work together to provid
 - `hostname`: container hostname.
 - `domain`: Domain for the private networks
 - `networks`: a list of type Networks. It specifies the configuration of the attached networks to the container.
+- `routes`: contains the routing table of the gateway
 - `portforwards`: list of Portforward tcp/udp forwards from public network to private network
 - `httpproxies`: liost of HTTPProxy. Reverse http/https proxy to allow one public ip to host multiple http services
 - `certificates`: List of Certificate
@@ -74,6 +75,12 @@ HTTPType enum:
 - `http`
 - `https`
 
+Route:
+- `name`: logical name of the route
+- `device`: device name
+- `destination`: destination network
+- `gateway`: gateway, optional
+
 ### Actions:
 - `install`: creates a gatewa on a node, starts it and configures all services
 - `start`: start a gateway
@@ -86,6 +93,8 @@ HTTPType enum:
 - `remove_dhcp_host`: Remove a host from a dhcp server
 - `add_network`: Adds a network to the gateway
 - `remove_network`: Remove a network from the gateway
+- `add_route`: add a route to the gateway
+- `remove_route`: remove a route from the gateway
 - `info`: Retreive information about your gateway
 
 ### Examples:
