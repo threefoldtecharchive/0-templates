@@ -61,17 +61,18 @@ class S3(TemplateBase):
 
     def _get_zrobot(self, name, url):
         j.clients.zrobot.get(name, data={'url': url})
-	# j.clients.zrobot.get(name, data={'url': 'http://172.30.115.224:6600'})
+	    # j.clients.zrobot.get(name, data={'url': 'http://172.30.115.224:6600'})
         return j.clients.zrobot.robots[name]
 
     def _vm(self):
         return self.api.services.get(template_uid=VM_TEMPLATE_UID, name=self.guid)
 
     def _gateway(self):
-        return self.api.services.get(template_uid=GATEWAY_TEMPLATE_UID, name=self.data['gateway'])
+        robot = j.clients.zrobot.robots[self.data['gatewayRobot']]
+        robot.services.get(template_uid=GATEWAY_TEMPLATE_UID, name=self.data['gateway'])
 
     def _vm_robot_and_ip(self):
-        ip = self.data['vmIp']
+        ip = self.data['vmIp'] # will be set in case of a vxlan
         if not ip:
             vm = self._vm()
             vminfo = vm.schedule_action('info', args={'timeout': 600}).wait(die=True).result
@@ -172,7 +173,9 @@ class S3(TemplateBase):
         }
     
         if self.data['vmNic']['type'] == 'vxlan':
-            host = self._gateway().schedule_action('add_dhcp_host', args={'network_name': self.data['gatewayNetwork'], 'host':{'hostname': self.guid}})
+            host = self._gateway().schedule_action(
+                'add_dhcp_host',
+                args={'network_name': self.data['gatewayNetwork'], 'host':{'hostname': self.guid}}).wait(die=True).result
             nic['hwaddr'] = host['macaddress']
             self.data['vmIp'] = host['ipaddress']
     
@@ -180,11 +183,7 @@ class S3(TemplateBase):
         vm_data = {
             'memory': 2000,
             'image': 'zero-os',
-            'nic': {
-                'id': self.data['vmNic']['id'],
-                'ztClient': self.data['vmNic']['ztClient'],
-                'type': self.data['vmNic']['type'],
-            },
+            'nic': nic,
             'disks': [{
                 'diskType': self.data['storageType'],
                 'size': 5,
