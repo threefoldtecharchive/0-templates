@@ -61,7 +61,6 @@ class S3(TemplateBase):
 
     def _get_zrobot(self, name, url):
         j.clients.zrobot.get(name, data={'url': url})
-	    # j.clients.zrobot.get(name, data={'url': 'http://172.30.115.224:6600'})
         return j.clients.zrobot.robots[name]
 
     def _vm(self):
@@ -91,10 +90,12 @@ class S3(TemplateBase):
         resp = capacity.api.ListCapacity(query_params={'farmer': self.data['farmerIyoOrg']})[1]
         resp.raise_for_status()
         self._nodes = resp.json()
-        # resp = resp.json()
-        # for i in range(0, len(resp)):
-        #     if resp[i]['node_id'] == 'ac1f6b457bd8':
-        #         self._nodes = [resp[i]]
+
+        # @todo remove the hack below after testing
+        resp = resp.json()
+        for i in range(0, len(resp)):
+            if resp[i]['node_id'] == 'ac1f6b457bd8':
+                self._nodes = [resp[i]]
 
         if not self._nodes:
             raise ValueError('There are no nodes in this farm')
@@ -106,7 +107,9 @@ class S3(TemplateBase):
             # if the current node candidate has enough storage, try to create a namespace on it
             if self._nodes[final_index]['total_resources'][storage_key] >= self.data['storageSize']:
                 best_node = self._nodes[final_index]
-                robot = self._get_zrobot(best_node['node_id'], best_node['robot_address'])
+                # @todo remove the hack below after testing
+                robot = self._get_zrobot(best_node['node_id'], 'http://172.30.115.224:6600')
+                #robot = self._get_zrobot(best_node['node_id'], best_node['robot_address'])
                 data = {
                     'diskType': self.data['storageType'],
                     'mode': 'direct',
@@ -127,8 +130,11 @@ class S3(TemplateBase):
                         raise RuntimeError(task.eco.errormessage)
                 else:
                     best_node['total_resources'][storage_key] = best_node['total_resources'][storage_key] - self.data['storageSize']
+                    # @todo remove the hack below after testing
                     self.data['namespaces'].append(
-                        {'name': namespace.name, 'url': best_node['robot_address'], 'node': best_node['node_id']})
+                        {'name': namespace.name, 'url': 'http://172.30.115.224:6600', 'node': best_node['node_id']})
+                    #self.data['namespaces'].append(
+                    #    {'name': namespace.name, 'url': best_node['robot_address'], 'node': best_node['node_id']})
                     return namespace, next_index
 
             if next_index == index:
