@@ -1,5 +1,6 @@
 import json
 import math
+import netaddr
 import time
 import requests
 
@@ -71,14 +72,21 @@ class S3(TemplateBase):
         robot.services.get(template_uid=GATEWAY_TEMPLATE_UID, name=self.data['gateway'])
 
     def _vm_robot_and_ip(self):
-        ip = self.data['vmIp'] # will be set in case of a vxlan
-        if not ip:
+        if self.data['nic']['type'] == 'zerotier':
             vm = self._vm()
             vminfo = vm.schedule_action('info', args={'timeout': 600}).wait(die=True).result
             ip = vminfo['zerotier'].get('ip')
 
             if not ip:
                 raise RuntimeError('VM has no ip assignments in zerotier network')
+        else:
+            info = self._gateway().schedule_action('info').wait(die=True).result
+            for network in info['networks']:
+                if network['name'] == 'public':
+                    ip = str(netaddr.IPNetwork(network['config']['cidr']).ip)
+                    break
+            else:
+                raise RuntimeError('Could not find public ip of gateway')
 
         return self._get_zrobot(vm.name, 'http://{}:6600'.format(ip)), ip
 
@@ -179,11 +187,29 @@ class S3(TemplateBase):
         }
     
         if self.data['vmNic']['type'] == 'vxlan':
-            host = self._gateway().schedule_action(
+            gw = self._gateway()
+            host = gw.schedule_action(
                 'add_dhcp_host',
                 args={'network_name': self.data['gatewayNetwork'], 'host':{'hostname': self.guid}}).wait(die=True).result
+            forward = {
+                'protocols': ['tcp'],
+                'srcport': 6600,
+                'srcnetwork': 'public',
+                'dstport': 6600, 
+                'dstip': host['ipaddress'],
+                'name': 'robot_{}'.format(self.guid)
+            }
+            gw.schedule_action('add_portforward', args={'forward': forward}).wait(die=True)
+            forward = {
+                'protocols':['tcp'],
+                'srcport':9000,
+                'srcnetwork': 'public',
+                'dstport': 9000,
+                'dstip': host['ipaddress'],
+                'name': 'minio_{}'.format(self.guid)
+            }
+            gw.schedule_action('add_portforward', args={'forward': forward}).wait(die=True)
             nic['hwaddr'] = host['macaddress']
-            self.data['vmIp'] = host['ipaddress']
     
         # Create the zero-os vm on which we will create the minio container
         vm_data = {
@@ -202,6 +228,7 @@ class S3(TemplateBase):
 
         vm = self.api.services.create(VM_TEMPLATE_UID, self.guid, vm_data)
         vm.schedule_action('install').wait(die=True)
+
         vm_robot, ip = self._vm_robot_and_ip()
 
         # Create the minio service on the vm

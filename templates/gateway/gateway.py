@@ -169,7 +169,7 @@ class Gateway(TemplateBase):
         except:
             self.logger.error('Failed to add dhcp host, restoring gateway to previous state')
             dhcpserver['hosts'].remove(host)
-            gateway_sal.networks[network_name].hosts.remove(host['hostname']
+            gateway_sal.networks[network_name].hosts.remove(host['hostname'])
             gateway_sal.configure_dhcp()
             gateway_sal.configure_cloudinit()
             raise
