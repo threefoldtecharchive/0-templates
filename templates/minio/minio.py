@@ -17,8 +17,11 @@ class Minio(TemplateBase):
         super().__init__(name=name, guid=guid, data=data)
         self.add_delete_callback(self.uninstall)
         self.recurring_action('_backup_minio', 30)
+        self.recurring_action('_monitor', 30)  # every 30 seconds
 
     def validate(self):
+        self.state.delete('status', 'running')
+        self.state.delete('zerodbs', 'started')
         for param in ['zerodbs', 'namespace', 'login', 'password']:
             if not self.data.get(param):
                 raise ValueError("parameter '%s' not valid: %s" % (param, str(self.data[param])))
@@ -26,12 +29,28 @@ class Minio(TemplateBase):
         if not self.data['resticRepo'].endswith('/'):
             self.data['resticRepo'] += '/'
 
+
+    def _monitor(self):
+        self.logger.info('Monitor minio %s' % self.name)
+        self.state.check('actions', 'install', 'ok')
+        self.state.check('actions', 'start', 'ok')
+        self.state.check('zerodbs', 'started', 'ok')
+
+        if not self._minio_sal.is_running():
+            self.state.delete('status', 'running')
+            self._minio_sal.create_config()
+            self.start()
+            if self._minio_sal.is_running():
+                self.state.set('status', 'running', 'ok')
+        else:
+            self.state.set('status', 'running', 'ok')
+
     @property
     def node_sal(self):
         return j.clients.zos.get(NODE_CLIENT)
 
     @property
-    def minio_sal(self):
+    def _minio_sal(self):
         kwargs = {
             'name': self.name,
             'node': self.node_sal,
@@ -51,7 +70,7 @@ class Minio(TemplateBase):
     @property
     def restic_sal(self):
         bucket = '{repo}{bucket}'.format(repo=self.data['resticRepo'], bucket=self.guid)
-        return j.sal_zos.get_restic(self.minio_sal.container, bucket)
+        return j.sal_zos.get_restic(self._minio_sal.container, bucket)
 
     def _backup_minio(self):
         self.state.check('actions', 'start', 'ok')
@@ -63,7 +82,7 @@ class Minio(TemplateBase):
 
     def install(self):
         self.logger.info('Installing minio %s' % self.name)
-        minio_sal = self.minio_sal
+        minio_sal = self._minio_sal
         minio_sal.create_config()
         self.data['node_port'] = minio_sal.node_port
         if not self.data['resticRepoPassword']:
@@ -78,7 +97,7 @@ class Minio(TemplateBase):
         """
         self.state.check('actions', 'install', 'ok')
         self.logger.info('Starting minio %s' % self.name)
-        self.minio_sal.start()
+        self._minio_sal.start()
         self.restic_sal.restore(META_DIR)
         self.state.set('actions', 'start', 'ok')
 
@@ -88,10 +107,13 @@ class Minio(TemplateBase):
         """
         self.state.check('actions', 'install', 'ok')
         self.logger.info('Stopping minio %s' % self.name)
-        self.minio_sal.stop()
+        self._minio_sal.stop()
         self.state.delete('actions', 'start')
 
     def uninstall(self):
         self.logger.info('Uninstalling minio %s' % self.name)
-        self.minio_sal.destroy()
+        self._minio_sal.destroy()
         self.state.delete('actions', 'install')
+
+    def update_zerodbs(self, zerodbs):
+        self.data['zerodbs'] = zerodbs

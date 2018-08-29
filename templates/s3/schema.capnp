@@ -1,7 +1,7 @@
 @0xf35b28a27d2d7444;
 
 struct Schema {
-    vmZerotier @0: Zerotier;
+    vmNic @0: Nic;
     farmerIyoOrg  @1: Text; # the farmer to create the s3 on
     dataShards @2: Int32=1; # 0-stor data shards config
     parityShards @3: Int32; # 0-stor parity shards config
@@ -11,15 +11,25 @@ struct Schema {
     minioLogin @7: Text; # minio login
     minioPassword @8: Text; # minio password
     minioUrl @9: Text; # url to access minio on. This is set by the template.
+    gateway @10: Text; # Gateway service to use for vm
+    gatewayRobot @11: Text; # Robot that created the gaty
+    gatewayNetwork @12: Text; # Gateway network to use for the vm
+    vmIp @13: Text; # vxlan ip
 
     enum StorageType {
      hdd @0;
      ssd @1;
     }
 
-    struct Zerotier {
-      id @0: Text; # zerotier network the vm should join
-      ztClient @1: Text; # the zt client service to be used to authorize the vm
+    struct Nic {
+      id @0: Text; # VxLan id or zerotier network id
+      type @1: NicType;
+      ztClient @2: Text;
+    }
+
+    enum NicType {
+      vxlan @0;
+      zerotier @1;
     }
 
     struct Namespace {

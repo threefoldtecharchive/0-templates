@@ -5,7 +5,7 @@ This template is responsible for managing s3 instance
 
 ### Schema:
 
-- `vmZerotier`: zerotier info Zerotier
+- `vmNic`: Nic info for the minio vm.
 - `farmerIyoOrg`: farmer organization to use for capacity
 - `dataShards`: 0-stor data shards config
 - `parityShards`: 0-stor parity shards config
@@ -16,9 +16,21 @@ This template is responsible for managing s3 instance
 - `minioPassword`: minio web password
 - `minioUrl`: the minio web url, this is set by the template.
 
-Zerotier:
-- `id`: zerotier network id.
-- `ztClient`: zerotier client name to be used for authorization.
+The attributes are only relevant in case of a vxlan nic:
+- `gateway`: the name of the gateway service to use for networking
+- `gatewayRobot`: the name of the gateway robot the gateway service lives on
+- `gatewayNetwork`: the name of the gateway network to be used to generate the vm ip and macaddress. 
+- `vmIp`: the ip assigned to the vm by the gateway. This is set by the template.
+
+
+Nic:
+- `id`: zerotier network id or vxlan id.
+- `ztClient`: zerotier client name to be used for authorization in case of a zerotier nic.
+- `type`: NicType
+
+NicType:
+- `vxlan`
+- `zerotier`
 
 Enum StorageType:
 - `hdd`
@@ -34,6 +46,9 @@ Namespace:
 - `install`: creates s3 instance by creating all the required namespaces and connects minio to those namespaces.
 - `uninstall`: deletes all the namespacs and zeroos vm on which minio runs.
 - `url`: returns the minio web url
+- `start`: start the minio instance
+- `stop`: stop the minio instance
+- `upgrade`: upgrade the minio flist
 
 ### Examples:
 #### DSL (api interface):
