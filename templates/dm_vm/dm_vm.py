@@ -83,6 +83,7 @@ class DmVm(TemplateBase):
                 'id': self.data['nic']['id'],
                 'type': self.data['nic']['type'],
                 'name': 'dm_nic',
+                'hwaddr': self.data['nic']['hwaddr'],
             }
         nics = [nic]
         if self.data['nic']['type'] == 'zerotier':

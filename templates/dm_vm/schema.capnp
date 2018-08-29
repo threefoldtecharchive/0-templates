@@ -42,6 +42,7 @@ struct Schema {
       id @0: Text; # VxLan id or zerotier network id
       type @1: NicType;
       ztClient @2: Text;
+      hwaddr @3: Text;
     }
 
     enum NicType {

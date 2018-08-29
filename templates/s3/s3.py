@@ -11,6 +11,7 @@ from zerorobot.template.decorator import timeout
 
 
 VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/dm_vm/0.0.1'
+GATEWAY_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/gateway/0.0.1'
 MINIO_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/minio/0.0.1'
 NS_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/namespace/0.0.1'
 
@@ -66,14 +67,18 @@ class S3(TemplateBase):
     def _vm(self):
         return self.api.services.get(template_uid=VM_TEMPLATE_UID, name=self.guid)
 
-    def _vm_robot_and_ip(self):
-        vm = self._vm()
-        vminfo = vm.schedule_action('info', args={'timeout': 600}).wait(die=True).result
-        # @todo: handle ip in case of vxlan
-        ip = vminfo['zerotier'].get('ip')
+    def _gateway(self):
+        return self.api.services.get(template_uid=GATEWAY_TEMPLATE_UID, name=self.data['gateway'])
 
+    def _vm_robot_and_ip(self):
+        ip = self.data['vmIp']
         if not ip:
-            raise RuntimeError('VM has no ip assignments in zerotier network')
+            vm = self._vm()
+            vminfo = vm.schedule_action('info', args={'timeout': 600}).wait(die=True).result
+            ip = vminfo['zerotier'].get('ip')
+
+            if not ip:
+                raise RuntimeError('VM has no ip assignments in zerotier network')
 
         return self._get_zrobot(vm.name, 'http://{}:6600'.format(ip)), ip
 
@@ -153,13 +158,24 @@ class S3(TemplateBase):
         for _ in range(zdb_count):
             namespace, node_index = self._create_namespace(node_index, storage_key, ns_password)
             result = namespace.schedule_action('connection_info').wait(die=True).result
-            if self.data['nic']['type'] == 'zerotier':
+            if self.data['nic']['type'] == 'vxlan':
                 zdbs_connection.append('{}:{}'.format(result['storage_ip'], result['port']))
                 continue
             zdbs_connection.append('{}:{}'.format(result['ip'], result['port']))
 
         self._nodes = sorted(self._nodes, key=lambda k: k['total_resources'][storage_key], reverse=True)
 
+        nic = {
+                'id': self.data['vmNic']['id'],
+                'ztClient': self.data['vmNic']['ztClient'],
+                'type': self.data['vmNic']['type'],
+        }
+    
+        if self.data['vmNic']['type'] == 'vxlan':
+            host = self._gateway().schedule_action('add_dhcp_host', args={'network_name': self.data['gatewayNetwork'], 'host':{'hostname': self.guid}})
+            nic['hwaddr'] = host['macaddress']
+            self.data['vmIp'] = host['ipaddress']
+    
         # Create the zero-os vm on which we will create the minio container
         vm_data = {
             'memory': 2000,

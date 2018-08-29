@@ -11,6 +11,9 @@ struct Schema {
     minioLogin @7: Text; # minio login
     minioPassword @8: Text; # minio password
     minioUrl @9: Text; # url to access minio on. This is set by the template.
+    gateway @10: Text; # Gateway service to use for vm
+    gatewayNetwork @11: Text; # Gateway network to use for the vm
+    vmIp @12: Text; # vxlan ip
 
     enum StorageType {
      hdd @0;

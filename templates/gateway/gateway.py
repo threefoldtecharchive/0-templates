@@ -149,19 +149,32 @@ class Gateway(TemplateBase):
             raise LookupError('Network with name {} doesn\'t exist'.format(network_name))
         dhcpserver = network['dhcpserver']
         for existing_host in dhcpserver['hosts']:
-            if existing_host['macaddress'] == host['macaddress']:
+            if host.get('macaddress') and existing_host['macaddress'] == host['macaddress']:
                 raise ValueError('Host with macaddress {} already exists'.format(host['macaddress']))
+            if host.get('ipaddress') and existing_host['ipaddress'] == host['ipaddress']:
+                raise ValueError('Host with ipaddress {} already exists'.format(host['ipaddress']))
+            if existing_host['hostname'] == host['hostname']:
+                raise ValueError('Host with hostname {} already exists'.format(host['hostname']))
+
+        gateway_sal = self._gateway_sal
+        host_sal = gateway_sal.networks[network_name].hosts.add(host['hostname'], host.get('ipaddress'), host.get('macaddress'))
+        host['ipaddress'] = host_sal.ipaddress
+        host['macaddress'] = host_sal.macaddress
+
         dhcpserver['hosts'].append(host)
 
         try:
-            self._gateway_sal.configure_dhcp()
-            self._gateway_sal.configure_cloudinit()
+            gateway_sal.configure_dhcp()
+            gateway_sal.configure_cloudinit()
         except:
             self.logger.error('Failed to add dhcp host, restoring gateway to previous state')
             dhcpserver['hosts'].remove(host)
-            self._gateway_sal.configure_dhcp()
-            self._gateway_sal.configure_cloudinit()
+            gateway_sal.networks[network_name].hosts.remove(host['hostname']
+            gateway_sal.configure_dhcp()
+            gateway_sal.configure_cloudinit()
             raise
+    
+        return host
 
     def remove_dhcp_host(self, network_name, host):
         self.logger.info('Add dhcp to network {}'.format(network_name))
