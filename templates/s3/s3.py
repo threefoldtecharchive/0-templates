@@ -82,7 +82,7 @@ class S3(TemplateBase):
         else:
             info = self._gateway().schedule_action('info').wait(die=True).result
             for network in info['networks']:
-                if network['name'] == 'public':
+                if network['name'] == self.data['gatewayPublicNetwork']:
                     ip = str(netaddr.IPNetwork(network['config']['cidr']).ip)
                     break
             else:
@@ -190,11 +190,11 @@ class S3(TemplateBase):
             gw = self._gateway()
             host = gw.schedule_action(
                 'add_dhcp_host',
-                args={'network_name': self.data['gatewayNetwork'], 'host':{'hostname': self.guid}}).wait(die=True).result
+                args={'network_name': self.data['gatewayPrivateNetwork'], 'host':{'hostname': self.guid}}).wait(die=True).result
             forward = {
                 'protocols': ['tcp'],
                 'srcport': 6600,
-                'srcnetwork': 'public',
+                'srcnetwork': self.data['gatewayPublicNetwork'],
                 'dstport': 6600, 
                 'dstip': host['ipaddress'],
                 'name': 'robot_{}'.format(self.guid)
@@ -203,7 +203,7 @@ class S3(TemplateBase):
             forward = {
                 'protocols':['tcp'],
                 'srcport':9000,
-                'srcnetwork': 'public',
+                'srcnetwork': self.data['gatewayPublicNetwork'],
                 'dstport': 9000,
                 'dstip': host['ipaddress'],
                 'name': 'minio_{}'.format(self.guid)

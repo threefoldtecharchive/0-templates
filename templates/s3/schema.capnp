@@ -13,7 +13,8 @@ struct Schema {
     minioUrl @9: Text; # url to access minio on. This is set by the template.
     gateway @10: Text; # Gateway service to use for vm
     gatewayRobot @11: Text; # Robot that created the gaty
-    gatewayNetwork @12: Text; # Gateway network to use for the vm
+    gatewayPublicNetwork @12: Text; # Gateway network to use for the vm
+    gatewayPrivateNetwork @13: Text; # Gateway network to use for the vm
 
     enum StorageType {
      hdd @0;
