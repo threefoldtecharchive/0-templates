@@ -2,6 +2,6 @@
 
 struct Schema {
     # url pointing to the 0-db to use to store the robot data
-    # supported format is : `zdb://admin_passwd:encryption_key@hostname:port/namespace`
+    # supported format is : `zdb://admin_passwd@hostname:port/namespace`
     dataRepo @0: Text;
 }
