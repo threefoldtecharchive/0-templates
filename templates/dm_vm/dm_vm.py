@@ -30,17 +30,17 @@ class DmVm(TemplateBase):
         if not self.data['nodeId']:
             raise ValueError('Invalid input, Vm requires nodeId')
 
-        capacity = j.clients.grid_capacity.get(interactive=False)
-        try:
-            node, _ = capacity.api.GetCapacity(self.data['nodeId'])
-        except HTTPError as err:
-            if err.response.status_code == 404:
-                raise ValueError('Node {} does not exist'.format(self.data['nodeId']))
-            raise err
+        # capacity = j.clients.grid_capacity.get(interactive=False)
+        # try:
+        #     node, _ = capacity.api.GetCapacity(self.data['nodeId'])
+        # except HTTPError as err:
+        #     if err.response.status_code == 404:
+        #         raise ValueError('Node {} does not exist'.format(self.data['nodeId']))
+        #     raise err
 
-        j.clients.zrobot.get(self.data['nodeId'], data={'url': node.robot_address})
+        j.clients.zrobot.get(self.data['nodeId'], data={'url': 'http://172.30.115.224:6600'})
         self._node_api = j.clients.zrobot.robots[self.data['nodeId']]
-        self._node_robot_url = node.robot_address
+        self._node_robot_url = 'http://172.30.115.224:6600'
 
         if self.data['image'].partition(':')[0] not in ['zero-os', 'ubuntu']:
             raise ValueError('Invalid image')
