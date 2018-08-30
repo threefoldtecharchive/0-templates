@@ -17,9 +17,9 @@ class Bridge(TemplateBase):
         self.add_delete_callback(self.uninstall)
 
     def validate(self):
-        mac = self.data.get("HWAddr")
+        mac = self.data.get("hwaddr")
         if mac and not netaddr.valid_mac(mac):
-            raise ValueError("HWAddr %s is not valid" % mac)
+            raise ValueError("hwAddr %s is not valid" % mac)
 
         mode = self.data.get('mode')
         if not mode:
@@ -45,10 +45,10 @@ class Bridge(TemplateBase):
 
         self._node_sal.client.bridge.create(
             name=self.name,
-            hwaddr=self.data['HWAddr'],
-            network=self.data['Mode'],
-            nat=self.data.get('Nat', False),
-            settings=self.data.get('Settings', None),
+            hwaddr=self.data['hwaddr'],
+            network=self.data['mode'],
+            nat=self.data.get('nat', False),
+            settings=self.data.get('settings', None),
         )
 
         self.state.set('actions', 'install', 'ok')
