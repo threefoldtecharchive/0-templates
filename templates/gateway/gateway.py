@@ -64,13 +64,23 @@ class Gateway(TemplateBase):
         else:
             raise LookupError('Network with name {} doesn\'t exist'.format(forward['srcnetwork']))
 
+        used_sourceports = set()
         for fw in self.data['portforwards']:
+            used_sourceports.add(fw['srcport'])
             name, combination = self._compare_objects(fw, forward, 'srcnetwork', 'srcport')
             if name:
                 raise ValueError('A forward with the same name exists')
             if combination:
                 if set(fw['protocols']).intersection(set(forward['protocols'])):
                     raise ValueError('Forward conflicts with existing forward')
+        if not forward['srcport']:
+            for suggested_port in range(2000, 10000):
+                if suggested_port not in used_sourceports:
+                    forward['srcport'] = suggested_port
+                    break
+            else:
+                raise RuntimeError('Could not find free sourceport to use')
+    
         self.data['portforwards'].append(forward)
 
         try:
@@ -80,6 +90,7 @@ class Gateway(TemplateBase):
             self.data['portforwards'].remove(forward)
             self._gateway_sal.configure_fw()
             raise
+        return forward
 
     def remove_portforward(self, name):
         self.logger.info('Remove portforward {}'.format(name))

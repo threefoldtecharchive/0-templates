@@ -1,20 +1,22 @@
 @0xf35b28a27d2d7444;
 
 struct Schema {
-    vmNic @0: Nic;
-    farmerIyoOrg  @1: Text; # the farmer to create the s3 on
-    dataShards @2: Int32=1; # 0-stor data shards config
-    parityShards @3: Int32; # 0-stor parity shards config
-    storageType @4: StorageType; # s3 storage type
-    storageSize @5: UInt16; # s3 storage size
-    namespaces @6: List(Namespace); # namespace services created for s3. This is set by the template.
-    minioLogin @7: Text; # minio login
-    minioPassword @8: Text; # minio password
-    minioUrl @9: Text; # url to access minio on. This is set by the template.
-    gateway @10: Text; # Gateway service to use for vm
-    gatewayRobot @11: Text; # Robot that created the gaty
-    gatewayPublicNetwork @12: Text; # Gateway network to use for the vm
-    gatewayPrivateNetwork @13: Text; # Gateway network to use for the vm
+    mgmtNic @0: Nic; # zerotier management nic
+    storageNic @1: Text; # vxlan management nic
+    farmerIyoOrg  @2: Text; # the farmer to create the s3 on
+    dataShards @3: Int32=1; # 0-stor data shards config
+    parityShards @4: Int32; # 0-stor parity shards config
+    storageType @5: StorageType; # s3 storage type
+    storageSize @6: UInt16; # s3 storage size
+    namespaces @7: List(Namespace); # namespace services created for s3. This is set by the template.
+    minioLogin @8: Text; # minio login
+    minioPassword @9: Text; # minio password
+    minioUrl @10: Text; # url to access minio on. This is set by the template.
+    gateway @11: Text; # Gateway service to use for vm
+    gatewayRobot @12: Text; # Robot that created the gaty
+    gatewayPublicNetwork @13: Text; # Gateway network to use for the vm
+    gatewayPrivateNetwork @14: Text; # Gateway network to use for the vm
+
 
     enum StorageType {
      hdd @0;
@@ -22,16 +24,10 @@ struct Schema {
     }
 
     struct Nic {
-      id @0: Text; # VxLan id or zerotier network id
-      type @1: NicType;
-      ztClient @2: Text;
+      id @0: Text; # Zerotier network id
+      ztClient @1: Text;
     }
-
-    enum NicType {
-      vxlan @0;
-      zerotier @1;
-    }
-
+  
     struct Namespace {
     name @0: Text; # namespace service name
     node @1: Text; # node id of the node on which the namespace was created

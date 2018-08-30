@@ -72,14 +72,15 @@ class S3(TemplateBase):
         robot.services.get(template_uid=GATEWAY_TEMPLATE_UID, name=self.data['gateway'])
 
     def _vm_robot_and_ip(self):
-        if self.data['nic']['type'] == 'zerotier':
-            vm = self._vm()
-            vminfo = vm.schedule_action('info', args={'timeout': 600}).wait(die=True).result
-            ip = vminfo['zerotier'].get('ip')
+        vm = self._vm()
+        vminfo = vm.schedule_action('info', args={'timeout': 600}).wait(die=True).result
+        mgmt_ip = vminfo['zerotier'].get('ip')
 
-            if not ip:
-                raise RuntimeError('VM has no ip assignments in zerotier network')
-        else:
+        if not mgmt_ip:
+            raise RuntimeError('VM has no ip assignments in zerotier network')
+        ip = mgmt_ip
+
+        if self.data['storageNic']:
             info = self._gateway().schedule_action('info').wait(die=True).result
             for network in info['networks']:
                 if network['name'] == self.data['gatewayPublicNetwork']:
@@ -88,7 +89,7 @@ class S3(TemplateBase):
             else:
                 raise RuntimeError('Could not find public ip of gateway')
 
-        return self._get_zrobot(vm.name, 'http://{}:6600'.format(ip)), ip
+        return self._get_zrobot(vm.name, 'http://{}:6600'.format(mgmt_ip)), ip
 
     def validate(self):
         if self.data['parityShards'] > self.data['dataShards']:
@@ -118,6 +119,15 @@ class S3(TemplateBase):
                 # @todo remove the hack below after testing
                 robot = self._get_zrobot(best_node['node_id'], 'http://172.30.115.224:6600')
                 #robot = self._get_zrobot(best_node['node_id'], best_node['robot_address'])
+                # list the services to know if the node is reachable
+                try:
+                    robot.services.find()
+                except:
+                    if next_index == index:
+                        raise RuntimeError('Looped all nodes and could not find a suitable node')
+                    final_index = next_index
+                    continue
+
                 data = {
                     'diskType': self.data['storageType'],
                     'mode': 'direct',
@@ -173,49 +183,37 @@ class S3(TemplateBase):
         for _ in range(zdb_count):
             namespace, node_index = self._create_namespace(node_index, storage_key, ns_password)
             result = namespace.schedule_action('connection_info').wait(die=True).result
-            if self.data['nic']['type'] == 'vxlan':
+            if self.data['storageNic']:
                 zdbs_connection.append('{}:{}'.format(result['storage_ip'], result['port']))
                 continue
             zdbs_connection.append('{}:{}'.format(result['ip'], result['port']))
 
         self._nodes = sorted(self._nodes, key=lambda k: k['total_resources'][storage_key], reverse=True)
 
-        nic = {
-                'id': self.data['vmNic']['id'],
-                'ztClient': self.data['vmNic']['ztClient'],
-                'type': self.data['vmNic']['type'],
+        mgmt_nic = {
+                'id': self.data['mgmtNic']['id'],
+                'ztClient': self.data['mgmtNic']['ztClient'],
+                'type': 'zerotier',
         }
+        storage_nic = {}
     
-        if self.data['vmNic']['type'] == 'vxlan':
+        if self.data['storageNic']:
             gw = self._gateway()
             host = gw.schedule_action(
                 'add_dhcp_host',
                 args={'network_name': self.data['gatewayPrivateNetwork'], 'host':{'hostname': self.guid}}).wait(die=True).result
-            forward = {
-                'protocols': ['tcp'],
-                'srcport': 6600,
-                'srcnetwork': self.data['gatewayPublicNetwork'],
-                'dstport': 6600, 
-                'dstip': host['ipaddress'],
-                'name': 'robot_{}'.format(self.guid)
+            storage_nic = {
+                'id': self.data['storageNic'],
+                'type': 'vxlan',
+                'hwaddr': host['macaddress'],
             }
-            gw.schedule_action('add_portforward', args={'forward': forward}).wait(die=True)
-            forward = {
-                'protocols':['tcp'],
-                'srcport':9000,
-                'srcnetwork': self.data['gatewayPublicNetwork'],
-                'dstport': 9000,
-                'dstip': host['ipaddress'],
-                'name': 'minio_{}'.format(self.guid)
-            }
-            gw.schedule_action('add_portforward', args={'forward': forward}).wait(die=True)
-            nic['hwaddr'] = host['macaddress']
-    
+
         # Create the zero-os vm on which we will create the minio container
         vm_data = {
             'memory': 2000,
             'image': 'zero-os',
-            'nic': nic,
+            'mgmtNic': mgmt_nic,
+            'storageNic': storage_nic,
             'disks': [{
                 'diskType': self.data['storageType'],
                 'size': 5,
@@ -258,6 +256,20 @@ class S3(TemplateBase):
         minio.schedule_action('start').wait(die=True)
         port = minio.schedule_action('node_port').wait(die=True).result
         self.data['minioUrl'] = 'http://{}:{}'.format(ip, port)
+
+        if self.data['storageNic']:
+            gw = self._gateway()
+            forward = {
+                'protocols': ['tcp'],
+                'srcport': None,
+                'srcnetwork': self.data['gatewayPublicNetwork'],
+                'dstport': port,
+                'dstip': host['ipaddress'],
+                'name': 'minio_{}'.format(self.guid)
+            }
+            forward = gw.schedule_action('add_portforward', args={'forward': forward}).wait(die=True).result
+            self.data['minioUrl'] = 'http://{}:{}'.format(ip, forward['srcport'])
+            
 
         self.state.set('actions', 'install', 'ok')
 

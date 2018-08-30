@@ -10,8 +10,7 @@ VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vm/0.0.1'
 ZT_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerotier_client/0.0.1'
 BASEFLIST = 'https://hub.grid.tf/tf-bootable/{}.flist'
 ZEROOSFLIST = 'https://hub.grid.tf/tf-bootable/zero-os-bootable.flist'
-IPXEURLZT = 'https://bootstrap.grid.tf/ipxe/{}/{}/development ztid={}'
-IPXEURL = 'https://bootstrap.grid.tf/ipxe/{}/0/development'
+IPXEURL = 'https://bootstrap.grid.tf/ipxe/{}/{}/development ztid={}'
 
 
 class DmVm(TemplateBase):
@@ -46,13 +45,9 @@ class DmVm(TemplateBase):
         if self.data['image'].partition(':')[0] not in ['zero-os', 'ubuntu']:
             raise ValueError('Invalid image')
 
-        for key in ['id', 'type']:
-            if not self.data['nic'].get(key):
+        for key in ['id', 'type', 'ztClient']:
+            if not self.data['mgmtNic'].get(key):
                 raise ValueError('Invalid input, nic requires {}'.format(key))
-
-        if self.data['nic']['type'] == 'zerotier' and not self.data['nic'].get('ztClient'):
-            raise ValueError('Invalid input, nic of type zerotier requires ztClient')
-
     @property
     def _node_vm(self):
         return self._node_api.services.get(name=self.guid)
@@ -80,23 +75,28 @@ class DmVm(TemplateBase):
         self.logger.info('Installing vm %s' % self.name)
 
         nic = {
-                'id': self.data['nic']['id'],
-                'type': self.data['nic']['type'],
-                'name': 'dm_nic',
-                'hwaddr': self.data['nic']['hwaddr'],
+            'id': self.data['mgmtNic']['id'],
+            'type': self.data['mgmtNic']['type'],
+            'name': 'mgmt_nic',
+        }
+        zt_name = self.data['mgmtNic']['ztClient']
+        zt_client = self.api.services.get(name=zt_name, template_uid=ZT_TEMPLATE_UID)
+        data = {'url': self._node_robot_url, 'serviceguid': self.guid}
+        zt_client.schedule_action('add_to_robot', args=data).wait(die=True)
+        nic['ztClient'] = self.guid
+        nics = [
+            nic
+        ]
+        if self.data['storageNic']['id']:
+            nic = {
+                'id': self.data['storageNic']['id'],
+                'type': self.data['storageNic']['type'],
+                'name': 'storage_nic',
+                'hwaddr': self.data['storageNic']['hwaddr'],
             }
-        nics = [nic]
-        if self.data['nic']['type'] == 'zerotier':
-            zt_name = self.data['nic']['ztClient']
-            zt_client = self.api.services.get(name=zt_name, template_uid=ZT_TEMPLATE_UID)
-            data = {'url': self._node_robot_url, 'serviceguid': self.guid}
-            zt_client.schedule_action('add_to_robot', args=data).wait(die=True)
-            nic['ztClient'] = self.guid
-            nics = [
-                nic,
-                {'name': 'test',
-                 'type': 'default'
-            }]
+            nics.append(nic)
+        else:
+            nics.append({'type': 'default', 'name': 'nat0'})
 
         vm_disks = []
         for disk in self.data['disks']:
@@ -130,12 +130,9 @@ class DmVm(TemplateBase):
         vm = self._node_api.services.find_or_create(VM_TEMPLATE_UID, self.guid, data=vm_data)
 
         if image == 'zero-os':
-            if self.data['nic']['type'] == 'zerotier':
-                if not self.data['ztIdentity']:
-                    self.data['ztIdentity'] = vm.schedule_action('generate_identity').wait(die=True).result
-                url = IPXEURLZT.format(version, self.data['nic']['id'], self.data['ztIdentity'])
-            else:
-                url = IPXEURL.format(version)
+            if not self.data['ztIdentity']:
+                self.data['ztIdentity'] = vm.schedule_action('generate_identity').wait(die=True).result
+            url = IPXEURL.format(version, self.data['mgmtNic']['id'], self.data['ztIdentity'])
             vm.schedule_action('update_ipxeurl', args={'url': url}).wait(die=True)
 
         vm.schedule_action('install').wait(die=True)
@@ -163,14 +160,13 @@ class DmVm(TemplateBase):
                 vdisk.delete()
             except ServiceNotFoundError:
                 pass
-        if self.data['nic']['type'] == 'zerotier':
-            try:
-                zt_name = self.data['nic']['ztClient']
-                zt_client = self.api.services.get(name=zt_name, template_uid=ZT_TEMPLATE_UID)
-                data = {'url': self._node_robot_url, 'serviceguid': self.guid}
-                zt_client.schedule_action('remove_from_robot', args=data).wait(die=True)
-            except ServiceNotFoundError:
-                pass
+        try:
+            zt_name = self.data['mgmtNic']['ztClient']
+            zt_client = self.api.services.get(name=zt_name, template_uid=ZT_TEMPLATE_UID)
+            data = {'url': self._node_robot_url, 'serviceguid': self.guid}
+            zt_client.schedule_action('remove_from_robot', args=data).wait(die=True)
+        except ServiceNotFoundError:
+            pass
 
         self.state.delete('actions', 'install')
         self.state.delete('status', 'running')
@@ -179,11 +175,12 @@ class DmVm(TemplateBase):
         self.state.check('actions', 'install', 'ok')
         info = self._node_vm.schedule_action('info', args={'timeout': timeout}).wait(die=True).result
         nics = info.pop('nics')
-        nic = nics[0]
-        if self.data['nic']['type'] == 'zerotier':
-            info['zerotier'] = {'id': nic['id'],
-                                'ztClient': self.data.get('nic', {}).get('ztClient'),
-                                'ip': nic.get('ip')}
+        for nic in nics:
+            if nic['type'] == 'zerotier':
+                info['zerotier'] = {'id': nic['id'],
+                                    'ztClient': self.data.get('mgmtNic', {}).get('ztClient'),
+                                    'ip': nic.get('ip')}
+                break
         return info
 
     def shutdown(self):
