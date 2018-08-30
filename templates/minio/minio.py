@@ -65,7 +65,7 @@ class Minio(TemplateBase):
             'restic_password': self.data['resticPassword'],
             'meta_private_key': self.data['metaPrivateKey'],
         }
-        return j.sal_zos.get_minio(**kwargs)
+        return j.sal_zos.minio.get(**kwargs)
 
     @property
     def restic_sal(self):
