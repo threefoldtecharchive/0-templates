@@ -14,7 +14,7 @@ This template is responsible for get statistics of node then add it in InfluxDB 
 ### Examples:
 #### DSL (api interface):
 ```python
-data = {'instanceName': 'influxdb_client_created'}
+data = {'influxdbClient': 'influxdb_client_created'}
 stat = robot.services.create('github.com/threefoldtech/0-templates/statistics/0.0.1',
     service_name='statistics_collector', 
     data=data)
@@ -25,7 +25,7 @@ stat.schedule_action('install')
 ```yaml
 services:
     - github.com/threefoldtech/0-templates/statistics/0.0.1__1e2b8c6b-b5b9-42c1-99f4-f9149dc25743:
-        instanceName : 'influxdb_client_created'
+        influxdbClient : 'influxdb_client_created'
 
 actions:
     - template: github.com/threefoldtech/0-templates/statistics/0.0.1
