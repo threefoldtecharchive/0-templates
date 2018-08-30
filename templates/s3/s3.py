@@ -69,7 +69,7 @@ class S3(TemplateBase):
 
     def _gateway(self):
         robot = j.clients.zrobot.robots[self.data['gatewayRobot']]
-        robot.services.get(template_uid=GATEWAY_TEMPLATE_UID, name=self.data['gateway'])
+        return robot.services.get(template_uid=GATEWAY_TEMPLATE_UID, name=self.data['gateway'])
 
     def _vm_robot_and_ip(self):
         vm = self._vm()
