@@ -1,4 +1,4 @@
-## template: github.com/jumpscale/digital_me/vm/0.0.1
+## template: github.com/threefoldtech/0-templates/dm_vm/0.0.1
 
 ### Description:
 This template is responsible for managing a vm on digital me
