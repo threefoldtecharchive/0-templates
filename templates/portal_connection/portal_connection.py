@@ -47,7 +47,7 @@ class PortalConnection(TemplateBase):
     def _get_listen_address(self):
         r_pid = os.getpid()
         self.logger.info('Robot pid = %s' % r_pid)
-        for c in psutil.net_connections('inet4'):
+        for c in psutil.net_connections('inet'):
             self.logger.info('Connection pid=%s, type=%s, status=%s' % (c.pid, c.type, c.status))
             if c.pid == r_pid and c.type == socket.SOCK_STREAM and c.status == psutil.CONN_LISTEN:
                 return c.laddr
