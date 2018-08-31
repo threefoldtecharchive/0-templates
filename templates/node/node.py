@@ -120,7 +120,6 @@ class Node(TemplateBase):
         try:
             sp = self._node_sal.storagepools.get(poolname)
         except ValueError:
-            self.logger.info("storage pool %s doesn't exist on node %s" % (poolname, self._node_sal.name))
             return
 
         if sp.mountpoint:
