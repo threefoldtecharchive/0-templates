@@ -2,6 +2,8 @@ from jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import timeout
 
+NODE_CLIENT = 'local'
+
 
 class Statistics(TemplateBase):
     version = '0.0.1'
@@ -12,6 +14,13 @@ class Statistics(TemplateBase):
         self._url_ = None
         self._node_ = None
         self.recurring_action('_monitor', 300)  # every 5 minutes
+
+    @property
+    def _node_sal(self):
+        """
+        connection to the node
+        """
+        return j.clients.zos.get(NODE_CLIENT)
 
     @property
     def _node(self):
@@ -54,8 +63,8 @@ class Statistics(TemplateBase):
 
         # Gather stats info
         db = j.clients.influxdb.get(self.data['influxdbClient'], create=False)
-        hostname = self._node.client.info.os()['hostname']
-        version = self._node.client.ping().split(':', 1)[1].strip()
+        hostname = self._node_sal.client.info.os()['hostname']
+        version = self._node_sal.client.ping().split(':', 1)[1].strip()
         for measurement, stat in stats_task.result.items():
             measurement = measurement.split('/')[0]
             tags = {x['key']: x['value'] for x in stat['tags']}
