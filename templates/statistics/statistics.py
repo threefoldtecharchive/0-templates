@@ -77,4 +77,4 @@ class Statistics(TemplateBase):
                 "fields": {
                     "value": float(value)
                 }
-            }])
+            }], database='statistics')
