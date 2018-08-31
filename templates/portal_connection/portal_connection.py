@@ -16,7 +16,6 @@ class PortalConnection(TemplateBase):
 
     def __init__(self, name, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        self.add_delete_callback(self.uninstall)
 
     def validate(self):
         for param in ['url']:
