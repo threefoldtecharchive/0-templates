@@ -50,7 +50,7 @@ class PortalConnection(TemplateBase):
         for c in psutil.net_connections('inet'):
             self.logger.info('Connection pid=%s, type=%s, status=%s' % (c.pid, c.type, c.status))
             if c.pid == r_pid and c.type == socket.SOCK_STREAM and c.status == psutil.CONN_LISTEN:
-                return c.laddr
+                return c.laddr.ip, c.laddr.port
         raise RuntimeError("Could not determine listening address")
 
     def uninstall(self, username, password):
