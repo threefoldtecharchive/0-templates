@@ -29,29 +29,19 @@ class PortalConnection(TemplateBase):
         """
         return j.clients.zos.get(NODE_CLIENT)
 
-    def install(self, username="", password=""):
+    def install(self, username, password, robot_url):
         auth_token = self._authenticate(username, password)
 
-        robot_ip, robot_port = self._get_listen_address()
         cookies = {"beaker.session.id": auth_token}
         data = {
             'name': self._node_sal.name,
-            'url': "http://{ip}:{port}".format(ip=robot_ip, port=robot_port),
+            'url': robot_url,
             'godToken': auth.god_jwt.create()
         }
         resp = requests.post("{base_url}/restmachine/zrobot/client/add".format(base_url=self.data['url']), json=data, cookies=cookies)
         resp.raise_for_status()
 
         self.state.set('actions', 'install', 'ok')
-
-    def _get_listen_address(self):
-        r_pid = os.getpid()
-        self.logger.info('Robot pid = %s' % r_pid)
-        for c in psutil.net_connections('inet'):
-            self.logger.info('Connection pid=%s, type=%s, status=%s' % (c.pid, c.type, c.status))
-            if c.pid == r_pid and c.type == socket.SOCK_STREAM and c.status == psutil.CONN_LISTEN:
-                return c.laddr.ip, c.laddr.port
-        raise RuntimeError("Could not determine listening address")
 
     def uninstall(self, username, password):
         auth_token = self._authenticate(username, password)
