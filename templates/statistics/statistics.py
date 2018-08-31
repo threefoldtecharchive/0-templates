@@ -54,10 +54,13 @@ class Statistics(TemplateBase):
 
         # Gather stats info
         db = j.clients.influxdb.get(self.data['influxdbClient'], create=False)
-
+        hostname = self._node.client.info.os()['hostname']
+        version = self._node.client.ping().split(':', 1)[1].strip()
         for measurement, stat in stats_task.result.items():
             measurement = measurement.split('/')[0]
             tags = {x['key']: x['value'] for x in stat['tags']}
+            tags['hostname'] = hostname
+            tags['version'] = version
             value = stat['current'].get('300', {}).get('avg')
             db.write_points([{
                 "measurement": measurement,
