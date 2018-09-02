@@ -95,7 +95,7 @@ class S3(TemplateBase):
         if self.data['parityShards'] > self.data['dataShards']:
             raise ValueError('parityShards must be equal to or less than dataShards')
 
-        capacity = j.clients.grid_capacity.get(interactive=False)
+        capacity = j.clients.threefold_directory.get(interactive=False)
         resp = capacity.api.ListCapacity(query_params={'farmer': self.data['farmerIyoOrg']})[1]
         resp.raise_for_status()
         self._nodes = resp.json()

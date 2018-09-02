@@ -30,7 +30,7 @@ class DmVm(TemplateBase):
         if not self.data['nodeId']:
             raise ValueError('Invalid input, Vm requires nodeId')
 
-        # capacity = j.clients.grid_capacity.get(interactive=False)
+        # capacity = j.clients.threefold_directory.get(interactive=False)
         # try:
         #     node, _ = capacity.api.GetCapacity(self.data['nodeId'])
         # except HTTPError as err:
