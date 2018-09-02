@@ -38,9 +38,9 @@ class DmVm(TemplateBase):
         #         raise ValueError('Node {} does not exist'.format(self.data['nodeId']))
         #     raise err
 
-        j.clients.zrobot.get(self.data['nodeId'], data={'url': 'http://172.30.115.224:6600'})
+        j.clients.zrobot.get(self.data['nodeId'], data={'url': 'http://172.30.99.30:6600'})
         self._node_api = j.clients.zrobot.robots[self.data['nodeId']]
-        self._node_robot_url = 'http://172.30.115.224:6600'
+        self._node_robot_url = 'http://172.30.99.30:6600'
 
         if self.data['image'].partition(':')[0] not in ['zero-os', 'ubuntu']:
             raise ValueError('Invalid image')

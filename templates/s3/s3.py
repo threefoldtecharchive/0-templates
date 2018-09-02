@@ -8,6 +8,8 @@ from jumpscale import j
 
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
+from zerorobot.service_collection import ServiceNotFoundError
+
 from zerorobot.template.decorator import timeout
 
 
@@ -73,7 +75,7 @@ class S3(TemplateBase):
 
     def _vm_robot_and_ip(self):
         vm = self._vm()
-        vminfo = vm.schedule_action('info', args={'timeout': 600}).wait(die=True).result
+        vminfo = vm.schedule_action('info', args={'timeout': 1200}).wait(die=True).result
         mgmt_ip = vminfo['zerotier'].get('ip')
 
         if not mgmt_ip:
@@ -103,7 +105,7 @@ class S3(TemplateBase):
         # @todo remove the hack below after testing
         resp = resp.json()
         for i in range(0, len(resp)):
-            if resp[i]['node_id'] == 'ac1f6b457bd8':
+            if resp[i]['node_id'] == 'ac1f6b457c78':
                 self._nodes = [resp[i]]
 
         if not self._nodes:
@@ -118,8 +120,7 @@ class S3(TemplateBase):
                 best_node = self._nodes[final_index]
                 # @todo remove the hack below after testing
                 print("************", best_node['node_id'])
-                robot = self._get_zrobot(best_node['node_id'], 'http://172.30.115.224:6600')
-                #robot = self._get_zrobot(best_node['node_id'], best_node['robot_address'])
+                robot = self._get_zrobot(best_node['node_id'], best_node['robot_address'])
                 # list the services to know if the node is reachable
                 try:
                     robot.services.find()
@@ -150,10 +151,9 @@ class S3(TemplateBase):
                 else:
                     best_node['total_resources'][storage_key] = best_node['total_resources'][storage_key] - self.data['storageSize']
                     # @todo remove the hack below after testing
+                    
                     self.data['namespaces'].append(
-                        {'name': namespace.name, 'url': 'http://172.30.115.224:6600', 'node': best_node['node_id']})
-                    #self.data['namespaces'].append(
-                    #    {'name': namespace.name, 'url': best_node['robot_address'], 'node': best_node['node_id']})
+                       {'name': namespace.name, 'url': best_node['robot_address'], 'node': best_node['node_id']})
                     return namespace, next_index
 
             if next_index == index:
@@ -253,6 +253,8 @@ class S3(TemplateBase):
         if not minio:
             raise RuntimeError('Failed to create minio service')
 
+        vm_robot.templates.checkout_repo('https://github.com/threefoldtech/0-templates', 'test_s3')
+
         minio.schedule_action('install').wait(die=True)
         minio.schedule_action('start').wait(die=True)
         port = minio.schedule_action('node_port').wait(die=True).result
@@ -277,16 +279,22 @@ class S3(TemplateBase):
     def uninstall(self):
         # uninstall and delete all the created namespaces
         for namespace in self.data['namespaces']:
-            robot = self._get_zrobot(namespace['node'], namespace['url'])
-            ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
-            ns.schedule_action('uninstall').wait(die=True)
-            ns.delete()
-            self.data['namespaces'].remove(namespace)
+            try:
+                robot = self._get_zrobot(namespace['node'], namespace['url'])
+                ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
+                ns.schedule_action('uninstall').wait(die=True)
+                ns.delete()
+                self.data['namespaces'].remove(namespace)
+            except ServiceNotFoundError:
+                continue
 
-        # uninstall and delete the minio vm
-        vm = self._vm()
-        vm.schedule_action('uninstall').wait(die=True)
-        vm.delete()
+        try:
+            # uninstall and delete the minio vm
+            vm = self._vm()
+            vm.schedule_action('uninstall').wait(die=True)
+            vm.delete()
+        except ServiceNotFoundError:
+            pass
 
     def url(self):
         return self.data['minioUrl']
