@@ -158,8 +158,8 @@ class Gateway(TemplateBase):
                 break
         else:
             raise LookupError('Network with name {} doesn\'t exist'.format(network_name))
-        dhcpserver = network['dhcpserver']
-        for existing_host in dhcpserver['hosts']:
+        dhcpserver = network.setdefault('dhcpserver', {})
+        for existing_host in dhcpserver.get('hosts', []):
             if host.get('macaddress') and existing_host['macaddress'] == host['macaddress']:
                 raise ValueError('Host with macaddress {} already exists'.format(host['macaddress']))
             if host.get('ipaddress') and existing_host['ipaddress'] == host['ipaddress']:
