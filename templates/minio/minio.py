@@ -70,7 +70,7 @@ class Minio(TemplateBase):
     @property
     def restic_sal(self):
         bucket = '{repo}{bucket}'.format(repo=self.data['resticRepo'], bucket=self.guid)
-        return j.sal_zos.get_restic(self._minio_sal.container, bucket)
+        return j.sal_zos.restic.get(self._minio_sal.container, bucket)
 
     def _backup_minio(self):
         self.state.check('actions', 'start', 'ok')
