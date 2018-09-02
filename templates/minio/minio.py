@@ -16,7 +16,7 @@ class Minio(TemplateBase):
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self.add_delete_callback(self.uninstall)
-        self.recurring_action('_backup_minio', 30)
+        # self.recurring_action('_backup_minio', 30)
         self.recurring_action('_monitor', 30)  # every 30 seconds
 
     def validate(self):
@@ -87,7 +87,7 @@ class Minio(TemplateBase):
         self.data['node_port'] = minio_sal.node_port
         if not self.data['resticRepoPassword']:
             self.data['resticRepoPassword'] = j.data.idgenerator.generateXCharID(10)
-        self.restic_sal.init_repo(password=self.data['resticRepoPassword'])
+        # self.restic_sal.init_repo(password=self.data['resticRepoPassword'])
 
         self.state.set('actions', 'install', 'ok')
 
@@ -98,7 +98,6 @@ class Minio(TemplateBase):
         self.state.check('actions', 'install', 'ok')
         self.logger.info('Starting minio %s' % self.name)
         self._minio_sal.start()
-        self.restic_sal.restore(META_DIR)
         self.state.set('actions', 'start', 'ok')
 
     def stop(self):
