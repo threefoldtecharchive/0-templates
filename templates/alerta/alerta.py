@@ -77,7 +77,7 @@ def send_alert(service, data):
     """
     resp = requests.post(service.data['url'] + "/alert", json=data, headers=service.headers)
     if resp.status_code != 201:
-        service.logger.error("Couldn't sent alert, error code was %s" % resp.status_code)
+        service.logger.error("Couldn't sent alert, error code was %s, message: %s" % resp.status_code, resp.text)
 
 def close_alert(service, alert_id):
     """
@@ -91,4 +91,4 @@ def close_alert(service, alert_id):
                         headers=service.headers)
 
     if resp.status_code != 200:
-        service.logger.info("Couldn't close alert, error code was %s" % resp.status_code)
+        service.logger.error("Couldn't close alert, error code was %s" % resp.status_code)
