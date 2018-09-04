@@ -11,7 +11,7 @@ class Alerta(TemplateBase):
     def __init__(self, name, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self.headers = {
-            "Authorization": "Bearer {}".format(self.data['apikey']),
+            "Authorization": "Key {}".format(self.data['apikey']),
             "Content-type": "application/json"
         }
 
