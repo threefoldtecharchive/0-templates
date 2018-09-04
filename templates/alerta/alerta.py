@@ -30,13 +30,18 @@ class Alerta(TemplateBase):
             alert = get_alert(self, uid)
             to_send_alert = False
             if alert:
+                self.logger.info("Message matched alert")
                 if alert['severity'] in OK_STATES:
+                    self.logger.info("alert is back ok")
                     close_alert(self, alert['id'])
                 elif alert['severity'] != message['status'] or alert['text'] != message['text']:
+                    self.logger.info("alert found but with different properties")
                     to_send_alert = True
             elif message['status'] not in OK_STATES:
+                self.logger.info("New message in not OK state")
                 to_send_alert = True
             if to_send_alert:
+                self.logger.info("Sending alerta with status {severity}".format(severity=message['status']))
                 report_data = {
                     'attributes': {},
                     'resource': uid,
