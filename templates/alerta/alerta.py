@@ -11,7 +11,7 @@ class Alerta(TemplateBase):
     def __init__(self, name, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self.headers = {
-            "Authorization": "Key {}".format(self.data['apikey']),
+            "Authorization": "Bearer {}".format(self.data['apikey']),
             "Content-type": "application/json"
         }
 
@@ -30,18 +30,14 @@ class Alerta(TemplateBase):
             alert = get_alert(self, uid)
             to_send_alert = False
             if alert:
-                self.logger.info("Message matched alert")
                 if alert['severity'] in OK_STATES:
-                    self.logger.info("alert is back ok")
                     close_alert(self, alert['id'])
                 elif alert['severity'] != message['status'] or alert['text'] != message['text']:
-                    self.logger.info("alert found but with different properties")
                     to_send_alert = True
             elif message['status'] not in OK_STATES:
-                self.logger.info("New message in not OK state")
                 to_send_alert = True
             if to_send_alert:
-                self.logger.info("Sending alerta with status {severity}".format(severity=message['status']))
+                self.logger.info("Sending alert with status {severity} ({uid}) to alerta server".format(severity=message['status'],uid=uid))
                 report_data = {
                     'attributes': {},
                     'resource': uid,
@@ -81,7 +77,7 @@ def send_alert(service, data):
     """
     resp = requests.post(service.data['url'] + "/alert", json=data, headers=service.headers)
     if resp.status_code != 201:
-        service.logger.info("Couldn't sent alert, error code was %s" % resp.status_code)
+        service.logger.error("Couldn't sent alert, error code was %s" % resp.status_code)
 
 def close_alert(service, alert_id):
     """
