@@ -74,7 +74,7 @@ data = {
         'filesystem': 'btrfs',
         'label': 'test',
     }],
-    'mgmtNic': {'id':'9f77fc393e820576', 'ztClient': 'main'},
+    'mgmtNic': {'id':'9f77fc393e820576', 'ztClient': 'main', 'type': 'zerotier'},
     'image': 'ubuntu',
     'configs': [{'path': '/root/.ssh/authorized_keys', 'content': 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDC8tBgGU1', 'name': 'sshkey'}]
 }
@@ -101,6 +101,7 @@ services:
           mgmtNic:
             id: 9f77fc393e820576
             ztClient: main
+            type: zerotier
 actions:
     - template: github.com/threefoldtech/0-templates/dm_vm/0.0.1
       service: 'three'
