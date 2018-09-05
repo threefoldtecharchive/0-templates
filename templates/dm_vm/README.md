@@ -1,4 +1,4 @@
-## template: github.com/jumpscale/digital_me/vm/0.0.1
+## template: github.com/threefoldtech/0-templates/dm_vm/0.0.1
 
 ### Description:
 This template is responsible for managing a vm on digital me
@@ -71,7 +71,7 @@ data = {
     'image': 'ubuntu',
     'configs': [{'path': '/root/.ssh/authorized_keys', 'content': 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDC8tBgGU1', 'name': 'sshkey'}]
 }
-vm = api.services.create('github.com/jumpscale/digital_me/vm/0.0.1','vm1', data)
+vm = api.services.create('github.com/threefoldtech/0-templates/dm_vm/0.0.1','vm1', data)
 vm.schedule_action('install')
 ```
 
@@ -95,7 +95,7 @@ services:
             id: 9f77fc393e820576
             ztClient: main
 actions:
-    - template: github.com/jumpscale/digital_me/vm/0.0.1
+    - template: github.com/threefoldtech/0-templates/dm_vm/0.0.1
       service: 'three'
       actions: ['install']
 

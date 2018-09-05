@@ -23,7 +23,7 @@ class TestZrobotTemplate(ZrobotBaseTest):
             'configRepo': 'https://example.com/account/config',
             'sshkey': 'privdata',
             'autoPushInterval': 1,
-            'flist': 'https://hub.gig.tech/gig-official-apps/zero-os-0-robot-latest.flist',
+            'flist': 'https://hub.grid.tf/gig-official-apps/zero-os-0-robot-latest.flist',
         }
 
     def setUp(self):

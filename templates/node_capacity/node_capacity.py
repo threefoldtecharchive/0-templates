@@ -49,9 +49,9 @@ class NodeCapacity(TemplateBase):
         self.logger.info("update the reserved capacity of the node")
         try:
             self._node_sal.capacity.update_reserved(
-                vms=self.api.services.find(template_name='vm', template_account='zero-os'),
-                vdisks=self.api.services.find(template_name='vdisk', template_account='zero-os'),
-                gateways=self.api.services.find(template_name='gateway', template_account='zero-os'),
+                vms=self.api.services.find(template_name='vm', template_account='threefoldtech'),
+                vdisks=self.api.services.find(template_name='vdisk', template_account='threefoldtech'),
+                gateways=self.api.services.find(template_name='gateway', template_account='threefoldtech'),
             )
             self.state.set('capacity', 'reserved', 'ok')
         except:

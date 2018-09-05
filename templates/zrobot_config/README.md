@@ -10,13 +10,13 @@ to reach the 0-db and use it for storage
 ### Schema:
 
 - `dataRepo`: url pointing to the 0-db to use to store the robot data.
-    format of the url is `zdb://admin_passwd:encryption_key@hostname:port/namespace`. The only required field being the hostname, all the other are optional.
+    format of the url is `zdb://admin_passwd@hostname:port/namespace`. The only required field being the hostname, all the other are optional.
     Here is a list of all possiblities:
     - `zdb://hostname`
     - `zdb://hostname:port`
     - `zdb://admin_passwd@hostname:port`
-    - `zdb://admin_passwd:encryption_key@hostname:port`
-    - `zdb://admin_passwd:encryption_key@hostname:port/namespace`
+    - `zdb://admin_passwd@hostname:port`
+    - `zdb://admin_passwd@hostname:port/namespace`
 
 ### Actions:
 
