@@ -5,7 +5,7 @@ from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 from zerorobot.service_collection import ServiceNotFoundError
 
-FLIST_ZROBOT_DEFAULT = 'https://hub.gig.tech/gig-official-apps/zero-os-0-robot-latest.flist'
+FLIST_ZROBOT_DEFAULT = 'https://hub.grid.tf/gig-official-apps/zero-os-0-robot-latest.flist'
 CONTAINER_TEMPLATE = 'github.com/threefoldtech/0-templates/container/0.0.1'
 NODE_CLIENT = 'local'
 
