@@ -225,7 +225,7 @@ class S3(TemplateBase):
             'nodeId': self._nodes[0]['node_id'],
         }
 
-        vm = self.api.services.create(VM_TEMPLATE_UID, self.guid, vm_data)
+        vm = self.api.services.find_or_create(VM_TEMPLATE_UID, self.guid, vm_data)
         vm.schedule_action('install').wait(die=True)
 
         vm_robot, ip = self._vm_robot_and_ip()
