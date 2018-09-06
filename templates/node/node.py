@@ -175,7 +175,8 @@ class Node(TemplateBase):
                 results = self._wait_all(tasks, timeout=120, die=True)
                 zdbinfo = sorted(list(zip(zdbs, results)), key=lambda x: x[1]['free'],  reverse=True)
             for zdb, info in zdbinfo:
-                potentials.pop(info['path'])
+                if info['path'] in potentials:
+                    potentials.pop(info['path'])
 
             disks = [(self._node_sal.disks.get(diskname), mountpoint) for mountpoint, diskname in potentials.items()]
             disks = list(filter(lambda disk: (disk[0].size / 1024 ** 3) > size and disk[0].type.value in disktypes, disks))
@@ -185,15 +186,7 @@ class Node(TemplateBase):
             return disks[0][1], disks[0][0].name
         else:
             disktypes = ['SSD', 'NVME']
-            # filter storagepools that have the correct disk type and whose (total size - reserved subvolume quota) >= size
-            storagepools = list(filter(lambda sp: self._node_sal.disks.get_device(sp.devices[0]).disk.type.value in disktypes and (sp.size - sp.total_quota() / (1024 ** 3)) >= size,
-                                       self._node_sal.storagepools.list()))
-            storagepools.sort(key=lambda sp: sp.size - sp.total_quota(), reverse=True)
-            if not storagepools:
-                return '', ''
-
-            sp = storagepools[0]
-            return self._node_sal.zerodbs.create_and_mount_subvolume(sp, name, size)
+            return self._node_sal.zerodbs.create_and_mount_subvolume(name, size, disktypes)
 
     def _create_zdb(self, diskname, mountpoint, mode, zdb_size, disktype, namespaces):
         """Create a zerodb service
