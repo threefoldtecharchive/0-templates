@@ -105,7 +105,7 @@ class S3(TemplateBase):
         # @todo remove the hack below after testing
         resp = resp.json()
         for i in range(0, len(resp)):
-            if resp[i]['node_id'] == 'ac1f6b457b78':
+            if resp[i]['node_id'] == 'ac1f6b47a0c8':
                 self._nodes = [resp[i]]
 
         if not self._nodes:
