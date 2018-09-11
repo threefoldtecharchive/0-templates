@@ -110,6 +110,10 @@ class S3(TemplateBase):
 
         if not self._nodes:
             raise ValueError('There are no nodes in this farm')
+        
+        if not self.data['nsPassword']:
+            self.data['nsPassword'] = j.data.idgenerator.generateXCharID(32) 
+
 
     def _create_namespace(self, index, storage_key, password):
         final_index = index
@@ -160,6 +164,12 @@ class S3(TemplateBase):
                 raise RuntimeError('Looped all nodes and could not find a suitable node')
             final_index = next_index
 
+    def _get_connection_info(self, namespace):
+            result = namespace.schedule_action('connection_info').wait(die=True).result
+            if self.data['storageNic']:
+                return '{}:{}'.format(result['storage_ip'], result['port'])
+            return '{}:{}'.format(result['ip'], result['port'])
+
     def install(self):
 
         # Calculate how many zerodbs are needed for the s3
@@ -175,19 +185,23 @@ class S3(TemplateBase):
             zdb_count = math.ceil(min_zdb + ((max_zdb - min_zdb)/2))
 
         storage_key = 'sru' if self.data['storageType'] == 'ssd' else 'hru'
-        ns_password = j.data.idgenerator.generateXCharID(32)
         zdbs_connection = list()
+
+        # Check if namespaces have already been created in a previous install attempt
+        if self.data['namespaces']:
+            for namespace in self.data['namespaces']:
+                robot = self._get_zrobot(namespace['node'], namespace['url'])
+                ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
+                zdbs_connection.append(self._get_connection_info(ns))
+                zdb_count -= 1
+
         self._nodes = sorted(self._nodes, key=lambda k: k['total_resources'][storage_key], reverse=True)
 
         # Create namespaces to be used as a backend for minio
         node_index = 0
         for _ in range(zdb_count):
-            namespace, node_index = self._create_namespace(node_index, storage_key, ns_password)
-            result = namespace.schedule_action('connection_info').wait(die=True).result
-            if self.data['storageNic']:
-                zdbs_connection.append('{}:{}'.format(result['storage_ip'], result['port']))
-                continue
-            zdbs_connection.append('{}:{}'.format(result['ip'], result['port']))
+            namespace, node_index = self._create_namespace(node_index, storage_key, self.data['nsPassword'])
+            zdbs_connection.append(self._get_connection_info(namespace))
 
         self._nodes = sorted(self._nodes, key=lambda k: k['total_resources'][storage_key], reverse=True)
 
@@ -200,13 +214,16 @@ class S3(TemplateBase):
     
         if self.data['storageNic']:
             gw = self._gateway()
-            host = gw.schedule_action(
-                'add_dhcp_host',
-                args={'network_name': self.data['gatewayPrivateNetwork'], 'host':{'hostname': self.guid}}).wait(die=True).result
+            if not self.data['vmMacaddress']:
+                host = gw.schedule_action(
+                    'add_dhcp_host',
+                    args={'network_name': self.data['gatewayPrivateNetwork'], 'host':{'hostname': self.guid}}).wait(die=True).result
+                self.data['vmMacaddress'] = host['macaddress']
+                self.data['vmIp'] = host['ipaddress']
             storage_nic = {
                 'id': self.data['storageNic'],
                 'type': 'vxlan',
-                'hwaddr': host['macaddress'],
+                'hwaddr': self.data['vmMacaddress'],
             }
 
         # Create the zero-os vm on which we will create the minio container
@@ -234,7 +251,7 @@ class S3(TemplateBase):
         minio_data = {
             'zerodbs': zdbs_connection,
             'namespace': self.guid,
-            'nsSecret': ns_password,
+            'nsSecret': self.data['nsPassword'],
             'login': self.data['minioLogin'],
             'password': self.data['minioPassword'],
         }
@@ -261,17 +278,19 @@ class S3(TemplateBase):
         self.data['minioUrl'] = 'http://{}:{}'.format(ip, port)
 
         if self.data['storageNic']:
-            gw = self._gateway()
-            forward = {
-                'protocols': ['tcp'],
-                'srcport': None,
-                'srcnetwork': self.data['gatewayPublicNetwork'],
-                'dstport': port,
-                'dstip': host['ipaddress'],
-                'name': 'minio_{}'.format(self.guid)
-            }
-            forward = gw.schedule_action('add_portforward', args={'forward': forward}).wait(die=True).result
-            self.data['minioUrl'] = 'http://{}:{}'.format(ip, forward['srcport'])
+            if not self.data['vmPort']:
+                gw = self._gateway()
+                forward = {
+                    'protocols': ['tcp'],
+                    'srcport': None,
+                    'srcnetwork': self.data['gatewayPublicNetwork'],
+                    'dstport': port,
+                    'dstip': self.data['vmIp'],
+                    'name': 'minio_{}'.format(self.guid)
+                }
+                forward = gw.schedule_action('add_portforward', args={'forward': forward}).wait(die=True).result
+                self.data['vmPort'] = forward['srcport']
+            self.data['minioUrl'] = 'http://{}:{}'.format(ip, self.data['vmPort'])
             
 
         self.state.set('actions', 'install', 'ok')

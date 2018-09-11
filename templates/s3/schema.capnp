@@ -16,6 +16,11 @@ struct Schema {
     gatewayRobot @12: Text; # Robot that created the gaty
     gatewayPublicNetwork @13: Text; # Gateway network to use for the vm
     gatewayPrivateNetwork @14: Text; # Gateway network to use for the vm
+    nsPassword @15: Text; # Namespace password
+    vmMacaddress @16: Text; # vm macaddress retrieved from the gateway
+    vmIp @17: Text; # Vm ip retrieved from the gateway
+    vmPort @18: Int32; # Vm forward port retrieved from the gateway
+
 
 
     enum StorageType {
