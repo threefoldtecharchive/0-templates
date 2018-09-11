@@ -243,7 +243,10 @@ class S3(TemplateBase):
         }
 
         vm = self.api.services.find_or_create(VM_TEMPLATE_UID, self.guid, vm_data)
-        vm.schedule_action('install').wait(die=True)
+        try:
+            vm.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            vm.schedule_action('install').wait(die=True)
 
         vm_robot, ip = self._vm_robot_and_ip()
 
