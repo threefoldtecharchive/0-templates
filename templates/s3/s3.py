@@ -25,7 +25,7 @@ class S3(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        # self.recurring_action('_monitor', 30)  # every 30 seconds
+        self.recurring_action('_monitor', 30)  # every 30 seconds
         self._nodes = []
 
     def _monitor(self):
@@ -102,12 +102,6 @@ class S3(TemplateBase):
         resp.raise_for_status()
         self._nodes = resp.json()
 
-        # @todo remove the hack below after testing
-        resp = resp.json()
-        for i in range(0, len(resp)):
-            if resp[i]['node_id'] == 'ac1f6b47a0c8':
-                self._nodes = [resp[i]]
-
         if not self._nodes:
             raise ValueError('There are no nodes in this farm')
         
@@ -122,8 +116,6 @@ class S3(TemplateBase):
             # if the current node candidate has enough storage, try to create a namespace on it
             if self._nodes[final_index]['total_resources'][storage_key] >= self.data['storageSize']:
                 best_node = self._nodes[final_index]
-                # @todo remove the hack below after testing
-                print("************", best_node['node_id'])
                 robot = self._get_zrobot(best_node['node_id'], best_node['robot_address'])
                 # list the services to know if the node is reachable
                 try:
@@ -154,8 +146,6 @@ class S3(TemplateBase):
                         raise RuntimeError(task.eco.message)
                 else:
                     best_node['total_resources'][storage_key] = best_node['total_resources'][storage_key] - self.data['storageSize']
-                    # @todo remove the hack below after testing
-                    
                     self.data['namespaces'].append(
                        {'name': namespace.name, 'url': best_node['robot_address'], 'node': best_node['node_id']})
                     return namespace, next_index
@@ -272,8 +262,6 @@ class S3(TemplateBase):
 
         if not minio:
             raise RuntimeError('Failed to create minio service')
-
-        vm_robot.templates.checkout_repo('https://github.com/threefoldtech/0-templates', 'test_s3')
 
         minio.schedule_action('install').wait(die=True)
         minio.schedule_action('start').wait(die=True)
