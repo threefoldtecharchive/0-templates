@@ -30,17 +30,17 @@ class DmVm(TemplateBase):
         if not self.data['nodeId']:
             raise ValueError('Invalid input, Vm requires nodeId')
 
-        # capacity = j.clients.threefold_directory.get(interactive=False)
-        # try:
-        #     node, _ = capacity.api.GetCapacity(self.data['nodeId'])
-        # except HTTPError as err:
-        #     if err.response.status_code == 404:
-        #         raise ValueError('Node {} does not exist'.format(self.data['nodeId']))
-        #     raise err
+        capacity = j.clients.threefold_directory.get(interactive=False)
+        try:
+            node, _ = capacity.api.GetCapacity(self.data['nodeId'])
+        except HTTPError as err:
+            if err.response.status_code == 404:
+                raise ValueError('Node {} does not exist'.format(self.data['nodeId']))
+            raise err
 
-        j.clients.zrobot.get(self.data['nodeId'], data={'url': 'http://172.30.198.119:6600'})
+        j.clients.zrobot.get(self.data['nodeId'], data={'url': node.robot_address})
         self._node_api = j.clients.zrobot.robots[self.data['nodeId']]
-        self._node_robot_url = 'http://172.30.198.119:6600'
+        self._node_robot_url = node.robot_address
 
         if self.data['image'].partition(':')[0] not in ['zero-os', 'ubuntu']:
             raise ValueError('Invalid image')
@@ -48,6 +48,7 @@ class DmVm(TemplateBase):
         for key in ['id', 'type', 'ztClient']:
             if not self.data['mgmtNic'].get(key):
                 raise ValueError('Invalid input, nic requires {}'.format(key))
+
     @property
     def _node_vm(self):
         return self._node_api.services.get(name=self.guid)
