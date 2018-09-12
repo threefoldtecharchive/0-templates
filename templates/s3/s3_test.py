@@ -53,7 +53,7 @@ class TestS3Template(ZrobotBaseTest):
         with pytest.raises(ValueError, message='template should fail if there are no nodes in the farmer org'):
             resp = MagicMock()
             resp.json.return_value = []
-            patch('jumpscale.j.clients.grid_capacity.get.return_value.api.ListCapacity.return_value', [0, resp]).start()
+            patch('jumpscale.j.clients.threefold_directory.get.return_value.api.ListCapacity.return_value', [0, resp]).start()
             self.s3.validate()
 
     def test_url(self):
