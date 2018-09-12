@@ -14,4 +14,6 @@ struct Schema {
     resticPassword @9: Text="coucou01"; # rustic password
     privateKey @10: Text; # encryption private key
     metaPrivateKey @11: Text; # metadata encryption private key
+    dataShard @12: UInt32=1;
+    parityShard @13: UInt32=0;
 }

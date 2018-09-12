@@ -28,7 +28,6 @@ class Minio(TemplateBase):
         if not self.data['resticRepo'].endswith('/'):
             self.data['resticRepo'] += '/'
 
-
     def _monitor(self):
         self.logger.info('Monitor minio %s' % self.name)
         self.state.check('actions', 'install', 'ok')
@@ -63,6 +62,8 @@ class Minio(TemplateBase):
             'restic_username': self.data['resticUsername'],
             'restic_password': self.data['resticPassword'],
             'meta_private_key': self.data['metaPrivateKey'],
+            'nr_datashards': self.data['dataShard'],
+            'nr_parityshards': self.data['parityShard']
         }
         return j.sal_zos.minio.get(**kwargs)
 
@@ -77,7 +78,7 @@ class Minio(TemplateBase):
     def install(self):
         self.logger.info('Installing minio %s' % self.name)
         minio_sal = self._minio_sal
-        minio_sal.create_config()
+
         self.data['node_port'] = minio_sal.node_port
         if not self.data['resticRepoPassword']:
             self.data['resticRepoPassword'] = j.data.idgenerator.generateXCharID(10)
