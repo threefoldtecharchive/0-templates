@@ -20,7 +20,6 @@ class Minio(TemplateBase):
 
     def validate(self):
         self.state.delete('status', 'running')
-        self.state.delete('zerodbs', 'started')
         for param in ['zerodbs', 'namespace', 'login', 'password']:
             if not self.data.get(param):
                 raise ValueError("parameter '%s' not valid: %s" % (param, str(self.data[param])))
@@ -32,11 +31,9 @@ class Minio(TemplateBase):
         self.logger.info('Monitor minio %s' % self.name)
         self.state.check('actions', 'install', 'ok')
         self.state.check('actions', 'start', 'ok')
-        self.state.check('zerodbs', 'started', 'ok')
 
         if not self._minio_sal.is_running():
             self.state.delete('status', 'running')
-            self._minio_sal.create_config()
             self.start()
             if self._minio_sal.is_running():
                 self.state.set('status', 'running', 'ok')

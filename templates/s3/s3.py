@@ -55,7 +55,6 @@ class S3(TemplateBase):
                 else:
                     minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
                     minio.schedule_action('update_zerodbs', args={'zerodbs': zdbs_connection}).wait(die=True)
-                    minio.state.set('zerodbs', 'started', 'ok')
 
         try:
             update_state()
@@ -196,12 +195,12 @@ class S3(TemplateBase):
         self._nodes = sorted(self._nodes, key=lambda k: k['total_resources'][storage_key], reverse=True)
 
         mgmt_nic = {
-                'id': self.data['mgmtNic']['id'],
-                'ztClient': self.data['mgmtNic']['ztClient'],
-                'type': 'zerotier',
+            'id': self.data['mgmtNic']['id'],
+            'ztClient': self.data['mgmtNic']['ztClient'],
+            'type': 'zerotier',
         }
         storage_nic = {}
-    
+
         if self.data['storageNic']:
             gw = self._gateway()
             if not self.data['vmMacaddress']:
@@ -225,8 +224,6 @@ class S3(TemplateBase):
             'disks': [{
                 'diskType': self.data['storageType'],
                 'size': 5,
-                'mountPoint': '/mnt',
-                'filesystem': 'btrfs',
                 'label': 's3vm'
             }],
             'nodeId': self._nodes[0]['node_id'],
@@ -255,7 +252,6 @@ class S3(TemplateBase):
         while time.time() < now + 2400:
             try:
                 minio = vm_robot.services.find_or_create(MINIO_TEMPLATE_UID, self.guid, minio_data)
-                minio.state.set('zerodbs', 'started', 'ok')
                 break
             except requests.ConnectionError:
                 time.sleep(10)
@@ -282,7 +278,7 @@ class S3(TemplateBase):
                 forward = gw.schedule_action('add_portforward', args={'forward': forward}).wait(die=True).result
                 self.data['vmPort'] = forward['srcport']
             self.data['minioUrl'] = 'http://{}:{}'.format(ip, self.data['vmPort'])
-            
+
 
         self.state.set('actions', 'install', 'ok')
 
@@ -305,6 +301,7 @@ class S3(TemplateBase):
             vm.delete()
         except ServiceNotFoundError:
             pass
+
 
     def url(self):
         return self.data['minioUrl']
