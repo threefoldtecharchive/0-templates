@@ -90,6 +90,7 @@ class Minio(TemplateBase):
         self.logger.info('Starting minio %s' % self.name)
         self._minio_sal.start()
         self.state.set('actions', 'start', 'ok')
+        self.state.set('status', 'running', 'ok')
 
     def stop(self):
         """
@@ -99,11 +100,13 @@ class Minio(TemplateBase):
         self.logger.info('Stopping minio %s' % self.name)
         self._minio_sal.stop()
         self.state.delete('actions', 'start')
+        self.state.delete('status', 'running')
 
     def uninstall(self):
         self.logger.info('Uninstalling minio %s' % self.name)
         self._minio_sal.destroy()
         self.state.delete('actions', 'install')
+        self.state.delete('status', 'running')
 
     def update_zerodbs(self, zerodbs):
         self.data['zerodbs'] = zerodbs
