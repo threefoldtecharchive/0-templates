@@ -4,8 +4,8 @@ struct Schema {
     mgmtNic @0: Nic; # zerotier management nic
     storageNic @1: Text; # vxlan management nic
     farmerIyoOrg  @2: Text; # the farmer to create the s3 on
-    dataShards @3: Int32=1; # 0-stor data shards config
-    parityShards @4: Int32; # 0-stor parity shards config
+    dataShards @3: Int32=4; # 0-stor data shards config
+    parityShards @4: Int32=2; # 0-stor parity shards config
     storageType @5: StorageType; # s3 storage type
     storageSize @6: UInt16; # s3 storage size
     namespaces @7: List(Namespace); # namespace services created for s3. This is set by the template.
@@ -32,7 +32,7 @@ struct Schema {
       id @0: Text; # Zerotier network id
       ztClient @1: Text;
     }
-  
+
     struct Namespace {
     name @0: Text; # namespace service name
     node @1: Text; # node id of the node on which the namespace was created

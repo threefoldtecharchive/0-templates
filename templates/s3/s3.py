@@ -168,13 +168,9 @@ class S3(TemplateBase):
         # based on this https://godoc.org/github.com/zero-os/0-stor/client/datastor/pipeline#ObjectDistributionConfig
         # I compute the max and min and settle half way between them
         # @todo this probably needs to changed at some point
-        zdb_count = 1
-        if self.data['dataShards'] and not self.data['parityShards']:
-            zdb_count = self.data['dataShards']
-        else:
-            max_zdb = self.data['dataShards'] + self.data['parityShards']
-            min_zdb = self.data['dataShards'] - self.data['parityShards']
-            zdb_count = math.ceil(min_zdb + ((max_zdb - min_zdb)/2))
+
+        # FIXME: +2 is arbitrary, need better logic to define this number
+        zdb_count = (self.data['parityShards'] + self.data['dataShards']) + 2
 
         storage_key = 'sru' if self.data['storageType'] == 'ssd' else 'hru'
         zdbs_connection = list()
@@ -225,7 +221,7 @@ class S3(TemplateBase):
             'mgmtNic': mgmt_nic,
             'storageNic': storage_nic,
             'disks': [{
-                'diskType': self.data['storageType'],
+                'diskType': 'ssd',
                 'size': 5,
                 'label': 's3vm'
             }],
@@ -247,6 +243,8 @@ class S3(TemplateBase):
             'nsSecret': self.data['nsPassword'],
             'login': self.data['minioLogin'],
             'password': self.data['minioPassword'],
+            'dataShard': self.data['dataShards'],
+            'parityShard': self.data['parityShards']
         }
 
         # Wait 20 mins for zerorobot until it downloads the repos and starts accepting requests
@@ -287,7 +285,7 @@ class S3(TemplateBase):
 
     def uninstall(self):
         # uninstall and delete all the created namespaces
-        for namespace in self.data['namespaces']:
+        for namespace in list(self.data['namespaces']):
             try:
                 robot = self._get_zrobot(namespace['node'], namespace['url'])
                 ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
@@ -305,6 +303,7 @@ class S3(TemplateBase):
         except ServiceNotFoundError:
             pass
 
+        self.state.delete('actions','install')
 
     def url(self):
         return self.data['minioUrl']
