@@ -13,7 +13,7 @@ This template is responsible for managing s3 instance
 - `storageSize`: s3 storage size
 - `namespaces`: list of Namespace, this is set by the template
 - `minioLogin`: minio web login
-- `minioPassword`: minio web password
+- `minioPassword`: minio web password, minimum 8 characters
 - `minioUrl`: the minio web url, this is set by the template.
 
 The attributes are only relevant in case of a vxlan nic:

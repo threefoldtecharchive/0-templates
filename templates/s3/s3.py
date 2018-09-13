@@ -96,6 +96,9 @@ class S3(TemplateBase):
         if self.data['parityShards'] > self.data['dataShards']:
             raise ValueError('parityShards must be equal to or less than dataShards')
 
+        if len(self.data['minioPassword'] ) < 8:
+            raise ValueError("minio password need to be at least 8 characters")
+
         capacity = j.clients.threefold_directory.get(interactive=False)
         resp = capacity.api.ListCapacity(query_params={'farmer': self.data['farmerIyoOrg']})[1]
         resp.raise_for_status()
