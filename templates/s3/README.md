@@ -5,7 +5,7 @@ This template is responsible for managing s3 instance
 
 ### Schema:
 
-- `vmNic`: Nic info for the minio vm.
+- `mgmtNic`: Nic info for the minio vm.
 - `farmerIyoOrg`: farmer organization to use for capacity
 - `dataShards`: 0-stor data shards config
 - `parityShards`: 0-stor parity shards config
@@ -55,7 +55,7 @@ Namespace:
 ```python
 data = {
     'farmerIyoOrg': 'sarah',
-    'vmZerotier': {'id':'9f77fc393e820576', 'ztClient': 'main'},
+    'mgmtNic': {'id':'9f77fc393e820576', 'ztClient': 'main'},
     'storageType': 'hdd',
     'storageSize': 10,
     'minioLogin': 'login',
@@ -69,7 +69,7 @@ s3.schedule_action('install')
 ```yaml
 services:
     - github.com/jumpscale/digital_me/s3/0.0.1__three:
-        vmZerotier:
+        mgmtNic:
           id: 9f77fc393e820576
           ztClient: zt
         farmerIyoOrg: sarah
