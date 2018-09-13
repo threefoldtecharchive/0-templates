@@ -24,9 +24,6 @@ class Minio(TemplateBase):
             if not self.data.get(param):
                 raise ValueError("parameter '%s' not valid: %s" % (param, str(self.data[param])))
 
-        if not self.data['resticRepo'].endswith('/'):
-            self.data['resticRepo'] += '/'
-
     def _monitor(self):
         self.logger.info('Monitor minio %s' % self.name)
         self.state.check('actions', 'install', 'ok')
@@ -56,18 +53,11 @@ class Minio(TemplateBase):
             'private_key': self.data['privateKey'],
             'login': self.data['login'],
             'password': self.data['password'],
-            'restic_username': self.data['resticUsername'],
-            'restic_password': self.data['resticPassword'],
             'meta_private_key': self.data['metaPrivateKey'],
             'nr_datashards': self.data['dataShard'],
             'nr_parityshards': self.data['parityShard']
         }
         return j.sal_zos.minio.get(**kwargs)
-
-    @property
-    def restic_sal(self):
-        bucket = '{repo}{bucket}'.format(repo=self.data['resticRepo'], bucket=self.guid)
-        return j.sal_zos.restic.get(self._minio_sal.container, bucket)
 
     def node_port(self):
         return self.data['node_port']
@@ -77,9 +67,6 @@ class Minio(TemplateBase):
         minio_sal = self._minio_sal
 
         self.data['node_port'] = minio_sal.node_port
-        if not self.data['resticRepoPassword']:
-            self.data['resticRepoPassword'] = j.data.idgenerator.generateXCharID(10)
-
         self.state.set('actions', 'install', 'ok')
 
     def start(self):
