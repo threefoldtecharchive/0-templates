@@ -55,7 +55,6 @@ class S3(TemplateBase):
                 else:
                     minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
                     minio.schedule_action('update_zerodbs', args={'zerodbs': zdbs_connection}).wait(die=True)
-                    minio.state.set('zerodbs', 'started', 'ok')
 
         try:
             update_state()
@@ -97,6 +96,9 @@ class S3(TemplateBase):
         if self.data['parityShards'] > self.data['dataShards']:
             raise ValueError('parityShards must be equal to or less than dataShards')
 
+        if len(self.data['minioPassword'] ) < 8:
+            raise ValueError("minio password need to be at least 8 characters")
+
         capacity = j.clients.threefold_directory.get(interactive=False)
         resp = capacity.api.ListCapacity(query_params={'farmer': self.data['farmerIyoOrg']})[1]
         resp.raise_for_status()
@@ -104,6 +106,10 @@ class S3(TemplateBase):
 
         if not self._nodes:
             raise ValueError('There are no nodes in this farm')
+        
+        if not self.data['nsPassword']:
+            self.data['nsPassword'] = j.data.idgenerator.generateXCharID(32) 
+
 
     def _create_namespace(self, index, storage_key, password):
         final_index = index
@@ -150,53 +156,62 @@ class S3(TemplateBase):
                 raise RuntimeError('Looped all nodes and could not find a suitable node')
             final_index = next_index
 
+    def _get_connection_info(self, namespace):
+            result = namespace.schedule_action('connection_info').wait(die=True).result
+            if self.data['storageNic']:
+                return '{}:{}'.format(result['storage_ip'], result['port'])
+            return '{}:{}'.format(result['ip'], result['port'])
+
     def install(self):
 
         # Calculate how many zerodbs are needed for the s3
         # based on this https://godoc.org/github.com/zero-os/0-stor/client/datastor/pipeline#ObjectDistributionConfig
         # I compute the max and min and settle half way between them
         # @todo this probably needs to changed at some point
-        zdb_count = 1
-        if self.data['dataShards'] and not self.data['parityShards']:
-            zdb_count = self.data['dataShards']
-        else:
-            max_zdb = self.data['dataShards'] + self.data['parityShards']
-            min_zdb = self.data['dataShards'] - self.data['parityShards']
-            zdb_count = math.ceil(min_zdb + ((max_zdb - min_zdb)/2))
+
+        # FIXME: +2 is arbitrary, need better logic to define this number
+        zdb_count = (self.data['parityShards'] + self.data['dataShards']) + 2
 
         storage_key = 'sru' if self.data['storageType'] == 'ssd' else 'hru'
-        ns_password = j.data.idgenerator.generateXCharID(32)
         zdbs_connection = list()
+
+        # Check if namespaces have already been created in a previous install attempt
+        if self.data['namespaces']:
+            for namespace in self.data['namespaces']:
+                robot = self._get_zrobot(namespace['node'], namespace['url'])
+                ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
+                zdbs_connection.append(self._get_connection_info(ns))
+                zdb_count -= 1
+
         self._nodes = sorted(self._nodes, key=lambda k: k['total_resources'][storage_key], reverse=True)
 
         # Create namespaces to be used as a backend for minio
         node_index = 0
         for _ in range(zdb_count):
-            namespace, node_index = self._create_namespace(node_index, storage_key, ns_password)
-            result = namespace.schedule_action('connection_info').wait(die=True).result
-            if self.data['storageNic']:
-                zdbs_connection.append('{}:{}'.format(result['storage_ip'], result['port']))
-                continue
-            zdbs_connection.append('{}:{}'.format(result['ip'], result['port']))
+            namespace, node_index = self._create_namespace(node_index, storage_key, self.data['nsPassword'])
+            zdbs_connection.append(self._get_connection_info(namespace))
 
         self._nodes = sorted(self._nodes, key=lambda k: k['total_resources'][storage_key], reverse=True)
 
         mgmt_nic = {
-                'id': self.data['mgmtNic']['id'],
-                'ztClient': self.data['mgmtNic']['ztClient'],
-                'type': 'zerotier',
+            'id': self.data['mgmtNic']['id'],
+            'ztClient': self.data['mgmtNic']['ztClient'],
+            'type': 'zerotier',
         }
         storage_nic = {}
-    
+
         if self.data['storageNic']:
             gw = self._gateway()
-            host = gw.schedule_action(
-                'add_dhcp_host',
-                args={'network_name': self.data['gatewayPrivateNetwork'], 'host':{'hostname': self.guid}}).wait(die=True).result
+            if not self.data['vmMacaddress']:
+                host = gw.schedule_action(
+                    'add_dhcp_host',
+                    args={'network_name': self.data['gatewayPrivateNetwork'], 'host':{'hostname': self.guid}}).wait(die=True).result
+                self.data['vmMacaddress'] = host['macaddress']
+                self.data['vmIp'] = host['ipaddress']
             storage_nic = {
                 'id': self.data['storageNic'],
                 'type': 'vxlan',
-                'hwaddr': host['macaddress'],
+                'hwaddr': self.data['vmMacaddress'],
             }
 
         # Create the zero-os vm on which we will create the minio container
@@ -206,17 +221,18 @@ class S3(TemplateBase):
             'mgmtNic': mgmt_nic,
             'storageNic': storage_nic,
             'disks': [{
-                'diskType': self.data['storageType'],
+                'diskType': 'ssd',
                 'size': 5,
-                'mountPoint': '/mnt',
-                'filesystem': 'btrfs',
                 'label': 's3vm'
             }],
             'nodeId': self._nodes[0]['node_id'],
         }
 
         vm = self.api.services.find_or_create(VM_TEMPLATE_UID, self.guid, vm_data)
-        vm.schedule_action('install').wait(die=True)
+        try:
+            vm.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            vm.schedule_action('install').wait(die=True)
 
         vm_robot, ip = self._vm_robot_and_ip()
 
@@ -224,9 +240,11 @@ class S3(TemplateBase):
         minio_data = {
             'zerodbs': zdbs_connection,
             'namespace': self.guid,
-            'nsSecret': ns_password,
+            'nsSecret': self.data['nsPassword'],
             'login': self.data['minioLogin'],
             'password': self.data['minioPassword'],
+            'dataShard': self.data['dataShards'],
+            'parityShard': self.data['parityShards']
         }
 
         # Wait 20 mins for zerorobot until it downloads the repos and starts accepting requests
@@ -235,7 +253,6 @@ class S3(TemplateBase):
         while time.time() < now + 2400:
             try:
                 minio = vm_robot.services.find_or_create(MINIO_TEMPLATE_UID, self.guid, minio_data)
-                minio.state.set('zerodbs', 'started', 'ok')
                 break
             except requests.ConnectionError:
                 time.sleep(10)
@@ -249,24 +266,26 @@ class S3(TemplateBase):
         self.data['minioUrl'] = 'http://{}:{}'.format(ip, port)
 
         if self.data['storageNic']:
-            gw = self._gateway()
-            forward = {
-                'protocols': ['tcp'],
-                'srcport': None,
-                'srcnetwork': self.data['gatewayPublicNetwork'],
-                'dstport': port,
-                'dstip': host['ipaddress'],
-                'name': 'minio_{}'.format(self.guid)
-            }
-            forward = gw.schedule_action('add_portforward', args={'forward': forward}).wait(die=True).result
-            self.data['minioUrl'] = 'http://{}:{}'.format(ip, forward['srcport'])
-            
+            if not self.data['vmPort']:
+                gw = self._gateway()
+                forward = {
+                    'protocols': ['tcp'],
+                    'srcport': None,
+                    'srcnetwork': self.data['gatewayPublicNetwork'],
+                    'dstport': port,
+                    'dstip': self.data['vmIp'],
+                    'name': 'minio_{}'.format(self.guid)
+                }
+                forward = gw.schedule_action('add_portforward', args={'forward': forward}).wait(die=True).result
+                self.data['vmPort'] = forward['srcport']
+            self.data['minioUrl'] = 'http://{}:{}'.format(ip, self.data['vmPort'])
+
 
         self.state.set('actions', 'install', 'ok')
 
     def uninstall(self):
         # uninstall and delete all the created namespaces
-        for namespace in self.data['namespaces']:
+        for namespace in list(self.data['namespaces']):
             try:
                 robot = self._get_zrobot(namespace['node'], namespace['url'])
                 ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
@@ -283,6 +302,8 @@ class S3(TemplateBase):
             vm.delete()
         except ServiceNotFoundError:
             pass
+
+        self.state.delete('actions','install')
 
     def url(self):
         return self.data['minioUrl']

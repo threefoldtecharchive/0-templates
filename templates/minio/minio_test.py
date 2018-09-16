@@ -22,10 +22,6 @@ class TestMinioTemplate(ZrobotBaseTest):
             'password': 'password',
             'zerodbs': ['192.24.121.42:9900'],
             'privateKey': '',
-            'resticPassword': 'pass',
-            'resticRepo': 'repo/',
-            'resticRepoPassword': '',
-            'resticUsername': 'username',
             'metaPrivateKey': '1234567890abcdef'
         }
 
@@ -92,8 +88,7 @@ class TestMinioTemplate(ZrobotBaseTest):
         minio.api.services.find_or_create = MagicMock()
         minio._get_zdbs = MagicMock()
         minio.install()
-
-        assert minio.data['resticRepoPassword'] != ''
+        
         container_data = {
             'flist': MINIO_FLIST,
             'node': self.valid_data['node'],

@@ -8,10 +8,8 @@ struct Schema {
     login @3: Text; # minio login. End user needs to know this login to have access to minio
     password @4: Text; #minio password. End user needs to know this login to have access to minio
     listenPort @5: UInt32=9000; # the port to bind to
-    resticRepo @6: Text="s3:http://195.134.212.42/"; # restic repo to use for metadata backup
-    resticRepoPassword @7: Text; # restic repo password
-    resticUsername @8: Text="zaibon"; # rustic username
-    resticPassword @9: Text="coucou01"; # rustic password
-    privateKey @10: Text; # encryption private key
-    metaPrivateKey @11: Text; # metadata encryption private key
+    privateKey @6: Text; # encryption private key
+    metaPrivateKey @7: Text; # metadata encryption private key
+    dataShard @8: UInt32=1;
+    parityShard @9: UInt32=0;
 }

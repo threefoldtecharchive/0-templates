@@ -21,7 +21,7 @@ class DmVm(TemplateBase):
     def __init__(self, name, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self.add_delete_callback(self.uninstall)
-
+        self._node_vm_name = self.guid + '_vm'  # name of the vm service created on the zos node
         self.recurring_action('_monitor', 30)  # every 30 seconds
         self._node_api = None
         self._node_robot_url = None
@@ -51,7 +51,7 @@ class DmVm(TemplateBase):
 
     @property
     def _node_vm(self):
-        return self._node_api.services.get(name=self.guid)
+        return self._node_api.services.get(name=self._node_vm_name)
 
     def _monitor(self):
         self.logger.info('Monitor vm %s' % self.name)
@@ -88,7 +88,7 @@ class DmVm(TemplateBase):
         nics = [
             nic
         ]
-        if self.data['storageNic']['id']:
+        if 'storageNic' in self.data and 'id' in self.data['storageNic']:
             nic = {
                 'id': self.data['storageNic']['id'],
                 'type': self.data['storageNic']['type'],
@@ -105,8 +105,8 @@ class DmVm(TemplateBase):
             vdisk.schedule_action('install').wait(die=True)
             vm_disks.append({
                 'name': vdisk.name,
-                'mountPoint': disk['mountPoint'],
-                'filesystem': disk['filesystem'],
+                'mountPoint': disk.get('mountPoint'),
+                'filesystem': disk.get('filesystem'),
                 'label': disk['label'],
             })
 
@@ -128,7 +128,7 @@ class DmVm(TemplateBase):
             flist = '{}:{}'.format(image, version)
             vm_data['flist'] = BASEFLIST.format(flist)
 
-        vm = self._node_api.services.find_or_create(VM_TEMPLATE_UID, self.guid, data=vm_data)
+        vm = self._node_api.services.find_or_create(VM_TEMPLATE_UID, self._node_vm_name, data=vm_data)
 
         if image == 'zero-os':
             if not self.data['ztIdentity']:
