@@ -5,7 +5,6 @@ This template is responsible for managing [minio](https://minio.io/) server inst
 
 ### Schema:
 
-- `node`: name of the node service to where minio will be deployed
 - `zdbs`: list of zerodbs endpoints used as backend for minio ex: ['192.168.122.87:9600']
 - `namespace`: namespace name to use on the 0-db
 - `nsSecret`: secret to use to have access to the namespace on the 0-db servers
@@ -36,7 +35,6 @@ api = ZeroRobotAPI.ZeroRobotAPI()
 robot = api.robots['main']
 
 args = {
-    'node': '547c5d299411',
     'zerodbs': [
     '192.168.122.87:9900',
     '192.168.122.87:9901',
@@ -62,7 +60,6 @@ To install instance `minio` on node `547c5d299411`
 ```yaml
 services:
     - github.com/threefoldtech/0-templates/minio/0.0.1__minio:
-          node: 547c5d299411
           zerodbs:
             - 192.168.122.87:9900
             - 192.168.122.87:9901
