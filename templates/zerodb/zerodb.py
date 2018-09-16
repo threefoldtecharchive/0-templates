@@ -208,8 +208,6 @@ class Zerodb(TemplateBase):
         for namespace in self.data['namespaces']:
             if namespace['name'] == name:
                 if prop:
-                    if prop not in ['size', 'password', 'public']:
-                        raise ValueError('Property must be size, password, or public')
                     namespace[prop] = value
                 if delete:
                     self.data['namespaces'].remove(namespace)
