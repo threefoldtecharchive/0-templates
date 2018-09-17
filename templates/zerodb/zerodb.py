@@ -166,8 +166,16 @@ class Zerodb(TemplateBase):
         self.state.check('status', 'running', 'ok')
         if self._namespace_exists_update_delete(name):
             raise ValueError('Namespace {} already exists'.format(name))
-        self.data['namespaces'].append({'name': name, 'size': size, 'password': password, 'public': public})
-        self._zerodb_sal.deploy()
+    
+        namespace = {'name': name, 'size': size, 'password': password, 'public': public}
+        self.data['namespaces'].append(namespace)
+
+        try:
+            self._zerodb_sal.deploy()
+        except:
+            self.data['namespaces'].remove(namespace)
+            self._zerodb_sal.deploy()
+            raise
 
     def namespace_set(self, name, prop, value):
         """
@@ -177,20 +185,33 @@ class Zerodb(TemplateBase):
         :param value: property value
         """
         self.state.check('status', 'running', 'ok')
-
-        if not self._namespace_exists_update_delete(name, prop, value):
+        
+        namespace = self._namespace_exists_update_delete(name, prop, value)
+        if not namespace:
             raise LookupError('Namespace {} doesn\'t exist'.format(name))
-        self._zerodb_sal.deploy()
+        
+        try:
+            self._zerodb_sal.deploy()
+        except:
+            self._namespace_exists_update_delete(name, prop, namespace[prop])
+            self._zerodb_sal.deploy()
+            raise
 
     def namespace_delete(self, name):
         """
         Delete a namespace
         """
         self.state.check('status', 'running', 'ok')
-        if not self._namespace_exists_update_delete(name, delete=True):
+        namespace = self._namespace_exists_update_delete(name, delete=True)
+        if not namespace:
             return
 
-        self._zerodb_sal.deploy()
+        try:
+            self._zerodb_sal.deploy()
+        except:
+            self.data['namespaces'].append(namespace)
+            self._zerodb_sal.deploy()
+            raise
 
     def connection_info(self):
         return {
@@ -200,6 +221,15 @@ class Zerodb(TemplateBase):
         }
 
     def _namespace_exists_update_delete(self, name, prop=None, value=None, delete=False):
+        """
+        Helper function to check if namespace <name> exists in self.data['namespaces'], and either update property <prop> with
+        a new value or delete the namespace.
+        It returns the namespace before any updates which is used in recovery in case the deploy on the zerodb fails.
+        :param name: namespace name
+        :param prop: property name
+        :param value: property value
+        :param delete: boolen indicating if the namespace should be deleted
+        """
         if prop and delete:
             raise ValueError('Can\'t set property and delete at the same time')
         if prop and prop not in ['size', 'password', 'public']:
@@ -207,9 +237,10 @@ class Zerodb(TemplateBase):
 
         for namespace in self.data['namespaces']:
             if namespace['name'] == name:
+                ns = dict(namespace)
                 if prop:
                     namespace[prop] = value
                 if delete:
                     self.data['namespaces'].remove(namespace)
-                return True
+                return ns
         return False
