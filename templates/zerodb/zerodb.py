@@ -52,7 +52,7 @@ class Zerodb(TemplateBase):
 
         if not self._zerodb_sal.is_running()[0]:
             self.state.delete('status', 'running')
-            self._zerodb_sal.start()
+            self._deploy()
             if self._zerodb_sal.is_running()[0]:
                 self.state.set('status', 'running', 'ok')
         else:
