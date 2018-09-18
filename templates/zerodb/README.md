@@ -60,6 +60,7 @@ args = {
     'sync': True,
     'mode': 'user',
     'admin': 'password',
+     'path': '/mnt/data/'
 }
 zdb = robot.services.create('github.com/threefoldtech/0-templates/zerodb/0.0.1', 'zerodb1', data=args)
 zdb.schedule_action('install')
