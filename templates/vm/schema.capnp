@@ -28,8 +28,8 @@ struct Schema {
         name @2: Text;
     }
     struct Port {
-        source @0: Int32;
-        target @1: Int32;
+        source @0: Text;
+        target @1: Text;
         name @2: Text;
     }
     struct Disk {
