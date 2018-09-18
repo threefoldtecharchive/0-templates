@@ -59,7 +59,7 @@ robot = j.clients.zrobot.robots['local']
 args = {
     'sync': True,
     'mode': 'user',
-    'admin': 'password',
+    'admin': 'password'
 }
 zdb = robot.services.create('github.com/threefoldtech/0-templates/zerodb/0.0.1', 'zerodb1', data=args)
 zdb.schedule_action('install')
