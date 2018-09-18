@@ -16,20 +16,12 @@ This template is responsible for managing s3 instance
 - `minioPassword`: minio web password, minimum 8 characters
 - `minioUrl`: the minio web url, this is set by the template.
 
-The attributes are only relevant in case of a vxlan nic:
-- `gateway`: the name of the gateway service to use for networking
-- `gatewayRobot`: the name of the gateway robot the gateway service lives on
-- `gatewayNetwork`: the name of the gateway network to be used to generate the vm ip and macaddress. 
-- `vmIp`: the ip assigned to the vm by the gateway. This is set by the template.
-
-
 Nic:
 - `id`: zerotier network id or vxlan id.
 - `ztClient`: zerotier client name to be used for authorization in case of a zerotier nic.
 - `type`: NicType
 
 NicType:
-- `vxlan`
 - `zerotier`
 
 Enum StorageType:

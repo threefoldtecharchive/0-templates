@@ -8,7 +8,6 @@ This template is responsible for managing a vm on digital me
 - `memory`: amount of memory in MiB. Defaults to 128.
 - `cpu`: number of virtual CPUs. Defaults to 1.
 - `mgmtNic`: a Nic struct with info about the management nic, it is currently expected to be a zerotier nic.
-- `storageNic`: a Nic struct with info about the management nic, it is currently expected to be a vxlan nic. **optional**
 - `disks`: list of Disk that can be attached to the vm. 
 - `image`: image name specifying if it is a `zero-os` or `ubuntu` image.
 - `configs`: List of type Config. **optional**
@@ -22,7 +21,6 @@ Nic:
 - `hwaddr`: macaddress
 
 Enum NicType:
-- `vxlan`
 - `zerotier`
 
 Disk:

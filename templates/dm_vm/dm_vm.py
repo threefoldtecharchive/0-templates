@@ -85,19 +85,7 @@ class DmVm(TemplateBase):
         data = {'url': self._node_robot_url, 'serviceguid': self.guid}
         zt_client.schedule_action('add_to_robot', args=data).wait(die=True)
         nic['ztClient'] = self.guid
-        nics = [
-            nic
-        ]
-        if 'storageNic' in self.data and 'id' in self.data['storageNic']:
-            nic = {
-                'id': self.data['storageNic']['id'],
-                'type': self.data['storageNic']['type'],
-                'name': 'storage_nic',
-                'hwaddr': self.data['storageNic']['hwaddr'],
-            }
-            nics.append(nic)
-        else:
-            nics.append({'type': 'default', 'name': 'nat0'})
+        nics = [nic, {'type': 'default', 'name': 'nat0'}]
 
         vm_disks = []
         for disk in self.data['disks']:
