@@ -72,7 +72,7 @@ class Zerodb(TemplateBase):
                 'size': self.data['size'],
                 'name': self.name,
             }
-            self.data['path'], _ = node.schedule_action('zdb_path', kwargs).wait(die=True).result
+            self.data['path'] = node.schedule_action('zdb_path', kwargs).wait(die=True).result
             if not self.data['path']:
                 raise RuntimeError('Failed to find a suitable disk for the zerodb')
 

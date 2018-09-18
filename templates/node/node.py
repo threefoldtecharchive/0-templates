@@ -182,16 +182,16 @@ class Node(TemplateBase):
             disks.sort(key=lambda disk: disk[0].size, reverse=True)
             if not disks:
                 return '', ''
-            return disks[0][1], disks[0][0].name
+            return disks[0][1]
         else:
             disktypes = ['SSD', 'NVME']
             return self._node_sal.zerodbs.create_and_mount_subvolume(name, size, disktypes)
 
-    def _create_zdb(self, diskname, mountpoint, mode, zdb_size, disktype, namespaces):
+    def _create_zdb(self, name, mountpoint, mode, zdb_size, disktype, namespaces):
         """Create a zerodb service
 
-        :param diskname: disk or subvolume name
-        :type diskname: string
+        :param name: zdb name
+        :type name: string
         :param mountpoint: zerodb mountpoint
         :type mountpoint: string
         :param mode: zerodb mode
@@ -205,8 +205,6 @@ class Node(TemplateBase):
         :return: zerodb service name
         :rtype: string
         """
-
-        zdb_name = 'zdb_%s_%s' % (self.name, diskname)
         zdb_data = {
             'path': mountpoint,
             'mode': mode,
@@ -216,10 +214,9 @@ class Node(TemplateBase):
             'namespaces': namespaces
         }
 
-        zdb = self.api.services.find_or_create(ZDB_TEMPLATE_UID, zdb_name, zdb_data)
+        zdb = self.api.services.find_or_create(ZDB_TEMPLATE_UID, name, zdb_data)
         zdb.schedule_action('install').wait(die=True)
         zdb.schedule_action('start').wait(die=True)
-        return zdb_name
 
     def create_zdb_namespace(self, disktype, mode, password, public, ns_size, name='', zdb_size=None):
         if disktype not in ['hdd', 'ssd']:
@@ -248,9 +245,10 @@ class Node(TemplateBase):
             'password': password,
             'public': public,
         }
-        mountpoint, name = self.zdb_path(disktype, zdb_size, zdb_name, zdbinfo)
+        mountpoint = self.zdb_path(disktype, zdb_size, zdb_name, zdbinfo)
         if mountpoint:
-            return self._create_zdb(name, mountpoint, mode, zdb_size, disktype, [namespace]), namespace_name
+            self._create_zdb(zdb_name, mountpoint, mode, zdb_size, disktype, [namespace])
+            return zdb_name, namespace_name
 
         zdbinfo = list(filter(lambda info: info[1]['mode'] == mode and (info[1]['free'] / 1024 ** 3) > zdb_size and info[1]['type'] in disktypes, zdbinfo))
         if not zdbinfo:
