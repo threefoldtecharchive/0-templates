@@ -28,12 +28,13 @@ class Vm(TemplateBase):
 
     @property
     def _vm_sal(self):
-        self.data['ports'] = populate_port_forwards(self.data['ports'], self._node_sal)
+        node_sal = self._node_sal
+        self.data['ports'] = populate_port_forwards(self.data['ports'], node_sal)
 
         data = self.data.copy()
         data['name'] = self.name
 
-        return self._node_sal.primitives.from_dict('vm', data)
+        return node_sal.primitives.from_dict('vm', data)
 
     @property
     def _node_sal(self):
@@ -186,6 +187,30 @@ class Vm(TemplateBase):
         self.logger.info('Disable vnc for vm %s' % self.name)
         self.state.check('actions', 'install', 'ok')
         self._vm_sal.disable_vnc()
+
+    def add_portforward(self, name, target, source=None):
+        for forward in list(self.data['ports']):
+            if forward['name'] == name:
+                raise RuntimeError("port forward with name {} already exist".format(name))
+
+        node_sal = self._node_sal
+        forward = {
+            'name': name,
+            'target': target,
+            'source': source,
+        }
+        forward = populate_port_forwards([forward], node_sal)[0]
+        self.data['ports'].append(forward)
+
+        node_sal.client.kvm.add_portfoward(self._vm_sal.uuid, forward['source'], forward['target'])
+        return forward
+
+    def remove_portforward(self, name):
+        for forward in list(self.data['ports']):
+            if forward['name'] == name:
+                self.node_sal.client.kvm.remove_portfoward(self._vm_sal.uuid, str(forward['source']), forward['target'])
+                self.data['ports'].remove(forward)
+                return
 
 
 def populate_port_forwards(ports, node_sal):

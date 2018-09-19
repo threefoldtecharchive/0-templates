@@ -214,3 +214,19 @@ class DmVm(TemplateBase):
         self.logger.info('Disable vnc for vm %s' % self.name)
         self.state.check('actions', 'install', 'ok')
         self._node_vm.schedule_action('disable_vnc').wait(die=True)
+
+    def add_portforward(self, name, target, source=None):
+        forward = {
+            'name': name,
+            'target': target,
+            'source': source,
+        }
+        result = self._node_vm.schedule_action('add_portforward', args=forward).wait(die=True).result
+        self.data['ports'].append(result)
+
+    def remove_portforward(self, name):
+        self._node_vm.schedule_action('remove_portforward', args={'name': name}).wait(die=True)
+        for forward in list(self.data['ports']):
+            if forward['name'] == name:
+                self.data['ports'].remove(forward)
+                return
