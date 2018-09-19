@@ -37,12 +37,6 @@ class Network(TemplateBase):
         return j.clients.zos.get(NODE_CLIENT)
 
     def configure(self):
-        try:
-            self.state.check('actions', 'install', 'ok')
-            return
-        except StateCheckError:
-            pass
-
         self.logger.info('installing network %s' % self.name)
 
         driver = self.data.get('driver')
