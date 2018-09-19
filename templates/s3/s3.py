@@ -124,6 +124,11 @@ class S3(TemplateBase):
         minio.schedule_action('start').wait(die=True)
         self.logger.info("minio installed")
 
+        port = minio.schedule_action('node_port').wait(die=True).result
+
+        self.logger.info("open port %s on minio vm", port)
+        self._vm().schedule_action('add_portforward', args={'name': 'minio', 'target': port, 'source': None}).wait(die=True)
+
         self.state.set('actions', 'install', 'ok')
 
     def uninstall(self):
@@ -296,23 +301,27 @@ def list_farm_nodes(farm_organization):
 
 
 def install_namespace(node, name, disk_type, size, password):
-    robot = get_zrobot(node['node_id'], node['robot_address'])
-    data = {
-        'diskType': disk_type,
-        'mode': 'direct',
-        'password': password,
-        'public': False,
-        'size': size,
-        'nsName': name,
-    }
-    namespace = robot.services.create(template_uid=NS_TEMPLATE_UID, data=data)
-    task = namespace.schedule_action('install').wait()
-    if task.eco:
-        if task.eco.category == 'python.NoNamespaceAvailability':
-            namespace.delete()
-        else:
-            raise NamespaceDeployError(task.eco.message, node)
-    return namespace, node
+    try:
+        robot = get_zrobot(node['node_id'], node['robot_address'])
+        data = {
+            'diskType': disk_type,
+            'mode': 'direct',
+            'password': password,
+            'public': False,
+            'size': size,
+            'nsName': name,
+        }
+        namespace = robot.services.create(template_uid=NS_TEMPLATE_UID, data=data)
+        task = namespace.schedule_action('install').wait()
+        if task.eco:
+            if task.eco.category == 'python.NoNamespaceAvailability':
+                namespace.delete()
+            else:
+                raise NamespaceDeployError(task.eco.message, node)
+        return namespace, node
+
+    except Exception as err:
+        raise NamespaceDeployError(str(err), node)
 
 
 def compute_minumum_namespaces(data, parity):
