@@ -101,9 +101,12 @@ class S3(TemplateBase):
             namespace, node_index = self._create_namespace(node_index, storage_key, self.data['nsPassword'])
             zdbs_connection.append(namespace_connection_info(namespace))
 
-        self._nodes = sorted(self._nodes, key=lambda k: k['total_resources'][storage_key], reverse=True)
 
         self.logger.info("create the zero-os vm on which we will create the minio container")
+        vm_node_id = pick_vm_node(self._nodes, storage_key)
+        if vm_node_id is None:
+            raise RuntimeError("no node found to deploy vm on it")
+
         mgmt_nic = {
             'id': self.data['mgmtNic']['id'],
             'ztClient': self.data['mgmtNic']['ztClient'],
@@ -118,7 +121,7 @@ class S3(TemplateBase):
                 'size': 10,  # FIXME: need to compute how much storage is needed on the disk to supprot X number of files in minio
                 'label': 's3vm'
             }],
-            'nodeId': self._nodes[0]['node_id'],
+            'nodeId': vm_node_id,
         }
 
         vm = self.api.services.find_or_create(VM_TEMPLATE_UID, self.guid, vm_data)
@@ -312,3 +315,31 @@ def namespace_connection_info(namespace):
 def get_zrobot(name, url):
     j.clients.zrobot.get(name, data={'url': url})
     return j.clients.zrobot.robots[name]
+
+def pick_vm_node(nodes, storage_type):
+    """
+    try to find a node where we can deploy the minio VM
+
+    :param nodes: list of nodes from the farm
+    :type nodes: list
+    :param storage_type: storage type required for the vdisk
+    :type storage_type: str
+    :return: the node id of the selected node
+    :rtype: string
+    """
+
+    # sort all the node by the amount of storage available
+    # TODO: better sorting logic taking in account memory and CPU available too
+    nodes = sorted(nodes, key=lambda k: k['total_resources'][storage_type], reverse=True)
+    selected_node = None
+    for node in nodes:
+        robot = get_zrobot(node['node_id'], node['robot_address'])
+        try:
+            # make sure the robot is reachable
+            robot.services.find()
+            selected_node = node['node_id']
+            break
+        except:
+            continue
+
+    return selected_node
