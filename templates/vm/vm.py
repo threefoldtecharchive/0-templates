@@ -197,7 +197,7 @@ def populate_port_forwards(ports, node_sal):
 
     if count > 0:
         # ask zero-os 'count' number of free port
-        free_ports = node_sal.free_ports(count)
+        free_ports = node_sal.freeports(count)
         # assigned the free port to the forward where source is missing
         for i, pf in enumerate(ports):
             if not pf.get('source'):

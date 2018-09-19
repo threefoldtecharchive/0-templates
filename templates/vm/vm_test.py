@@ -307,7 +307,7 @@ class TestVmTemplate(ZrobotBaseTest):
             {'source': 8080, 'dest': 9002, 'name': 'buz'},
         ]
         node_sal = MagicMock()
-        node_sal.free_ports.return_value = [2000, 2001]
+        node_sal.freeports.return_value = [2000, 2001]
         result = populate_port_forwards(ports, node_sal)
         assert result == [
             {'source': 2001, 'dest': 9000, 'name': 'foo'},
