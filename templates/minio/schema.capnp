@@ -7,9 +7,8 @@ struct Schema {
     nsSecret @2: Text; # secret to use to have access to the namespace on the 0-db servers
     login @3: Text; # minio login. End user needs to know this login to have access to minio
     password @4: Text; #minio password. End user needs to know this login to have access to minio
-    listenPort @5: UInt32=9000; # the port to bind to
-    privateKey @6: Text; # encryption private key
-    metaPrivateKey @7: Text; # metadata encryption private key
-    dataShard @8: UInt32=1;
-    parityShard @9: UInt32=0;
+    privateKey @5: Text; # encryption private key
+    metaPrivateKey @6: Text; # metadata encryption private key
+    dataShard @7: UInt32=1;
+    parityShard @8: UInt32=0;
 }

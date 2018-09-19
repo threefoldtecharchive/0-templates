@@ -49,7 +49,6 @@ class Minio(TemplateBase):
             'namespace': self.data['namespace'],
             'namespace_secret': self.data['nsSecret'],
             'zdbs': self.data['zerodbs'],
-            'node_port': self.data['listenPort'],
             'private_key': self.data['privateKey'],
             'login': self.data['login'],
             'password': self.data['password'],
@@ -60,13 +59,11 @@ class Minio(TemplateBase):
         return j.sal_zos.minio.get(**kwargs)
 
     def node_port(self):
-        return self.data['node_port']
+        return self._minio_sal.node_port
 
     def install(self):
         self.logger.info('Installing minio %s' % self.name)
         minio_sal = self._minio_sal
-
-        self.data['node_port'] = minio_sal.node_port
         self.state.set('actions', 'install', 'ok')
 
     def start(self):
@@ -75,7 +72,8 @@ class Minio(TemplateBase):
         """
         self.state.check('actions', 'install', 'ok')
         self.logger.info('Starting minio %s' % self.name)
-        self._minio_sal.start()
+        minio_sal = self._minio_sal
+        minio_sal.start()
         self.state.set('actions', 'start', 'ok')
         self.state.set('status', 'running', 'ok')
 
