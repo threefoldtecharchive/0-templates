@@ -181,7 +181,7 @@ class Node(TemplateBase):
             disks = list(filter(lambda disk: (disk[0].size / 1024 ** 3) > size and disk[0].type.value in disktypes, disks))
             disks.sort(key=lambda disk: disk[0].size, reverse=True)
             if not disks:
-                return '', ''
+                return ''
             return disks[0][1]
         else:
             disktypes = ['SSD', 'NVME']
