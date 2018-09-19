@@ -8,13 +8,20 @@ struct Schema {
     mgmtNic @2: Nic; # zerotier nic to attach to the vm
     image @3: Text; # image name specifying if it is a `zero-os` or `ubuntu` image
     disks @4: List(Disk); # list of disks to attach to the vm
-    configs @5: List(Config); # list of Config
-    ztIdentity @6: Text; # VM zerotier ID
-    nodeId @7: Text; # the node_id from the capacity registeration of the the node you want to deploy the vm on
+    ports @5 :List(Port); # List of portforwards from node to vm
+    configs @6: List(Config); # list of Config
+    ztIdentity @7: Text; # VM zerotier ID
+    nodeId @8: Text; # the node_id from the capacity registeration of the the node you want to deploy the vm on
 
    struct Config {
         path @0: Text;
         content @1: Text;
+        name @2: Text;
+   }
+
+   struct Port {
+        source @0: Int32;
+        target @1: Int32;
         name @2: Text;
    }
 

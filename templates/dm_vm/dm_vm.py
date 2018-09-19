@@ -104,6 +104,7 @@ class DmVm(TemplateBase):
             'disks': vm_disks,
             'configs': self.data['configs'],
             'ztIdentity': self.data['ztIdentity'],
+            'ports': self.data['ports'],
             'nics': nics,
         }
 

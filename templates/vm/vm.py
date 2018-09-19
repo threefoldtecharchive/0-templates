@@ -28,8 +28,11 @@ class Vm(TemplateBase):
 
     @property
     def _vm_sal(self):
+        self.data['ports'] = populate_port_forwards(self.data['ports'], self._node_sal)
+
         data = self.data.copy()
         data['name'] = self.name
+
         return self._node_sal.primitives.from_dict('vm', data)
 
     @property
@@ -44,7 +47,9 @@ class Vm(TemplateBase):
         self.state.check('actions', 'install', 'ok')
         self.state.check('actions', 'start', 'ok')
 
-        if not self._vm_sal.is_running():
+        vm_sal = self._vm_sal
+
+        if not vm_sal.is_running():
             self.state.delete('status', 'running')
 
             for disk in self.data['disks']:
@@ -52,9 +57,9 @@ class Vm(TemplateBase):
                 vdisk.state.check('status', 'running', 'ok')  # Cannot start vm until vdisks are running
 
             self._update_vdisk_url()
-            self._vm_sal.deploy()
+            vm_sal.deploy()
 
-            if self._vm_sal.is_running():
+            if vm_sal.is_running():
                 self.state.set('status', 'running', 'ok')
         else:
             self.state.set('status', 'running', 'ok')
@@ -174,9 +179,28 @@ class Vm(TemplateBase):
             'disks': self.data['disks'],
             'nics': nics,
             'ztIdentity': self.data['ztIdentity'],
+            'ports': {p['source']: p['target'] for p in self.data['ports']}
         }
 
     def disable_vnc(self):
         self.logger.info('Disable vnc for vm %s' % self.name)
         self.state.check('actions', 'install', 'ok')
         self._vm_sal.disable_vnc()
+
+
+def populate_port_forwards(ports, node_sal):
+    # count how many port we need to find
+    count = 0
+    for pf in ports:
+        if not pf.get('source'):
+            count += 1
+
+    if count > 0:
+        # ask zero-os 'count' number of free port
+        free_ports = node_sal.free_ports(count)
+        # assigned the free port to the forward where source is missing
+        for i, pf in enumerate(ports):
+            if not pf.get('source'):
+                ports[i]['source'] = free_ports.pop()
+
+    return ports
