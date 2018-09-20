@@ -3,8 +3,6 @@ from jumpscale import j
 from zerorobot.template.base import TemplateBase
 
 
-MINIO_FLIST = 'https://hub.gig.tech/gig-official-apps/minio.flist'
-META_DIR = '/bin/zerostor_meta'
 NODE_CLIENT = 'local'
 
 
@@ -63,7 +61,6 @@ class Minio(TemplateBase):
 
     def install(self):
         self.logger.info('Installing minio %s' % self.name)
-        minio_sal = self._minio_sal
         self.state.set('actions', 'install', 'ok')
 
     def start(self):
