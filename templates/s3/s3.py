@@ -156,6 +156,7 @@ class S3(TemplateBase):
             pass
 
         self.state.delete('actions', 'install')
+        self.state.delete('status', 'running')
 
     def url(self):
         vm_robot, public_ip = self._vm_robot_and_ip()
