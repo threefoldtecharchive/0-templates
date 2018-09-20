@@ -158,11 +158,26 @@ class S3(TemplateBase):
         self.state.delete('actions', 'install')
 
     def url(self):
-        vm_robot, ip = self._vm_robot_and_ip()
+        vm_robot, public_ip = self._vm_robot_and_ip()
         minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
-        port = minio.schedule_action('node_port').wait(die=True).result
-        # TODO: use public ip of the vm
-        return 'http://{}:{}'.format(ip, port)
+        public_port = minio.schedule_action('node_port').wait(die=True).result
+
+        vm_info = self._vm().schedule_action('info').wait(die=True).result
+        storage_ip = vm_info['host']['storage_addr']
+        storage_port = None
+        for src, dest in vm_info['ports'].items():
+            if dest == public_port:
+                storage_port = int(src)
+                break
+
+        output = {
+            'public': 'http://{}:{}'.format(public_ip, public_port),
+            'storage': '',
+        }
+        if storage_ip and storage_port:
+            output['storage'] = 'http://{}:{}'.format(storage_ip, storage_port)
+
+        return output
 
     def start(self):
         self.state.check('actions', 'install', 'ok')
