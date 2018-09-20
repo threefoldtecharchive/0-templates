@@ -10,7 +10,8 @@ This template is responsible for managing s3 instance
 - `dataShards`: 0-stor data shards config
 - `parityShards`: 0-stor parity shards config
 - `storageType`: s3 storage type. Must be a value of StorageType
-- `storageSize`: s3 storage size
+- `storageSize`: total s3 storage size in GB
+- `shardSize`:   shards size in GB, default 2GB
 - `namespaces`: list of Namespace, this is set by the template
 - `minioLogin`: minio web login
 - `minioPassword`: minio web password, minimum 8 characters

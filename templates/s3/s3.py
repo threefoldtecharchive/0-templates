@@ -1,3 +1,4 @@
+import math
 import time
 
 import requests
@@ -201,7 +202,10 @@ class S3(TemplateBase):
         self.logger.info("create namespaces to be used as a backend for minio")
 
         self.logger.info("compute how much zerodb are required")
-        required_nr_namespaces = compute_minumum_namespaces(data=self.data['dataShards'], parity=self.data['parityShards'])
+        required_nr_namespaces = compute_minumum_namespaces(total_size=self.data['storageSize'],
+                                                            data=self.data['dataShards'],
+                                                            parity=self.data['parityShards'],
+                                                            shard_size=self.data['shardSize'])
         deployed_nr_namespaces = 0
         deployed_namespaces = []
 
@@ -228,7 +232,7 @@ class S3(TemplateBase):
                                      node=node,
                                      name=self.guid,
                                      disk_type=self.data['storageType'],
-                                     size=self.data['storageSize'],
+                                     size=self.data['shardSize'],
                                      password=self.data['nsPassword']))
 
             for g in gevent.wait(gls):
@@ -243,7 +247,7 @@ class S3(TemplateBase):
                                                     'url': node['robot_address'],
                                                     'node': node['node_id']})
                     # update amount of ressource so the next iteration of the loop will sort the list of nodes properly
-                    nodes[nodes.index(node)]['total_resources'][storage_key] -= self.data['storageSize']
+                    nodes[nodes.index(node)]['total_resources'][storage_key] -= self.data['shardSize']
 
             self.save()  # to save the already deployed namespaces
             deployed_nr_namespaces = len(deployed_namespaces)
@@ -324,7 +328,7 @@ def install_namespace(node, name, disk_type, size, password):
         raise NamespaceDeployError(str(err), node)
 
 
-def compute_minumum_namespaces(data, parity):
+def compute_minumum_namespaces(total_size, data, parity, shard_size=2000):
     """
     compute the minumum number of zerodb required to
     fulfill the erasure coding policy
@@ -337,9 +341,7 @@ def compute_minumum_namespaces(data, parity):
     :return: minumum number of zerodb required
     :rtype: int
     """
-
-    # FIXME: +2 is arbitrary, need better logic to define this number
-    return (data+parity) + 2
+    return math.ceil(((total_size * (data+parity)) / data) / shard_size)
 
 
 def namespaces_connection_info(namespaces):
