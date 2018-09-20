@@ -174,13 +174,19 @@ class Vm(TemplateBase):
                 except (RuntimeError, ValueError) as e:
                     self.logger.warning('Failed to retreive zt ip: %s', str(e))
 
+        node_sal = self._node_sal
         return {
             'vnc': info.get('vnc'),
             'status': info.get('state', 'halted'),
             'disks': self.data['disks'],
             'nics': nics,
             'ztIdentity': self.data['ztIdentity'],
-            'ports': {p['source']: p['target'] for p in self.data['ports']}
+            'ports': {p['source']: p['target'] for p in self.data['ports']},
+            'host': {
+                'storage_addr': node_sal.storage_addr,
+                'public_addr': node_sal.public_addr,
+                'management_addr': node_sal.management_address,
+            }
         }
 
     def disable_vnc(self):
