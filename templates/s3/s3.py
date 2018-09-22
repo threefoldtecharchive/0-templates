@@ -285,7 +285,8 @@ class S3(TemplateBase):
             'type': 'zerotier',
         }
         vm_data = {
-            'memory': 2000,
+            'cpu': 2,
+            'memory': 4000,
             'image': 'zero-os',
             'mgmtNic': mgmt_nic,
             'disks': [{
