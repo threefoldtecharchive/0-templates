@@ -358,7 +358,11 @@ def compute_minumum_namespaces(total_size, data, parity, shard_size=2000):
     :return: minumum number of zerodb required
     :rtype: int
     """
-    return math.ceil(((total_size * (data+parity)) / data) / shard_size)
+    # minimum number of shards to fullfill the erasure coding policy
+    minimum = math.ceil(((total_size * (data+parity)) / data) / shard_size)
+    # add 25% of the minimum so we have more shards then needed
+    # this is needed to be able to still writes data if some shards are down
+    return math.ceil(minimum + (minimum * 0.25))
 
 
 def namespaces_connection_info(namespaces):
