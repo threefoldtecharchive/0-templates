@@ -69,7 +69,7 @@ class Traefik(TemplateBase):
 
     def start(self):
         """
-        start minio server
+        start traefik server
         """
         self.state.check('actions', 'install', 'ok')
         self.logger.info('Starting traefik  %s' % self.name)
