@@ -34,7 +34,6 @@ class Traefik(TemplateBase):
         kwargs = {
             'name': self.name,
             'node': self._node_sal,
-            'node_port': self.data['nodePort'],
             'etcd_watch':self.data['etcdWatch'],
             'etcd_endpoint': self.etc_url
         }
