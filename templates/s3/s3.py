@@ -260,14 +260,15 @@ class S3(TemplateBase):
                 namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
                 deployed_namespaces.append(namespace)
 
-        self.logger.info("namespaces required %d of %dGB", required_nr_namespaces, namespace_size)
+        self.logger.info("namespaces required: %d of %dGB", required_nr_namespaces, namespace_size)
         self.logger.info("namespaces already deployed %d", len(deployed_namespaces))
         required_nr_namespaces = required_nr_namespaces - len(deployed_namespaces)
 
         storage_key = 'sru' if self.data['storageType'] == 'ssd' else 'hru'
+        nodes = self._nodes.copy()
         while deployed_nr_namespaces < required_nr_namespaces:
             # sort nodes by the amount of storage available
-            nodes = sorted(self._nodes, key=lambda k: k['total_resources'][storage_key], reverse=True)
+            nodes = sorted(nodes, key=lambda k: k['total_resources'][storage_key], reverse=True)
 
             gls = set()
             for i in range(required_nr_namespaces - deployed_nr_namespaces):
@@ -291,11 +292,12 @@ class S3(TemplateBase):
                                                     'url': node['robot_address'],
                                                     'node': node['node_id']})
                     # update amount of ressource so the next iteration of the loop will sort the list of nodes properly
-                    nodes[nodes.index(node)]['total_resources'][storage_key] -= self.data['shardSize']
+                    nodes[nodes.index(node)]['total_resources'][storage_key] -= namespace_size
 
             self.save()  # to save the already deployed namespaces
             deployed_nr_namespaces = len(deployed_namespaces)
             self.logger.info("%d namespaces deployed, remaining %s", deployed_nr_namespaces, required_nr_namespaces - deployed_nr_namespaces)
+            self.logger.info("number of possible nodes to use for namespace deployment: %d ", len(nodes))
             if len(nodes) <= 0:
                 raise RuntimeError('could not deploy enough namespaces')
 
