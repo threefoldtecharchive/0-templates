@@ -24,6 +24,7 @@ class S3(TemplateBase):
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self.recurring_action('_monitor', 30)  # every 30 seconds
+        self.recurring_action('_ensure_namespaces_connections', 60)
         self._nodes = []
 
     def validate(self):
@@ -42,6 +43,32 @@ class S3(TemplateBase):
 
         if not self.data['nsPassword']:
             self.data['nsPassword'] = j.data.idgenerator.generateXCharID(32)
+
+    def _ensure_namespaces_connections(self):
+        self.logger.info("verify namespace connections")
+
+        zdbs_connection = []
+        # gather all the namespace services
+        namespaces = []
+        for namespace in self.data['namespaces']:
+            robot = get_zrobot(namespace['node'], namespace['url'])
+            namespaces.append(robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name']))
+
+        namespaces_connection = sorted(namespaces_connection_info(namespaces))
+        if not self.data['current_namespaces_connections']:
+            self.data['current_namespaces_connections'] = sorted(namespace_connection_info)
+            return
+
+        if namespaces_connection == sorted(self.data['current_namespaces_connections']):
+            self.logger.info("namespace connection in service data are in sync with reality")
+            return
+
+        self.logger.info("some namespace connection in service data are not correct, updating minio configuration")
+        vm_robot, _ = self._vm_robot_and_ip()
+        minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
+        # calling update_zerodbs will also tell minio process to reload its config
+        minio.schedule_action('update_zerodbs', args={'zerodbs': namespaces_connection}).wait(die=True)
+        self.data['current_namespaces_connections'] = namespace_connection_info
 
     def _monitor(self):
         self.logger.info('Monitor s3 %s' % self.name)
@@ -93,6 +120,7 @@ class S3(TemplateBase):
         if ns_gl.exception:
             raise ns_gl.exception
         namespaces_connections = ns_gl.value
+        self.data['current_namespaces_connections'] = sorted(namespaces_connections)
 
         if vm_gl.exception:
             raise vm_gl.exception

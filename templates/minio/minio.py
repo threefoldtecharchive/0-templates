@@ -95,3 +95,7 @@ class Minio(TemplateBase):
 
     def update_zerodbs(self, zerodbs):
         self.data['zerodbs'] = zerodbs
+        # if minio is running and we update the config, tell it to reload the config
+        minio_sal = self._minio_sal
+        if minio_sal.is_running():
+            self._minio_sal.reload()
