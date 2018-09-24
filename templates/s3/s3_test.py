@@ -169,6 +169,7 @@ class TestS3Template(ZrobotBaseTest):
         assert self.s3.data['minioUrl'] == 'http://ip:9001'
 
     def test_compute_shard_number(self):
-        assert compute_minimum_namespaces(2500, 16, 4) == (25, 125)
-        assert compute_minimum_namespaces(2500, 1, 1) == (3, 1667)
-        assert compute_minimum_namespaces(50000, 16, 4) == (25, 2500)
+        assert compute_minimum_namespaces(2500, 16, 4) == (25, 157)
+        assert compute_minimum_namespaces(2500, 1, 1) == (3, 2500)
+        assert compute_minimum_namespaces(50000, 16, 4) == (25, 3125)
+        assert compute_minimum_namespaces(50000, 10, 4) == (18, 5000)
