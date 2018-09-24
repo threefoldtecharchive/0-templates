@@ -30,6 +30,9 @@ class S3(TemplateBase):
         if self.data['parityShards'] > self.data['dataShards']:
             raise ValueError('parityShards must be equal to or less than dataShards')
 
+        if self.data['storageSize'] <= self.data['shardSize']:
+            raise ValueError("storageSize must be bigger then shardSize")
+
         if len(self.data['minioPassword']) < 8:
             raise ValueError("minio password need to be at least 8 characters")
 
@@ -218,7 +221,7 @@ class S3(TemplateBase):
         self.logger.info("create namespaces to be used as a backend for minio")
 
         self.logger.info("compute how much zerodb are required")
-        required_nr_namespaces = compute_minumum_namespaces(total_size=self.data['storageSize'],
+        required_nr_namespaces = compute_minimum_namespaces(total_size=self.data['storageSize'],
                                                             data=self.data['dataShards'],
                                                             parity=self.data['parityShards'],
                                                             shard_size=self.data['shardSize'])
@@ -345,7 +348,7 @@ def install_namespace(node, name, disk_type, size, password):
         raise NamespaceDeployError(str(err), node)
 
 
-def compute_minumum_namespaces(total_size, data, parity, shard_size=2000):
+def compute_minimum_namespaces(total_size, data, parity, shard_size=2000):
     """
     compute the minumum number of zerodb required to
     fulfill the erasure coding policy
@@ -358,6 +361,9 @@ def compute_minumum_namespaces(total_size, data, parity, shard_size=2000):
     :return: minumum number of zerodb required
     :rtype: int
     """
+    if shard_size >= total_size:
+        raise ValueError("total storage size must be bigger then shard size")
+
     # minimum number of shards to fullfill the erasure coding policy
     minimum = math.ceil(((total_size * (data+parity)) / data) / shard_size)
     # add 25% of the minimum so we have more shards then needed
