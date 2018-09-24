@@ -51,8 +51,6 @@ class Etcd(TemplateBase):
             'listen_client_urls': self.data['listenClientUrls'],
             'initial_advertise_peer_urls': self.data['initialAdvertisePeerUrls'],
             'advertise_client_urls': self.data['advertiseClientUrls'],
-            'client_port': self.data['clientPort'],
-            'peer_port': self.data['peerPort'],
         }
         return j.sal_zos.etcd.get(**kwargs)
 
@@ -90,6 +88,7 @@ class Etcd(TemplateBase):
         self.state.delete('status', 'running')
 
     def connection_info(self):
+        self.state.check('status', 'running', 'ok')
         return {
             'ip': self._node_sal.public_addr,
             'client_port': self.data['clientPort'],
