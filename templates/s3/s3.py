@@ -31,9 +31,6 @@ class S3(TemplateBase):
         if self.data['parityShards'] > self.data['dataShards']:
             raise ValueError('parityShards must be equal to or less than dataShards')
 
-        if self.data['storageSize'] <= self.data['shardSize']:
-            raise ValueError("storageSize must be bigger then shardSize")
-
         if len(self.data['minioPassword']) < 8:
             raise ValueError("minio password need to be at least 8 characters")
 
@@ -45,6 +42,7 @@ class S3(TemplateBase):
             self.data['nsPassword'] = j.data.idgenerator.generateXCharID(32)
 
     def _ensure_namespaces_connections(self):
+        self.state.check('actions', 'install', 'ok')
         self.logger.info("verify namespace connections")
 
         zdbs_connection = []
@@ -249,10 +247,9 @@ class S3(TemplateBase):
         self.logger.info("create namespaces to be used as a backend for minio")
 
         self.logger.info("compute how much zerodb are required")
-        required_nr_namespaces = compute_minimum_namespaces(total_size=self.data['storageSize'],
-                                                            data=self.data['dataShards'],
-                                                            parity=self.data['parityShards'],
-                                                            shard_size=self.data['shardSize'])
+        required_nr_namespaces, namespace_size = compute_minimum_namespaces(total_size=self.data['storageSize'],
+                                                                            data=self.data['dataShards'],
+                                                                            parity=self.data['parityShards'])
         deployed_nr_namespaces = 0
         deployed_namespaces = []
 
@@ -263,7 +260,7 @@ class S3(TemplateBase):
                 namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
                 deployed_namespaces.append(namespace)
 
-        self.logger.info("namespaces required %d", required_nr_namespaces)
+        self.logger.info("namespaces required %d of %dGB", required_nr_namespaces, namespace_size)
         self.logger.info("namespaces already deployed %d", len(deployed_namespaces))
         required_nr_namespaces = required_nr_namespaces - len(deployed_namespaces)
 
@@ -279,7 +276,7 @@ class S3(TemplateBase):
                                      node=node,
                                      name=self.guid,
                                      disk_type=self.data['storageType'],
-                                     size=self.data['shardSize'],
+                                     size=namespace_size,
                                      password=self.data['nsPassword']))
 
             for g in gevent.wait(gls):
@@ -376,9 +373,9 @@ def install_namespace(node, name, disk_type, size, password):
         raise NamespaceDeployError(str(err), node)
 
 
-def compute_minimum_namespaces(total_size, data, parity, shard_size=2000):
+def compute_minimum_namespaces(total_size, data, parity):
     """
-    compute the minumum number of zerodb required to
+    compute the number and size of zerodb namespace required to
     fulfill the erasure coding policy
 
 
@@ -389,14 +386,16 @@ def compute_minimum_namespaces(total_size, data, parity, shard_size=2000):
     :return: minumum number of zerodb required
     :rtype: int
     """
-    if shard_size >= total_size:
-        raise ValueError("total storage size must be bigger then shard size")
+    # compute the require size to be able to store all the data+parity
+    required_size = math.ceil((total_size * (data+parity)) / data)
 
-    # minimum number of shards to fullfill the erasure coding policy
-    minimum = math.ceil(((total_size * (data+parity)) / data) / shard_size)
-    # add 25% of the minimum so we have more shards then needed
-    # this is needed to be able to still writes data if some shards are down
-    return math.ceil(minimum + (minimum * 0.25))
+    # take the minimum nubmer of shard and add a 25% to it
+    nr_shards = math.ceil((data+parity) * 1.25)
+
+    # compute the size of the shards
+    shard_size = math.ceil(required_size / (data+parity))
+
+    return nr_shards, shard_size
 
 
 def namespaces_connection_info(namespaces):
