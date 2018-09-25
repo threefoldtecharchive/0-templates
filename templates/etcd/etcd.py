@@ -98,3 +98,7 @@ class Etcd(TemplateBase):
     def insert_record(self, key, value):
         self.state.check('status', 'running', 'ok')
         self._etcd_sal.put(key, value)
+
+    def get_record(self, key):
+        self.state.check('status', 'running', 'ok')
+        return self._etcd_sal.get(key)
