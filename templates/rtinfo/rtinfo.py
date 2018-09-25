@@ -12,10 +12,7 @@ class Rtinfo(TemplateBase):
     def __init__(self, name, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self.add_delete_callback(self.uninstall)
-
-    def validate(self):
-        # validate that rtinfo client is running when installed
-        self._monitor()
+        self.recurring_action("_monitor", 600)
 
     def _monitor(self):
         try:
