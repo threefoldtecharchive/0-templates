@@ -47,10 +47,6 @@ class Etcd(TemplateBase):
         kwargs = {
             'name': self.guid,
             'node': self._node_sal,
-            'listen_peer_urls': self.data['listenPeerUrls'],
-            'listen_client_urls': self.data['listenClientUrls'],
-            'initial_advertise_peer_urls': self.data['initialAdvertisePeerUrls'],
-            'advertise_client_urls': self.data['advertiseClientUrls'],
             'zt_identity': self.data['ztIdentity'],
             'nics': self.data['nics'],
             'token': self.data['token'],
@@ -96,12 +92,8 @@ class Etcd(TemplateBase):
         etcd_sal = self._etcd_sal
         return {'peer_url': etcd_sal.peer_url, 'client_url': etcd_sal.client_url}
     
-    def update_urls(self, data):
-        self.data['listenPeerUrls'] = data.get('listenPeerUrls', self.data['listenPeerUrls'])
-        self.data['listenClientUrls'] = data.get('listenClientUrls', self.data['listenClientUrls'])
-        self.data['initialAdvertisePeerUrls'] = data.get('initialAdvertisePeerUrls', self.data['initialAdvertisePeerUrls'])
-        self.data['advertiseClientUrls'] = data.get('advertiseClientUrls', self.data['advertiseClientUrls'])
-        self.data['cluster'] = data.get('cluster', self.data['cluster'])
+    def update_cluster(self, cluster):
+        self.data['cluster'] = cluster
     
     def insert_record(self, key, value):
         self.state.check('status', 'running', 'ok')

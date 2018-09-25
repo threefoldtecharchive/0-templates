@@ -2,20 +2,16 @@
 
 
 struct Schema {
-    listenPeerUrls @0 :List(Text); # List of URLs to listen on for peer traffic default: "http://localhost:2380"
-    listenClientUrls @1 :List(Text); # List of URLs to listen on for client traffic default: "http://localhost:2379"
-    initialAdvertisePeerUrls @2 :List(Text); # List of this member's peer URLs to advertise to the rest of the cluster. default: "http://localhost:2380"
-    advertiseClientUrls @3 :List(Text); # List of this member's client URLs to advertise to the rest of the cluster default: "http://localhost:2379"
-    nics @4 :List(Nic); # Configuration of the attached nics to the etcd container
-    ztIdentity @5 :Text; # ztidentity of the container running 0-etcd
-    token @6 :Text;
-    cluster @7 :List(Member);
+    nics @0 :List(Nic); # Configuration of the attached nics to the etcd container
+    ztIdentity @1 :Text; # ztidentity of the container running 0-etcd
+    token @2 :Text;
+    cluster @3 :List(Member);
 
     struct Member {
         name @0 :Text;
         address @1 :Text;
     }
-    
+
     struct Nic {
         type @0 :NicType;
         id @1 :Text;
