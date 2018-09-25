@@ -27,9 +27,9 @@ def main(data, robot, pool, clean, debug):
 
     _, ext = os.path.splitext(data)
     if ext == '.json':
-        input = j.data.serializer.json.load(data)
+        input = j.data.serializers.json.load(data)
     elif ext == '.yaml':
-        input = j.data.serializer.yaml.load(data)
+        input = j.data.serializers.yaml.load(data)
     elif ext == '.csv':
         input = csv_parser.parse(data)
     else:

@@ -29,7 +29,7 @@ class ZrobotConfig(TemplateBase):
         in production 0-os will detect that the robot stops and will restart it
         """
 
-        j.data.serializer.yaml.dump(
+        j.data.serializers.yaml.dump(
             CONFIG_PATH,
             {'zdb_url': self.data['dataRepo']}
         )
