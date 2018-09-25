@@ -380,14 +380,17 @@ def compute_minimum_namespaces(total_size, data, parity):
     compute the number and size of zerodb namespace required to
     fulfill the erasure coding policy
 
-
+    :param total_size: total size of the s3 storage
+    :type total_size: int
     :param data: data shards number
     :type data: int
     :param parity: parity shard number
     :type parity: int
-    :return: minumum number of zerodb required
-    :rtype: int
+    :return: tuple with (number,size) of zerodb namespace required
+    :rtype: tuple
     """
+    max_shard_size = 4000  # 4TB
+
     # compute the require size to be able to store all the data+parity
     required_size = math.ceil((total_size * (data+parity)) / data)
 
@@ -396,6 +399,11 @@ def compute_minimum_namespaces(total_size, data, parity):
 
     # compute the size of the shards
     shard_size = math.ceil(required_size / (data+parity))
+    # if shard size is bigger then max, we limite the shard size
+    # and increase the number of shards
+    if shard_size > max_shard_size:
+        shard_size = max_shard_size
+        nr_shards = math.ceil(required_size / shard_size)
 
     return nr_shards, shard_size
 

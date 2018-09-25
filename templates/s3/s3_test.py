@@ -172,4 +172,4 @@ class TestS3Template(ZrobotBaseTest):
         assert compute_minimum_namespaces(2500, 16, 4) == (25, 157)
         assert compute_minimum_namespaces(2500, 1, 1) == (3, 2500)
         assert compute_minimum_namespaces(50000, 16, 4) == (25, 3125)
-        assert compute_minimum_namespaces(50000, 10, 4) == (18, 5000)
+        assert compute_minimum_namespaces(50000, 10, 4) == (18, 4000)
