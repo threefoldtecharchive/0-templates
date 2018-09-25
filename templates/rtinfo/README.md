@@ -7,5 +7,5 @@ This template runs an rtinfo client on the local zos host.
 
 - `address`: IP address or dns name of the rtinfod server that aggregates the rtinfo.
 - `port`: Port where the rtinfod server is listening for client connections (default: `9930`)
-- `disk`: List of prefixes of disk names to watch (e.g. `["sd"]` to watch `sda`, `sdb`, `sdc`, ... disks)  
+- `disks`: List of prefixes of disk names to watch (e.g. `["sd"]` to watch `sda`, `sdb`, `sdc`, ... disks)  
     (default: `[""]` which pushes all watchable disks to rtinfod)
