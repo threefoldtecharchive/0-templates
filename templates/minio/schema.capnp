@@ -16,6 +16,5 @@ struct Schema {
     struct Tlog {
         namespace @0 :Text; # name of the tlog namespace
         address @1 :Text; # ip:port of the tlog namespace
-        password @2 :Text; # password of the tlog namespace
     }
 }

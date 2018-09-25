@@ -53,8 +53,7 @@ class Minio(TemplateBase):
             'nr_datashards': self.data['dataShard'],
             'nr_parityshards': self.data['parityShard'],
             'tlog_namespace': self.data.get('tlog').get('namespace'),
-            'tlog_address': self.data.get('tlog').get('address'),
-            'tlog_password': self.data.get('tlog').get('password')
+            'tlog_address': self.data.get('tlog').get('address')
         }
         return j.sal_zos.minio.get(**kwargs)
 
