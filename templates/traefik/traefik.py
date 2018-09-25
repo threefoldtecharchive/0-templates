@@ -45,7 +45,7 @@ class Traefik(TemplateBase):
     def etc_url(self):
         self.state.check('actions', 'install', 'ok')
         result = self._etcd.schedule_action('connection_info').wait(die=True).result
-        return '{}:{}'.format(result['ip'], result['client_port'])
+        return result['client_url']
         
 
     def node_port(self):
