@@ -49,14 +49,14 @@ class Traefik(TemplateBase):
         
 
     def node_port(self):
-        return self.data['node_port']
+        return self.data['nodePort']
 
     def install(self):
         self.logger.info('Installing traefik %s' % self.name)
 
         traefik_sal = self._traefik_sal
 
-        self.data['node_port'] = traefik_sal.node_port
+        self.data['nodePort'] = traefik_sal.node_port
         self.logger.info('Install traefik %s is Done' % self.name)
         self.state.set('actions', 'install', 'ok')
 
@@ -83,3 +83,7 @@ class Traefik(TemplateBase):
         self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
 
+    def Add_key_value(self,url_frontend, url_backend):
+        self.state.check('actions', 'install', 'ok')
+        self.logger.info('Adding to conf %s' % self.name)
+        self._traefik_sal.key_value_storage(url_frontend, url_backend)
