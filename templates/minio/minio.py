@@ -2,9 +2,6 @@ from jumpscale import j
 
 from zerorobot.template.base import TemplateBase
 
-
-MINIO_FLIST = 'https://hub.gig.tech/gig-official-apps/minio.flist'
-META_DIR = '/bin/zerostor_meta'
 NODE_CLIENT = 'local'
 
 
@@ -54,7 +51,10 @@ class Minio(TemplateBase):
             'password': self.data['password'],
             'meta_private_key': self.data['metaPrivateKey'],
             'nr_datashards': self.data['dataShard'],
-            'nr_parityshards': self.data['parityShard']
+            'nr_parityshards': self.data['parityShard'],
+            'tlog_namespace': self.data.get('tlog').get('namespace'),
+            'tlog_address': self.data.get('tlog').get('address'),
+            'tlog_password': self.data.get('tlog').get('password')
         }
         return j.sal_zos.minio.get(**kwargs)
 
@@ -98,4 +98,17 @@ class Minio(TemplateBase):
         # if minio is running and we update the config, tell it to reload the config
         minio_sal = self._minio_sal
         if minio_sal.is_running():
-            self._minio_sal.reload()
+            minio_sal.create_config()
+            minio_sal.reload()
+
+    def update_tlog(self, namespace, address, password=None):
+        self.data['tlog'] = {
+            'namespace': namespace,
+            'address': address,
+            'password': password,
+        }
+        # if minio is running and we update the config, tell it to reload the config
+        minio_sal = self._minio_sal
+        if minio_sal.is_running():
+            minio_sal.create_config()
+            minio_sal.reload()

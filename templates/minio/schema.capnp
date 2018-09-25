@@ -11,4 +11,11 @@ struct Schema {
     metaPrivateKey @6: Text; # metadata encryption private key
     dataShard @7: UInt32=1;
     parityShard @8: UInt32=0;
+    tlog @9: Tlog;
+
+    struct Tlog {
+        namespace @0 :Text; # name of the tlog namespace
+        address @1 :Text; # ip:port of the tlog namespace
+        password @2 :Text; # password of the tlog namespace
+    }
 }
