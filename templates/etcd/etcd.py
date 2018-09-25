@@ -45,7 +45,7 @@ class Etcd(TemplateBase):
     @property
     def _etcd_sal(self):
         kwargs = {
-            'name': self.name,
+            'name': self.guid,
             'node': self._node_sal,
             'listen_peer_urls': self.data['listenPeerUrls'],
             'listen_client_urls': self.data['listenClientUrls'],
@@ -91,9 +91,10 @@ class Etcd(TemplateBase):
         self.state.delete('actions', 'install')
         self.state.delete('status', 'running')
 
-    def address(self):
+    def connection_info(self):
         self.state.check('status', 'running', 'ok')
-        return self._etcd_sal.address
+        etcd_sal = self._etcd_sal
+        return {'peer_url': etcd_sal.peer_url, 'client_url': etcd_sal.client_url}
     
     def update_urls(self, data):
         self.data['listenPeerUrls'] = data.get('listenPeerUrls', self.data['listenPeerUrls'])
