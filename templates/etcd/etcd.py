@@ -22,8 +22,8 @@ class Etcd(TemplateBase):
     def _deploy(self):
         etcd_sal = self._etcd_sal
         etcd_sal.deploy()
-        self.data['clientPort'] = etcd_sal.client_port
-        self.data['peerPort'] = etcd_sal.peer_port
+        self.data['ztIdentity'] = etcd_sal.zt_identity
+        
 
     def _monitor(self):
         self.logger.info('Monitor etcd %s' % self.name)
@@ -51,6 +51,10 @@ class Etcd(TemplateBase):
             'listen_client_urls': self.data['listenClientUrls'],
             'initial_advertise_peer_urls': self.data['initialAdvertisePeerUrls'],
             'advertise_client_urls': self.data['advertiseClientUrls'],
+            'zt_identity': self.data['ztIdentity'],
+            'nics': self.data['nics'],
+            'token': self.data['token'],
+            'cluster': self.data['cluster'],
         }
         return j.sal_zos.etcd.get(**kwargs)
 
@@ -87,19 +91,16 @@ class Etcd(TemplateBase):
         self.state.delete('actions', 'install')
         self.state.delete('status', 'running')
 
-    def connection_info(self):
+    def address(self):
         self.state.check('status', 'running', 'ok')
-        return {
-            'ip': self._node_sal.public_addr,
-            'client_port': self.data['clientPort'],
-            'peer_port': self.data['peerPort']
-        }
+        return self._etcd_sal.address
     
     def update_urls(self, data):
         self.data['listenPeerUrls'] = data.get('listenPeerUrls', self.data['listenPeerUrls'])
         self.data['listenClientUrls'] = data.get('listenClientUrls', self.data['listenClientUrls'])
         self.data['initialAdvertisePeerUrls'] = data.get('initialAdvertisePeerUrls', self.data['initialAdvertisePeerUrls'])
         self.data['advertiseClientUrls'] = data.get('advertiseClientUrls', self.data['advertiseClientUrls'])
+        self.data['cluster'] = data.get('cluster', self.data['cluster'])
     
     def insert_record(self, key, value):
         self.state.check('status', 'running', 'ok')
