@@ -42,7 +42,6 @@ class S3(TemplateBase):
             self.data['nsPassword'] = j.data.idgenerator.generateXCharID(32)
 
     def _ensure_namespaces_connections(self):
-        self.state.check('actions', 'install', 'ok')
         self.logger.info("verify namespace connections")
         try:
             self.state.check('actions', 'install', 'ok')
@@ -57,8 +56,8 @@ class S3(TemplateBase):
             namespaces.append(robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name']))
 
         namespaces_connection = sorted(namespaces_connection_info(namespaces))
-        if not self.data['current_namespaces_connections']:
-            self.data['current_namespaces_connections'] = sorted(namespace_connection_info)
+        if not self.data.get('current_namespaces_connections'):
+            self.data['current_namespaces_connections'] = sorted(namespaces_connection)
             return
 
         if namespaces_connection == sorted(self.data['current_namespaces_connections']):
@@ -70,12 +69,12 @@ class S3(TemplateBase):
         minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
         # calling update_zerodbs will also tell minio process to reload its config
         minio.schedule_action('update_zerodbs', args={'zerodbs': namespaces_connection}).wait(die=True)
-        self.data['current_namespaces_connections'] = namespace_connection_info
+        self.data['current_namespaces_connections'] = namespaces_connection
 
     def _monitor(self):
         self.logger.info('Monitor s3 %s' % self.name)
         try:
-        self.state.check('actions', 'install', 'ok')
+            self.state.check('actions', 'install', 'ok')
         except StateCheckError:
             return
 
@@ -108,24 +107,33 @@ class S3(TemplateBase):
             self.state.delete('status', 'running')
 
     def install(self):
-        def deploy_namespaces():
-            namespaces = self._deploy_namespaces()
+        def deploy_data_namespaces():
+            namespaces = self._deploy_minio_backend_namespaces()
             namespaces_connections = namespaces_connection_info(namespaces)
             return namespaces_connections
+
+        def deploy_tlog_namespace():
+            namespace = self._deploy_minio_tlog_namespace()
+            return namespace_connection_info(namespace)
 
         def deploy_vm():
             self._deploy_minio_vm()
             return self._vm_robot_and_ip()
 
         # deploy all namespaces and vm concurrently
-        ns_gl = gevent.spawn(deploy_namespaces)
+        ns_data_gl = gevent.spawn(deploy_data_namespaces)
+        ns_tlog_gl = gevent.spawn(deploy_tlog_namespace)
         vm_gl = gevent.spawn(deploy_vm)
-        gevent.wait([ns_gl, vm_gl])
+        gevent.wait([ns_data_gl, ns_tlog_gl, vm_gl])
 
-        if ns_gl.exception:
-            raise ns_gl.exception
-        namespaces_connections = ns_gl.value
+        if ns_data_gl.exception:
+            raise ns_data_gl.exception
+        namespaces_connections = ns_data_gl.value
         self.data['current_namespaces_connections'] = sorted(namespaces_connections)
+
+        if ns_tlog_gl.exception:
+            raise ns_tlog_gl.exception
+        tlog_connection = ns_tlog_gl.value
 
         if vm_gl.exception:
             raise vm_gl.exception
@@ -139,7 +147,11 @@ class S3(TemplateBase):
             'login': self.data['minioLogin'],
             'password': self.data['minioPassword'],
             'dataShard': self.data['dataShards'],
-            'parityShard': self.data['parityShards']
+            'parityShard': self.data['parityShards'],
+            'tlog': {
+                'namespace': self.data['tlog']['name'],
+                'address': tlog_connection,
+            }
         }
 
         self.logger.info("wait up to 20 mins for zerorobot until it downloads the repos and starts accepting requests")
@@ -235,10 +247,6 @@ class S3(TemplateBase):
     def _vm(self):
         return self.api.services.get(template_uid=VM_TEMPLATE_UID, name=self.guid)
 
-    def _gateway(self):
-        robot = j.clients.zrobot.robots[self.data['gatewayRobot']]
-        return robot.services.get(template_uid=GATEWAY_TEMPLATE_UID, name=self.data['gateway'])
-
     def _vm_robot_and_ip(self):
         vm = self._vm()
         vminfo = vm.schedule_action('info', args={'timeout': 1200}).wait(die=True).result
@@ -250,14 +258,13 @@ class S3(TemplateBase):
 
         return get_zrobot(vm.name, 'http://{}:6600'.format(mgmt_ip)), ip
 
-    def _deploy_namespaces(self):
+    def _deploy_minio_backend_namespaces(self):
         self.logger.info("create namespaces to be used as a backend for minio")
 
         self.logger.info("compute how much zerodb are required")
         required_nr_namespaces, namespace_size = compute_minimum_namespaces(total_size=self.data['storageSize'],
                                                                             data=self.data['dataShards'],
                                                                             parity=self.data['parityShards'])
-        deployed_nr_namespaces = 0
         deployed_namespaces = []
 
         # Check if namespaces have already been created in a previous install attempt
@@ -270,52 +277,61 @@ class S3(TemplateBase):
         self.logger.info("namespaces required: %d of %dGB", required_nr_namespaces, namespace_size)
         self.logger.info("namespaces already deployed %d", len(deployed_namespaces))
         required_nr_namespaces = required_nr_namespaces - len(deployed_namespaces)
+        for namespace, node in deploy_namespaces(nr_namepaces=required_nr_namespaces,
+                                                 name=self.guid,
+                                                 size=namespace_size,
+                                                 storage_type=self.data['storageType'],
+                                                 password=self.data['nsPassword'],
+                                                 nodes=self._nodes):
+            deployed_namespaces.append(namespace)
+            self.data['namespaces'].append({'name': namespace.name,
+                                            'url': node['robot_address'],
+                                            'node': node['node_id']})
 
-        storage_key = 'sru' if self.data['storageType'] == 'ssd' else 'hru'
-        nodes = self._nodes.copy()
-        while deployed_nr_namespaces < required_nr_namespaces:
-            # sort nodes by the amount of storage available
-            nodes = sorted(nodes, key=lambda k: k['total_resources'][storage_key], reverse=True)
-
-            gls = set()
-            for i in range(required_nr_namespaces - deployed_nr_namespaces):
-                node = nodes[i % len(nodes)]
-                gls.add(gevent.spawn(install_namespace,
-                                     node=node,
-                                     name=self.guid,
-                                     disk_type=self.data['storageType'],
-                                     size=namespace_size,
-                                     password=self.data['nsPassword']))
-
-            for g in gevent.wait(gls):
-                if g.exception:
-                    if g.exception.node in nodes:
-                        # we could not deploy on this node, remove it from the possible node to use
-                        nodes.remove(g.exception.node)
-                else:
-                    namespace, node = g.value
-                    deployed_namespaces.append(namespace)
-                    self.data['namespaces'].append({'name': namespace.name,
-                                                    'url': node['robot_address'],
-                                                    'node': node['node_id']})
-                    # update amount of ressource so the next iteration of the loop will sort the list of nodes properly
-                    nodes[nodes.index(node)]['total_resources'][storage_key] -= namespace_size
-
-            self.save()  # to save the already deployed namespaces
             deployed_nr_namespaces = len(deployed_namespaces)
             self.logger.info("%d namespaces deployed, remaining %s", deployed_nr_namespaces, required_nr_namespaces - deployed_nr_namespaces)
-            self.logger.info("number of possible nodes to use for namespace deployment: %d ", len(nodes))
-            if len(nodes) <= 0:
-                raise RuntimeError('could not deploy enough namespaces')
+            self.save()  # to save the already deployed namespaces
+
+        if len(deployed_namespaces) < required_nr_namespaces:
+            raise RuntimeError("could not deploy enough namespaces for minio data backend")
 
         return deployed_namespaces
 
+    def _deploy_minio_tlog_namespace(self):
+        self.logger.info("create namespaces to be used as a tlog for minio")
+
+        # Check if namespaces have already been created in a previous install attempt
+        if self.data.get('tlog') and self.data['tlog']['node'] and self.data['tlog']['url']:
+            robot = get_zrobot(self.data['tlog']['node'], self.data['tlog']['url'])
+            namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['tlog']['name'])
+            namespace.schedule_action('install').wait(die=True)
+            return namespace
+
+        tlog_namespace = None
+        for namespace, node in deploy_namespaces(nr_namepaces=1,
+                                                 name=self.guid + '_tlog',
+                                                 size=10,  # TODO: compute how much is needed
+                                                 storage_type='ssd',
+                                                 password=self.data['nsPassword'],
+                                                 nodes=self._nodes):
+            tlog_namespace = namespace
+            self.data['tlog'] = {'name': tlog_namespace.name,
+                                 'url': node['robot_address'],
+                                 'node': node['node_id']}
+
+        if not tlog_namespace:
+            raise RuntimeError("could not deploy tlog namespace for minio")
+
+        self.logger.info("tlog namespaces deployed")
+        self.save()  # to save the already deployed namespaces
+
+        return tlog_namespace
+
     def _deploy_minio_vm(self):
         self.logger.info("create the zero-os vm on which we will create the minio container")
-        vm_node_id = pick_vm_node(self._nodes)
-        if vm_node_id is None:
-            raise RuntimeError("no node found to deploy vm on it")
+        nodes = self._nodes.copy()
 
+        nodes = sort_by_less_used(filter_node_online(nodes), 'sru')
         mgmt_nic = {
             'id': self.data['mgmtNic']['id'],
             'ztClient': self.data['mgmtNic']['ztClient'],
@@ -331,16 +347,71 @@ class S3(TemplateBase):
                 'size': 10,  # FIXME: need to compute how much storage is needed on the disk to supprot X number of files in minio
                 'label': 's3vm'
             }],
-            'nodeId': vm_node_id,
         }
 
-        vm = self.api.services.find_or_create(VM_TEMPLATE_UID, self.guid, vm_data)
-        try:
-            vm.state.check('actions', 'install', 'ok')
-        except StateCheckError:
-            vm.schedule_action('install').wait(die=True)
+        for node in nodes:
+            vm_data['nodeId'] = node['node_id']
+            vm = self.api.services.find_or_create(VM_TEMPLATE_UID, self.guid, vm_data)
+            try:
+                vm.state.check('actions', 'install', 'ok')
+                return vm
+            except StateCheckError:
+                pass
+
+            t = vm.schedule_action('install')
+            t.wait()
+            if t.state != 'ok':
+                vm.delete(wait=True, timeout=60, die=False)
 
         return vm
+
+
+def deploy_namespaces(nr_namepaces, name,  size, storage_type, password, nodes):
+    """
+    generic function to deploy a group namespaces
+
+    This function will yield namespaces as they are created
+    It can return once nr_namespaces has been created or if we cannot create namespaces on any nodes.
+    It is up to the caller to count the number of namespaces received from this function to know if the deployed enough namespaces
+    """
+
+    if storage_type not in ['ssd', 'hdd']:
+        raise ValueError("storage_type must be 'ssd' or 'hdd', not %s" % storage_type)
+
+    storage_key = 'sru' if storage_type == 'ssd' else 'hru'
+
+    required_nr_namespaces = nr_namepaces
+    deployed_nr_namespaces = 0
+    nodes = filter_node_online(nodes.copy())
+    while deployed_nr_namespaces < required_nr_namespaces:
+        # sort nodes by the amount of storage available
+        nodes = sort_by_less_used(nodes, storage_key)
+
+        gls = set()
+        for i in range(required_nr_namespaces - deployed_nr_namespaces):
+            node = nodes[i % len(nodes)]
+            gls.add(gevent.spawn(install_namespace,
+                                 node=node,
+                                 name=name,
+                                 disk_type=storage_type,
+                                 size=size,
+                                 password=password))
+
+        for g in gevent.iwait(gls):
+            if g.exception and g.exception.node in nodes:
+                # we could not deploy on this node, remove it from the possible node to use
+                nodes.remove(g.exception.node)
+            else:
+                namespace, node = g.value
+                deployed_nr_namespaces += 1
+
+                # update amount of ressource so the next iteration of the loop will sort the list of nodes properly
+                nodes[nodes.index(node)]['used_resources'][storage_key] += size
+
+                yield (namespace, node)
+
+        if len(nodes) <= 0:
+            return
 
 
 def list_farm_nodes(farm_organization):
@@ -370,7 +441,7 @@ def install_namespace(node, name, disk_type, size, password):
             'nsName': name,
         }
         namespace = robot.services.create(template_uid=NS_TEMPLATE_UID, data=data)
-        task = namespace.schedule_action('install').wait()
+        task = namespace.schedule_action('install').wait(timeout=300)
         if task.eco:
             if task.eco.category == 'python.NoNamespaceAvailability':
                 namespace.delete()
@@ -442,21 +513,28 @@ def pick_vm_node(nodes):
     :rtype: string
     """
 
-    # sort all the node by the amount of storage available
     # TODO: better sorting logic taking in account memory and CPU available too
-    nodes = sorted(nodes, key=lambda k: k['total_resources']['sru'], reverse=True)
-    selected_node = None
-    for node in nodes:
-        robot = get_zrobot(node['node_id'], node['robot_address'])
-        try:
-            # make sure the robot is reachable
-            robot.services.find()
-            selected_node = node['node_id']
-            break
-        except:
-            continue
+    return sort_by_less_used(filter_node_online(nodes), 'sru')[0]
 
-    return selected_node
+
+def sort_by_less_used(nodes, storage_key):
+    def key(node):
+        return node['total_resources'][storage_key] - node['used_resources'][storage_key]
+    return sorted(nodes, key=key, reverse=True)
+
+
+def filter_node_online(nodes):
+    def url_ping(node):
+        try:
+            j.sal.nettools.checkUrlReachable(node['robot_address'])
+            return (node, True)
+        except:
+            return (node, False)
+
+    group = gevent.pool.Group()
+    for node, ok in group.imap_unordered(url_ping, nodes):
+        if ok:
+            yield node
 
 
 class NamespaceDeployError(RuntimeError):
