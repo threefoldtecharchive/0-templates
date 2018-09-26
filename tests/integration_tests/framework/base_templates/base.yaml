@@ -1,0 +1,9 @@
+services:
+{% block services %}
+{% include services %}
+{% endblock %}
+
+actions:
+{% block actions %}
+{% include actions %}
+{% endblock %}

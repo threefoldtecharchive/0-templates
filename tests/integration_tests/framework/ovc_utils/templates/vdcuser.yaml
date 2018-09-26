@@ -1,0 +1,8 @@
+{% include 'openvcloud.yaml'%}
+
+{% for username, value in vdcusers.items() %}
+  - github.com/openvcloud/0-templates/vdcuser/{{config_params('version')}}__{{username}}:
+{% for userparam, value2 in value.items() %}
+      {{userparam}}: {{value2}}
+{% endfor %}
+{% endfor %}

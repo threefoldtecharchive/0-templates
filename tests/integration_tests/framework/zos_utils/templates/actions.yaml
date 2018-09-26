@@ -1,0 +1,27 @@
+{% for action, value in temp_actions.items() %}
+  - template: github.com/zero-os/0-templates/{{action}}/{{config_params('version')}}
+{% for actions_param, value2 in value.items() %}
+{% if value2 is mapping %}
+    {{actions_param}}:
+{% for args_param, value3 in value2.items() %}
+{% if value3 is mapping %}
+      {{args_param}}:
+{% for port_group_param, value4 in value3.items() %}
+{% if port_group_param == 'destination' %}
+        - {{port_group_param}}: {{value4}}
+{% elif args_param == 'groups' %}
+        - {{port_group_param}}
+{% else %}
+          {{port_group_param}}: {{value4}}
+{% endif %}
+{% endfor %}
+{% else %}
+      {{args_param}}: {{value3}}
+{% endif %}
+{% endfor %}
+{% else %}
+    {{actions_param}}: {{value2}}
+{% endif %}
+{% endfor %}
+
+{% endfor %}

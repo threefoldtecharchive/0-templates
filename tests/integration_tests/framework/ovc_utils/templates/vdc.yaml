@@ -1,0 +1,19 @@
+{% include 'account.yaml'%}
+
+{% for csname, value in cloudspaces.items() %}
+  - github.com/openvcloud/0-templates/vdc/{{config_params('version')}}__{{csname}}:
+{% for csparam, value2 in value.items() %}
+{% if value2 is mapping %}
+      {{csparam}}:
+{% for userparam, value3 in value2.items() %}
+{% if userparam == 'name' %}
+        - {{userparam}}: {{value3}}
+{% else %}
+          {{userparam}}: {{value3}}
+{% endif %}
+{% endfor %}
+{% else %}
+      {{csparam}}: {{value2}}
+{% endif %}
+{% endfor %}
+{% endfor %}

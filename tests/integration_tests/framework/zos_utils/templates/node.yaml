@@ -1,0 +1,6 @@
+{% for zos_node_name, value in zos_nodes.items() %}
+  - github.com/zero-os/0-templates/node/{{config_params('version')}}__{{zos_node_name}}:
+{% for zos_node_param, value2 in value.items() %}
+      {{zos_node_param}}: {{value2}}
+{% endfor %}
+{% endfor %}

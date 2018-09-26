@@ -1,0 +1,19 @@
+{% include 'vdcuser.yaml'%}
+
+{% for accountname, value in accounts.items() %}
+  - github.com/openvcloud/0-templates/account/{{config_params('version')}}__{{accountname}}:
+{% for accountparam, value2 in value.items() %}
+{% if value2 is mapping %}
+      {{accountparam}}:
+{% for userparam, value3 in value2.items() %}
+{% if userparam == 'name' %}
+        - {{userparam}}: {{value3}}
+{% else %}
+          {{userparam}}: {{value3}}
+{% endif %}
+{% endfor %}
+{% else %}
+      {{accountparam}}: {{value2}}
+{% endif %}
+{% endfor %}
+{% endfor %}

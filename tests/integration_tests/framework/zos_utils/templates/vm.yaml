@@ -1,0 +1,32 @@
+{% for vm_name, value in vms.items() %}
+  - github.com/zero-os/0-templates/vm/{{config_params('version')}}__{{vm_name}}:
+{% for vm_param, value2 in value.items() %}
+{% if value2 is mapping %}
+      {{vm_param}}:
+{% for param, value3 in value2.items() %}
+{% if loop.index == 1 %}
+        - {{param}}: {{value3}}
+{% else %}
+          {{param}}: {{value3}}
+{% endif %}
+{% endfor %}
+{% elif value2 is iterable and value2 is not string %}
+      {{vm_param}}:
+{% for dict in value2 %}
+{% if dict is string %}
+        - {{dict}}
+{% else %}
+{% for param4, value4 in dict.items() %}
+{% if loop.index == 1 %}
+        - {{param4}}: {{value4}}
+{% else %}
+          {{param4}}: {{value4}}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% else %}
+      {{vm_param}}: {{value2}}
+{% endif %}
+{% endfor %}
+{% endfor %}
