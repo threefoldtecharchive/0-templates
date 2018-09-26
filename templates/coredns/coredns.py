@@ -14,7 +14,6 @@ class Coredns(TemplateBase):
         super().__init__(name=name, guid=guid, data=data)
         self._url_ = None
         self._node_ = None
-        self.etcd = self._etcd
 
     @property
     def _node_sal(self):
@@ -36,19 +35,17 @@ class Coredns(TemplateBase):
             'node': self._node_sal,
             'recursive_resolvers':self.data['upsteram'],
             'domain':self.data['domain'],
-            'etcd_endpoint': self.etc_url
+            'etcd_endpoint': self._etc_url
         }
         return j.sal_zos.coredns.get(**kwargs)
     @property
     def _etcd(self):
         return self.api.services.get(template_uid=ETCD_TEMPLATE_UID, name=self.data['etcdServerName'])
-
-    def etc_url(self):
-        self.state.check('actions', 'install', 'ok')
+    @property
+    def _etc_url(self):
         result = self._etcd.schedule_action('connection_info').wait(die=True).result
         return result['client_url']
         
-
     def node_port(self):
         return self.data['nodePort']
 
