@@ -297,7 +297,8 @@ class S3(TemplateBase):
                                                  size=namespace_size,
                                                  storage_type=self.data['storageType'],
                                                  password=self.data['nsPassword'],
-                                                 nodes=self._nodes):
+                                                 nodes=self._nodes,
+                                                 logger=self.logger):
             deployed_namespaces.append(namespace)
             self.data['namespaces'].append({'name': namespace.name,
                                             'url': node['robot_address'],
@@ -328,7 +329,8 @@ class S3(TemplateBase):
                                                  size=10,  # TODO: compute how much is needed
                                                  storage_type='ssd',
                                                  password=self.data['nsPassword'],
-                                                 nodes=self._nodes):
+                                                 nodes=self._nodes,
+                                                 logger=self.logger):
             tlog_namespace = namespace
             self.data['tlog'] = {'name': tlog_namespace.name,
                                  'url': node['robot_address'],
@@ -381,7 +383,7 @@ class S3(TemplateBase):
         return vm
 
 
-def deploy_namespaces(nr_namepaces, name,  size, storage_type, password, nodes):
+def deploy_namespaces(nr_namepaces, name,  size, storage_type, password, nodes, logger):
     """
     generic function to deploy a group namespaces
 
@@ -405,6 +407,7 @@ def deploy_namespaces(nr_namepaces, name,  size, storage_type, password, nodes):
         gls = set()
         for i in range(required_nr_namespaces - deployed_nr_namespaces):
             node = nodes[i % len(nodes)]
+            logger.info("try to install namespace %s on node %s", node['node_id'], name)
             gls.add(gevent.spawn(install_namespace,
                                  node=node,
                                  name=name,
@@ -414,7 +417,7 @@ def deploy_namespaces(nr_namepaces, name,  size, storage_type, password, nodes):
 
         for g in gevent.iwait(gls):
             if g.exception and g.exception.node in nodes:
-                # we could not deploy on this node, remove it from the possible node to use
+                logger.error("we could not deploy on node %s, remove it from the possible node to use", node['node_id'])
                 nodes.remove(g.exception.node)
             else:
                 namespace, node = g.value
@@ -458,10 +461,8 @@ def install_namespace(node, name, disk_type, size, password):
         namespace = robot.services.create(template_uid=NS_TEMPLATE_UID, data=data)
         task = namespace.schedule_action('install').wait(timeout=300)
         if task.eco:
-            if task.eco.category == 'python.NoNamespaceAvailability':
-                namespace.delete()
-            else:
-                raise NamespaceDeployError(task.eco.message, node)
+            namespace.delete()
+            raise NamespaceDeployError(task.eco.message, node)
         return namespace, node
 
     except Exception as err:
