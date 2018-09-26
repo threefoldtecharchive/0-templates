@@ -42,7 +42,7 @@ class S3(TemplateBase):
             self.data['nsPassword'] = j.data.idgenerator.generateXCharID(32)
 
     def _ensure_namespaces_connections(self):
-        self.logger.info("verify namespace connections")
+        self.logger.info("verify data backend namespace connections")
         try:
             self.state.check('actions', 'install', 'ok')
         except StateCheckError:
@@ -50,6 +50,9 @@ class S3(TemplateBase):
 
         zdbs_connection = []
         # gather all the namespace services
+        vm_robot, _ = self._vm_robot_and_ip()
+        minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
+
         namespaces = []
         for namespace in self.data['namespaces']:
             robot = get_zrobot(namespace['node'], namespace['url'])
@@ -62,14 +65,24 @@ class S3(TemplateBase):
 
         if namespaces_connection == sorted(self.data['current_namespaces_connections']):
             self.logger.info("namespace connection in service data are in sync with reality")
-            return
+        else:
+            self.logger.info("some namespace connection in service data are not correct, updating minio configuration")
+            # calling update_zerodbs will also tell minio process to reload its config
+            minio.schedule_action('update_zerodbs', args={'zerodbs': namespaces_connection}).wait(die=True)
+            self.data['current_namespaces_connections'] = namespaces_connection
 
-        self.logger.info("some namespace connection in service data are not correct, updating minio configuration")
-        vm_robot, _ = self._vm_robot_and_ip()
-        minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
-        # calling update_zerodbs will also tell minio process to reload its config
-        minio.schedule_action('update_zerodbs', args={'zerodbs': namespaces_connection}).wait(die=True)
-        self.data['current_namespaces_connections'] = namespaces_connection
+        self.logger.info("verify tlog namespace connections")
+        robot = get_zrobot(self.data['tlog']['node'], self.data['tlog']['url'])
+        namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
+        connection_info = namespace_connection_info(namespace)
+        if connection_info == self.data['tlog']['address']:
+            self.logger.info("tlog namespace connection in service data is in sync with reality")
+        else:
+            self.logger.info("tlog namespace connection in service data is not correct, updating minio configuration")
+            t = minio.schedule_action('update_zerodbs', args={'namespace': self.guid+'_tlog',
+                                                              'address': connection_info})
+            t.wait(die=True)
+            self.data['tlog']['address'] = connection_info
 
     def _monitor(self):
         self.logger.info('Monitor s3 %s' % self.name)
@@ -149,7 +162,7 @@ class S3(TemplateBase):
             'dataShard': self.data['dataShards'],
             'parityShard': self.data['parityShards'],
             'tlog': {
-                'namespace': self.data['tlog']['name'],
+                'namespace': self.guid + '_tlog',
                 'address': tlog_connection,
             }
         }
@@ -191,7 +204,9 @@ class S3(TemplateBase):
             self.data['namespaces'].remove(namespace)
 
         group = gevent.pool.Group()
-        group.imap_unordered(delete_namespace, list(self.data['namespaces']))
+        namespaces = list(self.data['namespaces'])
+        namespaces.append(self.data['tlog'])
+        group.imap_unordered(delete_namespace, namespaces)
         group.join()
 
         try:
