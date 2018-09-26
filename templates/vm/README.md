@@ -80,7 +80,7 @@ vm.schedule_action('install')
 ```yaml
 services:
     - github.com/threefoldtech/0-templates/vm/0.0.1__vm1:
-        flist: 'https://hub.gig.tech/gig-bootable/ubuntu:latest.flist'
+        flist: 'https://hub.grid.tf/tf-bootable/ubuntu:latest.flist'
         memory: 256
         cpu: 1
         nics: 
