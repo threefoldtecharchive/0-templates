@@ -34,10 +34,9 @@ class Rtinfo(TemplateBase):
 
     def install(self):
         # reinstall if already present
-        try:
-            self.node_sal.client.rtinfo.stop(self.data["address"], self.data["port"])
-        except BaseException:
-            pass
+        # stop doesn't throw exception when no service with address/port is present
+        self.node_sal.client.rtinfo.stop(self.data["address"], self.data["port"])
+
         self.node_sal.client.rtinfo.start(
             self.data["address"], self.data["port"], self.data["disks"]
         )
