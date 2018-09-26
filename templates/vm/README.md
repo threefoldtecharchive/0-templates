@@ -68,7 +68,7 @@ data = {
     'memory': 256,
     'cpu': 1,
     'nics': [{'type':'default', 'name': 'defaultnic'}],
-    'flist': 'https://hub.gig.tech/gig-bootable/ubuntu:latest.flist',
+    'flist': 'https://hub.grid.tf/tf-bootable/ubuntu:latest.flist',
     'ports':[{'source': 22, 'target': 22, 'name': 'ssh'}],
     'configs': [{'path': '/root/.ssh/authorized_keys', 'content': 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDC8tBgGU1', 'name': 'sshkey'}]
 }
