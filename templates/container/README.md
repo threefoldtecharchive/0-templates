@@ -70,7 +70,7 @@ To install container `zerodbcontainer` on node `525400123456`:
 robot = j.clients.zrobot.robots['local']
 
 container_data = {
-    'flist': 'https://hub.gig.tech/maxux/zero-db.flist',
+    'flist': 'https://hub.grid.tf/tf-autobuilder/threefoldtech-0-db-release-development.flist',
     'mounts': [{'source': '/mnt/zdb/one', 'target': '/zdb'}],
     'nics': [{'type': 'default'}],
 }
@@ -88,7 +88,7 @@ To install container `zerodbcontainer` on node `525400123456`:
 ```yaml
 services:
     - github.com/threefoldtech/0-templates/container/0.0.1__zerodbcontainer:
-          flist: 'https://hub.gig.tech/maxux/zero-db.flist'
+          flist: 'https://hub.grid.tf/tf-autobuilder/threefoldtech-0-db-release-development.flist'
           storage: 'ardb://hub.gig.tech:16379'
           nics:
             - type: 'default'
