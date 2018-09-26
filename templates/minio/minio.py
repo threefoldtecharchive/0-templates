@@ -104,11 +104,10 @@ class Minio(TemplateBase):
             minio_sal.create_config()
             minio_sal.reload()
 
-    def update_tlog(self, namespace, address, password=None):
+    def update_tlog(self, namespace, address):
         self.data['tlog'] = {
             'namespace': namespace,
-            'address': address,
-            'password': password,
+            'address': address
         }
         # if minio is running and we update the config, tell it to reload the config
         minio_sal = self._minio_sal
