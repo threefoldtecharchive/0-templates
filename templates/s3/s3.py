@@ -44,6 +44,10 @@ class S3(TemplateBase):
     def _ensure_namespaces_connections(self):
         self.state.check('actions', 'install', 'ok')
         self.logger.info("verify namespace connections")
+        try:
+            self.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            return
 
         zdbs_connection = []
         # gather all the namespace services
@@ -70,7 +74,10 @@ class S3(TemplateBase):
 
     def _monitor(self):
         self.logger.info('Monitor s3 %s' % self.name)
+        try:
         self.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            return
 
         @timeout(10)
         def update_state():

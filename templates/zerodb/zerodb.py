@@ -38,8 +38,11 @@ class Zerodb(TemplateBase):
 
     def _monitor(self):
         self.logger.info('Monitor zerodb %s' % self.name)
-        self.state.check('actions', 'install', 'ok')
-        self.state.check('actions', 'start', 'ok')
+        try:
+            self.state.check('actions', 'install', 'ok')
+            self.state.check('actions', 'start', 'ok')
+        except StateCheckError:
+            return
 
         node = self.api.services.get(template_account='threefoldtech', template_name='node')
         node.state.check('disks', 'mounted', 'ok')
@@ -48,7 +51,7 @@ class Zerodb(TemplateBase):
             try:
                 self.state.check('status', 'running', 'ok')
             except StateCheckError:
-                self._node_sal.zerodbs.mount_subvolume(self.name, self.data['path'])            
+                self._node_sal.zerodbs.mount_subvolume(self.name, self.data['path'])
 
         if not self._zerodb_sal.is_running()[0]:
             self.state.delete('status', 'running')
@@ -85,8 +88,8 @@ class Zerodb(TemplateBase):
         """
         start zerodb server
         """
-        self.state.check('actions', 'install', 'ok')
         self.logger.info('Starting zerodb %s' % self.name)
+        self.state.check('actions', 'install', 'ok')
         self._deploy()
         self.state.set('actions', 'start', 'ok')
         self.state.set('status', 'running', 'ok')
@@ -166,7 +169,7 @@ class Zerodb(TemplateBase):
         self.state.check('status', 'running', 'ok')
         if self._namespace_exists_update_delete(name):
             raise ValueError('Namespace {} already exists'.format(name))
-    
+
         namespace = {'name': name, 'size': size, 'password': password, 'public': public}
         self.data['namespaces'].append(namespace)
 
@@ -185,11 +188,11 @@ class Zerodb(TemplateBase):
         :param value: property value
         """
         self.state.check('status', 'running', 'ok')
-        
+
         namespace = self._namespace_exists_update_delete(name, prop, value)
         if not namespace:
             raise LookupError('Namespace {} doesn\'t exist'.format(name))
-        
+
         try:
             self._zerodb_sal.deploy()
         except:

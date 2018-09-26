@@ -1,6 +1,7 @@
 from jumpscale import j
 
 from zerorobot.template.base import TemplateBase
+from zerorobot.template.state import StateCheckError
 
 NODE_CLIENT = 'local'
 
@@ -23,8 +24,11 @@ class Minio(TemplateBase):
 
     def _monitor(self):
         self.logger.info('Monitor minio %s' % self.name)
-        self.state.check('actions', 'install', 'ok')
-        self.state.check('actions', 'start', 'ok')
+        try:
+            self.state.check('actions', 'install', 'ok')
+            self.state.check('actions', 'start', 'ok')
+        except StateCheckError:
+            return
 
         if not self._minio_sal.is_running():
             self.state.delete('status', 'running')
