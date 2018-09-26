@@ -50,14 +50,14 @@ class Coredns(TemplateBase):
         
 
     def node_port(self):
-        return self.data['node_port']
+        return self.data['nodePort']
 
     def install(self):
         self.logger.info('Installing CoreDns %s' % self.name)
 
         coredns_sal = self._coredns_sal
 
-        self.data['node_port'] = coredns_sal.node_port
+        self.data['nodePort'] = coredns_sal.node_port
         self.logger.info('Install CoreDns %s is Done' % self.name)
         self.state.set('actions', 'install', 'ok')
 

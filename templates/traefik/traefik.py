@@ -86,4 +86,4 @@ class Traefik(TemplateBase):
     def Add_key_value(self,url_frontend, url_backend):
         self.state.check('actions', 'install', 'ok')
         self.logger.info('Adding to conf %s' % self.name)
-        self._traefik_sal.key_value_storage(url_frontend, url_backend)
+        self._traefik_sal.key_value_storage(url_backend,url_frontend)
