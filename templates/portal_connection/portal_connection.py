@@ -40,7 +40,7 @@ class PortalConnection(TemplateBase):
         }
         resp = requests.post("{base_url}/restmachine/zrobot/client/add".format(base_url=self.data['url']), json=data, cookies=cookies)
         if resp.status_code == 409:
-            if not "already in the portal" in resp.content:
+            if not "already in the portal" in resp.text:
                 resp.raise_for_status()
             else:
                 self.logger.info(resp.content)
