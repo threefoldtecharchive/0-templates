@@ -33,7 +33,6 @@ class Zerodb(TemplateBase):
     def _deploy(self):
         zerodb_sal = self._zerodb_sal
         zerodb_sal.deploy()
-        self.data['nodePort'] = zerodb_sal.node_port
         self.data['ztIdentity'] = zerodb_sal.zt_identity
 
     def _monitor(self):
@@ -214,10 +213,11 @@ class Zerodb(TemplateBase):
             raise
 
     def connection_info(self):
+        zdb_sal = self._zerodb_sal
         return {
-            'ip': self._node_sal.public_addr,
-            'storage_ip': self._node_sal.storageAddr,
-            'port': self.data['nodePort']
+            'ip': zdb_sal.node.public_addr,
+            'storage_ip': zdb_sal.node.storageAddr,
+            'port': zdb_sal.node_port,
         }
 
     def _namespace_exists_update_delete(self, name, prop=None, value=None, delete=False):

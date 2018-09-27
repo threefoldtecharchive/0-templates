@@ -11,7 +11,6 @@ This template is responsible for managing [minio](https://minio.io/) server inst
 - `login`: minio login. End user need to know this login to have access to minio
 - `password`: minio password. End user need to know this login to have access to minio
 - `container`: reference to the container on which minio will be running. This is set by the template
-- `listenPort`: the port minio will bind to
 - `privateKey`: encryption private key
 - `metaPrivateKey`: metadata encryption private key
 

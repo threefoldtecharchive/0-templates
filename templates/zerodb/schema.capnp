@@ -5,13 +5,12 @@ struct Schema {
     mode @0: Mode=direct; # a value from enum Mode representing the 0-db mode
     sync @1: Bool=false; # boolean indicating whether all write should be sync'd or not.
     path @2: Text; # path to use for zdb data. Filled out by the template if it is not supplied.
-    nodePort @3: Int32=9901; # the node port used in the portforwarding
-    admin @4: Text; # admin password
-    namespaces @5: List(Namespace); # a list of namespaces deployed on this zerodb
-    nics @6 :List(Nic); # Configuration of the attached nics to the zerodb container
-    ztIdentity @7: Text; # ztidentity of the container running 0-db
-    size @8: Int32; # disk size of the 0-db. Only applicable for
-    diskType @9 :DiskType; # type of disk to use for this zerodb
+    admin @3: Text; # admin password
+    namespaces @4: List(Namespace); # a list of namespaces deployed on this zerodb
+    nics @5 :List(Nic); # Configuration of the attached nics to the zerodb container
+    ztIdentity @6: Text; # ztidentity of the container running 0-db
+    size @7: Int32; # disk size of the 0-db. Only applicable for
+    diskType @8 :DiskType; # type of disk to use for this zerodb
 
     enum DiskType{
         hdd @0;
