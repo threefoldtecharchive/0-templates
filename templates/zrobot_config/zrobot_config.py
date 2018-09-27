@@ -33,6 +33,13 @@ class ZrobotConfig(TemplateBase):
             CONFIG_PATH,
             {'zdb_url': self.data['dataRepo']}
         )
+        if j.core.state.configGetFromDict("myconfig", "backend") != "db":
+            (admin_password, hostname, port, namespace) = _parse_zdb(self.data['dataRepo'])
+
+            j.core.state.configSetInDict("myconfig", "backend_addr", "{}:{}".format(hostname, port))
+            j.core.state.configSetInDict("myconfig", "adminsecret", admin_password)
+            secrets = j.core.state.configGetSetInDict("myconfig", "secrets", "")
+
         self._kill_robot()
 
     def delete(self):
