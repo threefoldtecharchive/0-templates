@@ -87,8 +87,8 @@ Route:
 - `stop`: stops a gateway
 - `add_portforward`: Adds a portforward to the firewall
 - `remove_portforward`: Removes a portforward from the firewall
-- `add_http_porxy`: Adds a httpproxy to the http server
-- `remove_http_porxy`: Removes a httpproxy from the http server
+- `add_http_proxy`: Adds a httpproxy to the http server
+- `remove_http_proxy`: Removes a httpproxy from the http server
 - `add_dhcp_host`: Adds a host to a dhcp server
 - `remove_dhcp_host`: Remove a host from a dhcp server
 - `add_network`: Adds a network to the gateway
