@@ -50,9 +50,6 @@ class S3(TemplateBase):
 
         zdbs_connection = []
         # gather all the namespace services
-        vm_robot, _ = self._vm_robot_and_ip()
-        minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
-
         namespaces = []
         for namespace in self.data['namespaces']:
             robot = get_zrobot(namespace['node'], namespace['url'])
@@ -61,7 +58,9 @@ class S3(TemplateBase):
         namespaces_connection = sorted(namespaces_connection_info(namespaces))
         if not self.data.get('current_namespaces_connections'):
             self.data['current_namespaces_connections'] = sorted(namespaces_connection)
-            return
+
+        vm_robot, _ = self._vm_robot_and_ip()
+        minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
 
         if namespaces_connection == sorted(self.data['current_namespaces_connections']):
             self.logger.info("namespace connection in service data are in sync with reality")
@@ -72,17 +71,22 @@ class S3(TemplateBase):
             self.data['current_namespaces_connections'] = namespaces_connection
 
         self.logger.info("verify tlog namespace connections")
+        if 'tlog' not in self.data or not self.data['tlog'].get('node') or not self.data['tlog'].get('node'):
+            return
+
         robot = get_zrobot(self.data['tlog']['node'], self.data['tlog']['url'])
-        namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
+        namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['tlog']['name'])
+
         connection_info = namespace_connection_info(namespace)
-        if connection_info == self.data['tlog']['address']:
+        if self.data['tlog'].get('address') and self.data['tlog']['address'] == connection_info:
             self.logger.info("tlog namespace connection in service data is in sync with reality")
-        else:
-            self.logger.info("tlog namespace connection in service data is not correct, updating minio configuration")
-            t = minio.schedule_action('update_zerodbs', args={'namespace': self.guid+'_tlog',
-                                                              'address': connection_info})
-            t.wait(die=True)
-            self.data['tlog']['address'] = connection_info
+            return
+
+        self.logger.info("tlog namespace connection in service data is not correct, updating minio configuration")
+        t = minio.schedule_action('update_tlog', args={'namespace': self.guid+'_tlog',
+                                                       'address': connection_info})
+        t.wait(die=True)
+        self.data['tlog']['address'] = connection_info
 
     def _monitor(self):
         self.logger.info('Monitor s3 %s' % self.name)
@@ -403,11 +407,12 @@ def deploy_namespaces(nr_namepaces, name,  size, storage_type, password, nodes, 
     while deployed_nr_namespaces < required_nr_namespaces:
         # sort nodes by the amount of storage available
         nodes = sort_by_less_used(nodes, storage_key)
+        logger.info('number of possible nodes to use for namespace deployments %s', len(nodes))
 
         gls = set()
         for i in range(required_nr_namespaces - deployed_nr_namespaces):
             node = nodes[i % len(nodes)]
-            logger.info("try to install namespace %s on node %s", node['node_id'], name)
+            logger.info("try to install namespace %s on node %s", name, node['node_id'])
             gls.add(gevent.spawn(install_namespace,
                                  node=node,
                                  name=name,
