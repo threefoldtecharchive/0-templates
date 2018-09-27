@@ -42,11 +42,12 @@ class S3(TemplateBase):
             self.data['nsPassword'] = j.data.idgenerator.generateXCharID(32)
 
     def _ensure_namespaces_connections(self):
-        self.logger.info("verify data backend namespace connections")
         try:
             self.state.check('actions', 'install', 'ok')
         except StateCheckError:
             return
+
+        self.logger.info("verify data backend namespace connections")
 
         zdbs_connection = []
         # gather all the namespace services
@@ -89,11 +90,11 @@ class S3(TemplateBase):
         self.data['tlog']['address'] = connection_info
 
     def _monitor(self):
-        self.logger.info('Monitor s3 %s' % self.name)
         try:
             self.state.check('actions', 'install', 'ok')
         except StateCheckError:
             return
+        self.logger.info('Monitor s3 %s' % self.name)
 
         @timeout(10)
         def update_state():
@@ -202,16 +203,24 @@ class S3(TemplateBase):
         def delete_namespace(namespace):
             self.logger.info("deleting namespace %s on node %s", namespace['node'], namespace['url'])
             robot = get_zrobot(namespace['node'], namespace['url'])
-            ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
-            ns.schedule_action('uninstall').wait(die=True)
-            ns.delete()
-            self.data['namespaces'].remove(namespace)
+            try:
+                ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
+                ns.schedule_action('uninstall').wait(die=True)
+                ns.delete()
+            except ServiceNotFoundError:
+                pass
+
+            if namespace in self.data['namespaces']:
+                self.data['namespaces'].remove(namespace)
 
         group = gevent.pool.Group()
         namespaces = list(self.data['namespaces'])
-        namespaces.append(self.data['tlog'])
+        if self.data['tlog']:
+            namespaces.append(self.data['tlog'])
         group.imap_unordered(delete_namespace, namespaces)
         group.join()
+        self.data['tlog'] = None
+        self.data['current_namespaces_connections'] = None
 
         try:
             # uninstall and delete the minio vm
