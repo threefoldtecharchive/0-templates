@@ -18,6 +18,11 @@ class Etcd(TemplateBase):
 
     def validate(self):
         self.state.delete('status', 'running')
+        for nic in self.data['nics']:
+            if nic['type'] == 'zerotier':
+                break
+        else:
+            raise ValueError('Service must contain at least one zerotier nic')
 
     def _deploy(self):
         etcd_sal = self._etcd_sal
