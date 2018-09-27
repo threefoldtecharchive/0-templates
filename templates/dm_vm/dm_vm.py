@@ -55,7 +55,10 @@ class DmVm(TemplateBase):
 
     def _monitor(self):
         self.logger.info('Monitor vm %s' % self.name)
-        self.state.check('actions', 'install', 'ok')
+        try:
+            self.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            return
 
         @timeout(10)
         def update_state():

@@ -45,8 +45,11 @@ class Vm(TemplateBase):
 
     def _monitor(self):
         self.logger.info('Monitor vm %s' % self.name)
-        self.state.check('actions', 'install', 'ok')
-        self.state.check('actions', 'start', 'ok')
+        try:
+            self.state.check('actions', 'install', 'ok')
+            self.state.check('actions', 'start', 'ok')
+        except StateCheckError:
+            return
 
         vm_sal = self._vm_sal
 

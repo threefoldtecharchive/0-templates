@@ -39,7 +39,11 @@ class PortalConnection(TemplateBase):
             'godToken': auth.god_jwt.create()
         }
         resp = requests.post("{base_url}/restmachine/zrobot/client/add".format(base_url=self.data['url']), json=data, cookies=cookies)
-        resp.raise_for_status()
+        if resp.status_code == 409:
+            if not "already in the portal" in resp.text:
+                resp.raise_for_status()
+            else:
+                self.logger.info(resp.content)
 
         self.state.set('actions', 'install', 'ok')
 

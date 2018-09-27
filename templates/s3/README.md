@@ -11,7 +11,6 @@ This template is responsible for managing s3 instance
 - `parityShards`: 0-stor parity shards config
 - `storageType`: s3 storage type. Must be a value of StorageType
 - `storageSize`: total s3 storage size in GB
-- `shardSize`:   shards size in GB, default 2GB
 - `namespaces`: list of Namespace, this is set by the template
 - `minioLogin`: minio web login
 - `minioPassword`: minio web password, minimum 8 characters
@@ -50,7 +49,7 @@ data = {
     'farmerIyoOrg': 'sarah',
     'mgmtNic': {'id':'9f77fc393e820576', 'ztClient': 'main'},
     'storageType': 'hdd',
-    'storageSize': 10,
+    'storageSize': 50000,
     'minioLogin': 'login',
     'minioPassword': 'password',
 }
@@ -67,7 +66,7 @@ services:
           ztClient: zt
         farmerIyoOrg: sarah
         storageType: hdd
-        storageSize: 10
+        storageSize: 50000
         minioLogin: login
         minioPassword: password
 

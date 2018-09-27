@@ -7,8 +7,8 @@ struct Schema {
     parityShards @3: Int32=4; # 0-stor parity shards config
     storageType @4: StorageType; # s3 storage type
     storageSize @5: UInt64; # total s3 storage size in GB
-    shardSize @11: UInt64=2000; # shards size in GB
     namespaces @6: List(Namespace); # namespace services created for s3. This is set by the template.
+    tlog @11: Namespace;
     minioLogin @7: Text; # minio login
     minioPassword @8: Text; # minio password
     minioUrl @9: Text; # url to access minio on. This is set by the template.
