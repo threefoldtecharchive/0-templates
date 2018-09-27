@@ -49,10 +49,10 @@ class Zerodb(TemplateBase):
             except StateCheckError:
                 self._node_sal.zerodbs.mount_subvolume(self.name, self.data['path'])            
 
-        if not self._zerodb_sal.is_running()[0]:
+        if not self._zerodb_sal.is_running():
             self.state.delete('status', 'running')
             self._deploy()
-            if self._zerodb_sal.is_running()[0]:
+            if self._zerodb_sal.is_running():
                 self.state.set('status', 'running', 'ok')
         else:
             self.state.set('status', 'running', 'ok')
@@ -216,7 +216,7 @@ class Zerodb(TemplateBase):
         zdb_sal = self._zerodb_sal
         return {
             'ip': zdb_sal.node.public_addr,
-            'storage_ip': zdb_sal.node.storageAddr,
+            'storage_ip': zdb_sal.node.storage_addr,
             'port': zdb_sal.node_port,
         }
 
