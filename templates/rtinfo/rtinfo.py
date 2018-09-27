@@ -20,8 +20,9 @@ class Rtinfo(TemplateBase):
         except StateCheckError:
             return
 
+        addr = "{host}:{port}".format(host=self.data["address"], port=self.data["port"])
         for s in self.node_sal.client.rtinfo.list():
-            if s.address == self.data["address"] and s.port == self.data["port"]:
+            if s == addr:
                 return
 
         self.node_sal.client.rtinfo.start(
