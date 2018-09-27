@@ -35,6 +35,8 @@ class Coredns(TemplateBase):
             'node': self._node_sal,
             'recursive_resolvers':self.data['upsteram'],
             'domain':self.data['domain'],
+            'zt_identity': self.data['ztIdentity'],
+            'nics': self.data['nics'],
             'etcd_endpoint': self._etc_url
         }
         return j.sal_zos.coredns.get(**kwargs)
@@ -54,6 +56,9 @@ class Coredns(TemplateBase):
 
         coredns_sal = self._coredns_sal
 
+        coredns_sal.deploy()
+        self.data['ztIdentity'] = coredns_sal.zt_identity
+
         self.data['nodePort'] = coredns_sal.node_port
         self.logger.info('Install CoreDns %s is Done' % self.name)
         self.state.set('actions', 'install', 'ok')
@@ -70,6 +75,7 @@ class Coredns(TemplateBase):
         """
         self.state.check('actions', 'install', 'ok')
         self.logger.info('Starting CoreDns  %s' % self.name)
+        self._coredns_sal.deploy()
         self._coredns_sal.start()
         self.state.set('actions', 'start', 'ok')
         self.state.set('status', 'running', 'ok')
