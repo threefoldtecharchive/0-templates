@@ -1,8 +1,0 @@
-{% include 'sshkey.yaml'%}
-
-  - github.com/openvcloud/0-templates/openvcloud/{{config_params('version')}}__{{openvcloud}}:
-      name: '{{config_params('environment')}}'
-      address: '{{config_params('environment')}}'
-      login: '{{config_params('login')}}'
-      token: '{{token}}'
-      location: '{{config_params('location')}}'

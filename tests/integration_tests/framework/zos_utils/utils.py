@@ -1,6 +1,6 @@
 from testconfig import config
 from framework.constructor import constructor
-from js9 import j
+from jumpscale import j
 from framework.zos_utils import *
 import time
 import subprocess
@@ -21,8 +21,8 @@ class ZOS_BaseTest(constructor):
         cls.cont_flist = 'https://hub.gig.tech/gig-official-apps/ubuntu1604.flist'
         cls.vm_flist = 'https://hub.gig.tech/gig-bootable/ubuntu:16.04.flist'
         cls.cont_storage = 'ardb://hub.gig.tech:16379'
-        cls.vm_username = config['main']['username']
-        cls.vm_password = config['main']['password']
+        #cls.vm_username = config['main']['username']
+        #cls.vm_password = config['main']['password']
         cls.zt_token = config['main']['zt_token']
         cls.zt_id = config['main']['zt_id']
         cls.ssh_key= config['main']['sshkey']

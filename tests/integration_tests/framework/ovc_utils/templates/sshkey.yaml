@@ -1,4 +1,0 @@
-  - github.com/openvcloud/0-templates/sshkey/{{config_params('version')}}__{{key or random_string()}}:
-       name: '{{key or random_string()}}'
-       dir: '/root/.ssh/'
-       passphrase: '{{key or random_string()}}'

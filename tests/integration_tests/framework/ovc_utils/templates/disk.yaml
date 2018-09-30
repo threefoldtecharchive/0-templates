@@ -1,8 +1,0 @@
-{% include 'vdc.yaml'%}
-
-{% for diskname, value in disks.items() %}
-  - github.com/openvcloud/0-templates/disk/{{config_params('version')}}__{{diskname}}:
-{% for diskparam, value2 in value.items() %}
-      {{diskparam}}: {{value2}}
-{% endfor %}
-{% endfor %}

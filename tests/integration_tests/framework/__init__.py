@@ -1,7 +1,7 @@
 import logging
 import os
 from testconfig import config
-from js9 import j
+from jumpscale import j
 
 # Initiate testsuite logger
 logger = logging.getLogger('testsuite')
