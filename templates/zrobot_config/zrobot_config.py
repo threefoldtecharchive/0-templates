@@ -46,7 +46,7 @@ class ZrobotConfig(TemplateBase):
         if j.core.state.configGetFromDict("myconfig", "backend") == "db":
             j.tools.configmanager.set_namespace(namespace)
             # Robot should be running using a sandbox
-            j.tools.configmanager.configure_keys_from_sandbox(config.config_repo.path)
+            j.tools.configmanager.configure_keys_from_paths(config.config_repo.key)
         else:
             j.core.state.configSetInDict("myconfig", "backend", "db")
             j.core.state.configSetInDict("myconfig", "backend_addr", "{}:{}".format(hostname, port))
