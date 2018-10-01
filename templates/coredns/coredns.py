@@ -12,9 +12,22 @@ class Coredns(TemplateBase):
 
     def __init__(self, name, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        self._url_ = None
         self._node_ = None
+        self.add_delete_callback(self.uninstall)
+        self.recurring_action('_monitor', 30)  # every 30 seconds
 
+    def _monitor(self):
+        self.logger.info('Monitor coredns %s' % self.name)
+        self.state.check('actions', 'start', 'ok')
+
+        if not self._coredns_sal.is_running():
+            self.state.delete('status', 'running')
+            self._coredns_sal.deploy()
+            self._coredns_sal.start()
+            if self._coredns_sal.is_running():
+                self.state.set('status', 'running', 'ok')
+        else:
+            self.state.set('status', 'running', 'ok')
     @property
     def _node_sal(self):
         """
@@ -34,7 +47,6 @@ class Coredns(TemplateBase):
             'name': self.name,
             'node': self._node_sal,
             'recursive_resolvers':self.data['upsteram'],
-            'domain':self.data['domain'],
             'zt_identity': self.data['ztIdentity'],
             'nics': self.data['nics'],
             'etcd_endpoint': self._etc_url
@@ -86,4 +98,15 @@ class Coredns(TemplateBase):
         self._coredns_sal.stop()
         self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
+
+    def register_domain(self, domain, ip, ttl=300):
+        self.state.check('actions', 'install', 'ok')
+        self.logger.info('adding domain  in etcd server')
+        domain_parts = domain.split('.')
+        # The key for coredns should start with path(/hosts) and the domain reversed
+        # i.e. test.com => /hosts/com/test
+        key = "/hosts/{}".format("/".join(domain_parts[::-1]))
+        value = '{{"host":"{}","ttl":{}}}'.format(ip, ttl)
+        self._etcd.schedule_action('insert_record', args={"key":key, "value": value}).wait(die=True)
+        self.logger.info('successful')
 

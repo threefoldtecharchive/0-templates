@@ -3,10 +3,9 @@
 struct Schema {
     etcdServerName @0: Text; #Name of Etcd service
     upsteram @1 : Text; #by default 8.8.8.8:53 8.8.4.4:53
-    domain @2 : Text; 
-    nodePort @3: Int32=9500; # the port to bind to
-    nics @4 :List(Nic); # Configuration of the attached nics to the traefik container
-    ztIdentity @5 :Text; # ztidentity of the container running traefik
+    nodePort @2: Int32=9500; # the port to bind to
+    nics @3 :List(Nic); # Configuration of the attached nics to the traefik container
+    ztIdentity @4 :Text; # ztidentity of the container running traefik
 
 
     struct Nic {
