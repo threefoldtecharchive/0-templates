@@ -11,7 +11,7 @@ struct Schema {
     tlog @11: Namespace;
     minioLogin @7: Text; # minio login
     minioPassword @8: Text; # minio password
-    minioUrl @9: Text; # url to access minio on. This is set by the template.
+    minioUrls @9: Urls; # url to access minio on. This is set by the template.
     nsPassword @10: Text; # Namespace password
 
 
@@ -30,6 +30,11 @@ struct Schema {
       name @0: Text; # namespace service name
       node @1: Text; # node id of the node on which the namespace was created
       url @2: Text; # node zrobot url
+    }
+
+    struct Urls {
+      public @0: Text;
+      storage @1: Text;
     }
 }
 

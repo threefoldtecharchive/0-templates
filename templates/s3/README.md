@@ -14,7 +14,7 @@ This template is responsible for managing s3 instance
 - `namespaces`: list of Namespace, this is set by the template
 - `minioLogin`: minio web login
 - `minioPassword`: minio web password, minimum 8 characters
-- `minioUrl`: the minio web url, this is set by the template.
+- `minioUrls`: the minio web urls, this is set by the template.
 
 Nic:
 - `id`: zerotier network id or vxlan id.
@@ -33,6 +33,9 @@ Namespace:
 - `node`: node id of the node the namespace is deplopyed on
 - `url`: node zrobot address
 
+Urls:
+public: URL of minio over the public network
+storage: URL of minio over the storage network
 
 ### Actions:
 - `install`: creates s3 instance by creating all the required namespaces and connects minio to those namespaces.
