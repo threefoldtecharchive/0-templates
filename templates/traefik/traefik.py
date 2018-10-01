@@ -12,8 +12,23 @@ class Traefik(TemplateBase):
 
     def __init__(self, name, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        self._url_ = None
         self._node_ = None
+        self.add_delete_callback(self.uninstall)
+        self.recurring_action('_monitor', 30)  # every 30 seconds
+
+
+    def _monitor(self):
+        self.logger.info('Monitor traefik %s' % self.name)
+        self.state.check('actions', 'start', 'ok')
+
+        if not self._traefik_sal.is_running():
+            self.state.delete('status', 'running')
+            self._traefik_sal.deploy()
+            self._traefik_sal.start()
+            if self._traefik_sal.is_running():
+                self.state.set('status', 'running', 'ok')
+        else:
+            self.state.set('status', 'running', 'ok')
 
     @property
     def _node_sal(self):
@@ -85,7 +100,23 @@ class Traefik(TemplateBase):
         self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
 
-    def Add_key_value(self,url_frontend, url_backend):
+    def add_virtual_host(self, domain, ip, port=80):
         self.state.check('actions', 'install', 'ok')
-        self.logger.info('Adding to conf %s' % self.name)
-        self._traefik_sal.key_value_storage(url_backend,url_frontend)
+        self.logger.info('adding backend and frontend in etcd server')
+        
+        backend_name = "backend{}{}".format(ip.replace(".", ""), port)
+        frontend_name = "frontend{}".format(domain.replace(".", ""))
+        
+        backend_key = "/traefik/backends/{}/servers/server1/url".format(backend_name)
+        backend_value = "http://{}:{}".format(ip, port)
+        self._etcd.schedule_action('insert_record', args={"key":backend_key, "value": backend_value}).wait(die=True)
+        
+        frontend_key1 = "/traefik/frontends/{}/backend".format(frontend_name)
+        frontend_value1 = backend_name
+        self._etcd.schedule_action('insert_record', args={"key":frontend_key1, "value": frontend_value1}).wait(die=True)
+        
+        frontend_key2 = "/traefik/frontends/{0}/routes/{0}/rule".format(frontend_name)
+        frontend_value2 = "Host:{}".format(domain)
+        self._etcd.schedule_action('insert_record', args={"key":frontend_key2, "value": frontend_value2}).wait(die=True)
+
+        self.logger.info('successful')

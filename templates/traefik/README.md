@@ -27,7 +27,7 @@ NicType enum:
 - `start`: start traefik service and create traefik config .
 - `stop`: stop the traefik process.
 - `uninstall`: stop the traefik process and remove the container.
-- `Add_key_value`: inserts a frontend/backend in traefik config.
+- `add_virtual_host`: inserts a frontend/backend in Etcd service.
 
 
 ### Usage example via the 0-robot DSL
@@ -42,7 +42,7 @@ args = {
 traefik = robot.services.create('github.com/threefoldtech/0-templates/traefik/0.0.1', 'traefik1', data=args)
 traefik.schedule_action('install')
 traefik.schedule_action('start')
-traefik.schedule_action('Add_key_value', args={'url_frontend': 'bola_test.com', 'url_backend':'http://10.147.17.198:80'})
+traefik.schedule_action('add_virtual_host', args={'domain': 'bola_test.com', 'ip':'10.147.17.198'})
 traefik.schedule_action('stop')
 traefik.schedule_action('uninstall')
 ```
