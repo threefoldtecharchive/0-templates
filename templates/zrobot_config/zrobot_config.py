@@ -52,6 +52,7 @@ class ZrobotConfig(TemplateBase):
             j.core.state.configSetInDict("myconfig", "backend_addr", "{}:{}".format(hostname, port))
             j.core.state.configSetInDict("myconfig", "adminsecret", admin_password)
             j.core.state.configSetInDict("myconfig", "secrets", "")
+            j.core.state.configSetInDict("myconfig", "namespace", namespace)
             self._kill_robot()
 
     def delete(self):
@@ -61,4 +62,6 @@ class ZrobotConfig(TemplateBase):
         if j.sal.fs.exists(CONFIG_PATH):
             j.sal.fs.remove(CONFIG_PATH)
 
+        # Should reset backend to file
+        j.core.state.configSetInDict("myconfig", "backend", "file")
         self._kill_robot()
