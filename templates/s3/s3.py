@@ -23,9 +23,10 @@ class S3(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        self.recurring_action('_monitor', 30)  # every 30 seconds
-        self.recurring_action('_ensure_namespaces_connections', 60)
-        self._nodes = []
+        self.recurring_action('_monitor', 60)  # every 30 seconds
+        self.recurring_action('_ensure_namespaces_connections', 300)
+
+        self._robots = {}
 
     def validate(self):
         if self.data['parityShards'] > self.data['dataShards']:
@@ -34,12 +35,16 @@ class S3(TemplateBase):
         if len(self.data['minioPassword']) < 8:
             raise ValueError("minio password need to be at least 8 characters")
 
-        self._nodes = list_farm_nodes(self.data['farmerIyoOrg'])
-        if not self._nodes:
-            raise ValueError('There are no nodes in this farm')
-
         if not self.data['nsPassword']:
             self.data['nsPassword'] = j.data.idgenerator.generateXCharID(32)
+
+    @property
+    def _nodes(self):
+        # keep a cache for a few minutes
+        nodes = list_farm_nodes(self.data['farmerIyoOrg'])
+        if not nodes:
+            raise ValueError('There are no nodes in this farm')
+        return nodes
 
     def _ensure_namespaces_connections(self):
         try:
@@ -142,6 +147,7 @@ class S3(TemplateBase):
         ns_data_gl = gevent.spawn(deploy_data_namespaces)
         ns_tlog_gl = gevent.spawn(deploy_tlog_namespace)
         vm_gl = gevent.spawn(deploy_vm)
+        self.logger.info("wait for all namespaces and vm to be installed")
         gevent.wait([ns_data_gl, ns_tlog_gl, vm_gl])
 
         if ns_data_gl.exception:
@@ -235,12 +241,13 @@ class S3(TemplateBase):
         self.state.delete('actions', 'install')
         self.state.delete('status', 'running')
 
+    @timeout(120)
     def url(self):
         vm_robot, public_ip = self._vm_robot_and_ip()
         minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
         public_port = minio.schedule_action('node_port').wait(die=True).result
 
-        vm_info = self._vm().schedule_action('info').wait(die=True).result
+        vm_info = self._vm().schedule_action('info').wait(die=True, timeout=30).result
         storage_ip = vm_info['host']['storage_addr']
         storage_port = None
         for src, dest in vm_info['ports'].items():
@@ -285,7 +292,7 @@ class S3(TemplateBase):
             raise RuntimeError('VM has no ip assignments in zerotier network')
         ip = mgmt_ip
 
-        return get_zrobot(vm.name, 'http://{}:6600'.format(mgmt_ip)), ip
+        return get_zrobot(vminfo['node_id'], 'http://{}:6600'.format(mgmt_ip)), ip
 
     def _deploy_minio_backend_namespaces(self):
         self.logger.info("create namespaces to be used as a backend for minio")
@@ -534,20 +541,6 @@ def get_zrobot(name, url):
     return j.clients.zrobot.robots[name]
 
 
-def pick_vm_node(nodes):
-    """
-    try to find a node where we can deploy the minio VM
-
-    :param nodes: list of nodes from the farm
-    :type nodes: list
-    :return: the node id of the selected node
-    :rtype: string
-    """
-
-    # TODO: better sorting logic taking in account memory and CPU available too
-    return sort_by_less_used(filter_node_online(nodes), 'sru')[0]
-
-
 def sort_by_less_used(nodes, storage_key):
     def key(node):
         return node['total_resources'][storage_key] - node['used_resources'][storage_key]
@@ -557,7 +550,7 @@ def sort_by_less_used(nodes, storage_key):
 def filter_node_online(nodes):
     def url_ping(node):
         try:
-            j.sal.nettools.checkUrlReachable(node['robot_address'])
+            j.sal.nettools.checkUrlReachable(node['robot_address'], timeout=3)
             return (node, True)
         except:
             return (node, False)
