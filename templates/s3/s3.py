@@ -246,7 +246,7 @@ class S3(TemplateBase):
         minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
         public_port = minio.schedule_action('node_port').wait(die=True).result
 
-        vm_info = self._vm().schedule_action('info').wait(die=True, timout=30).result
+        vm_info = self._vm().schedule_action('info').wait(die=True, timeout=30).result
         storage_ip = vm_info['host']['storage_addr']
         storage_port = None
         for src, dest in vm_info['ports'].items():
@@ -540,20 +540,6 @@ def get_zrobot(name, url):
     return j.clients.zrobot.robots[name]
 
 
-def pick_vm_node(nodes):
-    """
-    try to find a node where we can deploy the minio VM
-
-    :param nodes: list of nodes from the farm
-    :type nodes: list
-    :return: the node id of the selected node
-    :rtype: string
-    """
-
-    # TODO: better sorting logic taking in account memory and CPU available too
-    return sort_by_less_used(filter_node_online(nodes), 'sru')[0]
-
-
 def sort_by_less_used(nodes, storage_key):
     def key(node):
         return node['total_resources'][storage_key] - node['used_resources'][storage_key]
@@ -563,7 +549,7 @@ def sort_by_less_used(nodes, storage_key):
 def filter_node_online(nodes):
     def url_ping(node):
         try:
-            j.sal.nettools.checkUrlReachable(node['robot_address'])
+            j.sal.nettools.checkUrlReachable(node['robot_address'], timeout=3)
             return (node, True)
         except:
             return (node, False)
