@@ -103,7 +103,9 @@ class Traefik(TemplateBase):
     def add_virtual_host(self, domain, ip, port=80):
         self.state.check('actions', 'install', 'ok')
         self.logger.info('adding backend and frontend in etcd server')
-        
+        #the name of frontend is frontend +  domain without dots
+        #i.e. test.com => frontendtestcom
+        #the same in backend using ip 
         backend_name = "backend{}{}".format(ip.replace(".", ""), port)
         frontend_name = "frontend{}".format(domain.replace(".", ""))
         
@@ -120,3 +122,25 @@ class Traefik(TemplateBase):
         self._etcd.schedule_action('insert_record', args={"key":frontend_key2, "value": frontend_value2}).wait(die=True)
 
         self.logger.info('successful')
+
+    def remove_virtual_host(self, domain):
+        """
+        remove frontend from etcd
+        
+        Arguments:
+            domain {string} -- domain of frontend
+        """
+        self.state.check('actions', 'install', 'ok')
+        self.logger.info('removing frontend from etcd server')
+        #the name of frontend is frontend +  domain without dots
+        #i.e. test.com => frontendtestcom
+        frontend_name = "frontend{}".format(domain.replace(".", ""))
+
+        
+        frontend_key1 = "/traefik/frontends/{}/backend".format(frontend_name)
+        frontend_key2 = "/traefik/frontends/{0}/routes/{0}/rule".format(frontend_name)
+
+        self._etcd.schedule_action('delete_record', args={"key":frontend_key1}).wait(die=True)
+        self._etcd.schedule_action('delete_record', args={"key":frontend_key2}).wait(die=True)
+
+        self.logger.info('deleted')

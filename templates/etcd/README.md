@@ -39,6 +39,7 @@ NicType enum:
 - `update_cluster`: updates the cluster value in self.data. This should be used to update the service with info about all the members of this cluster.
 - `insert_record`: inserts a key/value in etcd
 - `get_record`: retrieves a value of a key in etcd
+- `delete_record`: delete record by key from etcd server
 
 
 
@@ -55,6 +56,7 @@ etcd = robot.services.create('github.com/threefoldtech/0-templates/etcd/0.0.1', 
 etcd.schedule_action('install')
 etcd.schedule_action('start')
 etcd.schedule_action('insert_record', args={'key': 'one', 'value':'one'})
+etcd.schedule_action('delete_record', args={'key': 'one'})
 etcd.schedule_action('stop')
 ```
 

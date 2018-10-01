@@ -28,6 +28,7 @@ NicType enum:
 - `stop`: stop the coredns process.
 - `uninstall`: stop the coredns process and remove the container.
 - `register_domain`: add domain to etcd server with ip node ( key/value)
+- `unregister_domain`: delete domain from etcd server
 
 
 ### Usage example via the 0-robot DSL
@@ -42,7 +43,8 @@ coredns = robot.services.create('github.com/threefoldtech/0-templates/coredns/0.
 coredns.schedule_action('install')
 coredns.schedule_action('start')
 coredns.schedule_action('stop')
-traefik.schedule_action('register_domain', args={'domain': 'bola_test.com', 'ip':'10.147.17.252'})
+coredns.schedule_action('register_domain', args={'domain': 'bola_test.com', 'ip':'10.147.17.252'})
+coredns.schedule_action('unregister_domain', args={'domain': 'bola_test.com'})
 coredns.schedule_action('uninstall')
 ```
 

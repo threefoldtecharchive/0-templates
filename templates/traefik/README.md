@@ -28,6 +28,7 @@ NicType enum:
 - `stop`: stop the traefik process.
 - `uninstall`: stop the traefik process and remove the container.
 - `add_virtual_host`: inserts a frontend/backend in Etcd service.
+- `remove_virtual_host`: delete frontend only from Etcd service
 
 
 ### Usage example via the 0-robot DSL
@@ -43,6 +44,7 @@ traefik = robot.services.create('github.com/threefoldtech/0-templates/traefik/0.
 traefik.schedule_action('install')
 traefik.schedule_action('start')
 traefik.schedule_action('add_virtual_host', args={'domain': 'bola_test.com', 'ip':'10.147.17.198'})
+traefik.schedule_action('remove_virtual_host', args={'domain': 'bola_test.com'})
 traefik.schedule_action('stop')
 traefik.schedule_action('uninstall')
 ```

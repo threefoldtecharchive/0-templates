@@ -107,3 +107,7 @@ class Etcd(TemplateBase):
     def get_record(self, key):
         self.state.check('status', 'running', 'ok')
         return self._etcd_sal.get(key)
+    
+    def delete_record(self, key):
+        self.state.check('status', 'running', 'ok')
+        return self._etcd_sal.delete(key)

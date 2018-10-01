@@ -109,4 +109,11 @@ class Coredns(TemplateBase):
         value = '{{"host":"{}","ttl":{}}}'.format(ip, ttl)
         self._etcd.schedule_action('insert_record', args={"key":key, "value": value}).wait(die=True)
         self.logger.info('successful')
-
+    
+    def unregister_domain(self, domain):
+        self.state.check('actions', 'install', 'ok')
+        self.logger.info('removing domain from etcd server')
+        domain_parts = domain.split('.')
+        key = "/hosts/{}".format("/".join(domain_parts[::-1]))
+        self._etcd.schedule_action('delete_record', args={"key":key}).wait(die=True)
+        self.logger.info('deleted')
