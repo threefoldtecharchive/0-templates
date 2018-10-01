@@ -15,6 +15,7 @@ This template is responsible for managing s3 instance
 - `minioLogin`: minio web login
 - `minioPassword`: minio web password, minimum 8 characters
 - `minioUrl`: the minio web url, this is set by the template.
+- `minioBlockSize`: block size of the data on minio. Defaults to 1048576 bytes.
 
 Nic:
 - `id`: zerotier network id or vxlan id.

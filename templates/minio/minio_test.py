@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 import os
 import pytest
 
-from minio import Minio, MINIO_FLIST, NODE_CLIENT
+from minio import Minio, NODE_CLIENT
 from zerorobot.template.state import StateCheckError
 from JumpscaleZrobot.test.utils import ZrobotBaseTest
 
@@ -22,7 +22,11 @@ class TestMinioTemplate(ZrobotBaseTest):
             'password': 'password',
             'zerodbs': ['192.24.121.42:9900'],
             'privateKey': '',
-            'metaPrivateKey': '1234567890abcdef'
+            'metaPrivateKey': '1234567890abcdef',
+            'blockSize': 1048576,
+            'dataShard': 1,
+            'parityShard': 0,
+            'tlog': {'address': '', 'namespace': ''}
         }
 
     def setUp(self):
@@ -66,18 +70,18 @@ class TestMinioTemplate(ZrobotBaseTest):
         get_node = patch('jumpscale.j.clients.zos.get', MagicMock(return_value='node_sal')).start()
         minio = Minio('minio', data=self.valid_data)
 
-        assert minio.node_sal == 'node_sal'
+        assert minio._node_sal == 'node_sal'
         get_node.assert_called_once_with(NODE_CLIENT)
 
     def test_minio_sal(self):
         """
         Test node_sal property
         """
-        minio_sal = patch('jumpscale.j.sal_zos.get_minio', MagicMock(return_value='minio_sal')).start()
+        minio_sal = patch('jumpscale.j.sal_zos.minio.get', MagicMock(return_value='minio_sal')).start()
         minio = Minio('minio', data=self.valid_data)
         minio._get_zdbs = MagicMock()
 
-        assert minio.minio_sal == 'minio_sal'
+        assert minio._minio_sal == 'minio_sal'
         assert minio_sal.called
 
     def test_install(self):
@@ -90,7 +94,6 @@ class TestMinioTemplate(ZrobotBaseTest):
         minio.install()
         
         container_data = {
-            'flist': MINIO_FLIST,
             'node': self.valid_data['node'],
             'env':  [
                 {'name': 'MINIO_ACCESS_KEY', 'value': 'login'}, {'name': 'MINIO_SECRET_KEY', 'value': 'password'},
@@ -110,7 +113,7 @@ class TestMinioTemplate(ZrobotBaseTest):
         minio.api.services.get = MagicMock()
         minio._get_zdbs = MagicMock()
         minio.start()
-        minio.minio_sal.start.assert_called_once_with()
+        minio._minio_sal.start.assert_called_once_with()
         minio.state.check('actions', 'start', 'ok')
 
     def test_start_before_install(self):
@@ -132,8 +135,8 @@ class TestMinioTemplate(ZrobotBaseTest):
         minio._get_zdbs = MagicMock()
         minio.stop()
 
-        minio.minio_sal.stop.assert_called_once_with()
-        minio.state.delete.assert_called_once_with('actions', 'start')
+        minio._minio_sal.stop.assert_called_once_with()
+        minio.state.delete.call_count == 2
 
     def test_stop_before_install(self):
         """
@@ -152,5 +155,6 @@ class TestMinioTemplate(ZrobotBaseTest):
         minio.state.delete = MagicMock()
 
         minio.uninstall()
-        minio.minio_sal.destroy.assert_called_once_with()
-        minio.state.delete.assert_called_once_with('actions', 'install')
+        minio._minio_sal.destroy.assert_called_once_with()
+        minio.state.delete.call_count == 2
+

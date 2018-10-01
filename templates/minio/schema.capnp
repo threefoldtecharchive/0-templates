@@ -12,6 +12,7 @@ struct Schema {
     dataShard @7: UInt32=1;
     parityShard @8: UInt32=0;
     tlog @9: Tlog;
+    blockSize @10 :UInt32=1048576;
 
     struct Tlog {
         namespace @0 :Text; # name of the tlog namespace

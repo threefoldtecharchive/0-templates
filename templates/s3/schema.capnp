@@ -13,8 +13,7 @@ struct Schema {
     minioPassword @8: Text; # minio password
     minioUrl @9: Text; # url to access minio on. This is set by the template.
     nsPassword @10: Text; # Namespace password
-
-
+    minioBlockSize @10 :UInt32=1048576; # minio data block size in bytes
 
     enum StorageType {
      hdd @0;

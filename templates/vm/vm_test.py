@@ -291,15 +291,6 @@ class TestVmTemplate(ZrobotBaseTest):
         with pytest.raises(StateCheckError):
             vm.state.check('status', 'rebooting', 'ok')
 
-    def test_monitor_before_install(self):
-        """
-        Test monitor before install
-        :return:
-        """
-        with pytest.raises(StateCheckError, message='monitor vm before install should raise an error'):
-            vm = Vm('vm', data=self.valid_data)
-            vm._monitor()
-
     def test_populate_ports(self):
         ports = [
             {'source': '', 'dest': 9000, 'name': 'foo'},
