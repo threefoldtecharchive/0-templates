@@ -39,14 +39,14 @@ class Minio(TemplateBase):
             self.state.set('status', 'running', 'ok')
 
     @property
-    def node_sal(self):
+    def _node_sal(self):
         return j.clients.zos.get(NODE_CLIENT)
 
     @property
     def _minio_sal(self):
         kwargs = {
             'name': self.name,
-            'node': self.node_sal,
+            'node': self._node_sal,
             'namespace': self.data['namespace'],
             'namespace_secret': self.data['nsSecret'],
             'zdbs': self.data['zerodbs'],
@@ -57,7 +57,8 @@ class Minio(TemplateBase):
             'nr_datashards': self.data['dataShard'],
             'nr_parityshards': self.data['parityShard'],
             'tlog_namespace': self.data.get('tlog').get('namespace'),
-            'tlog_address': self.data.get('tlog').get('address')
+            'tlog_address': self.data.get('tlog').get('address'),
+            'block_size': self.data['blockSize'],
         }
         return j.sal_zos.minio.get(**kwargs)
 

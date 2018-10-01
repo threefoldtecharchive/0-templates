@@ -205,7 +205,8 @@ class S3(TemplateBase):
             'tlog': {
                 'namespace': self.guid + '_tlog',
                 'address': tlog_connection,
-            }
+            },
+            'blockSize': self.data['minioBlockSize'],
         }
 
         self.logger.info("wait up to 20 mins for zerorobot until it downloads the repos and starts accepting requests")

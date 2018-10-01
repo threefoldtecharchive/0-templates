@@ -14,6 +14,7 @@ This template is responsible for managing [minio](https://minio.io/) server inst
 - `listenPort`: the port minio will bind to
 - `privateKey`: encryption private key
 - `metaPrivateKey`: metadata encryption private key
+- `blockSize`:  block size of the data on minio. Defaults to 1048576 bytes.
 
 ### Actions
 - `install`: install the minio server. It will create a container on the node and run minio inside the container
