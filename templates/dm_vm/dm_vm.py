@@ -174,6 +174,7 @@ class DmVm(TemplateBase):
                                     'ztClient': self.data.get('mgmtNic', {}).get('ztClient'),
                                     'ip': nic.get('ip')}
                 break
+        info['node_id'] = self.data['nodeId']
         return info
 
     def shutdown(self):
