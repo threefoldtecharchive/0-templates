@@ -504,7 +504,7 @@ def compute_minimum_namespaces(total_size, data, parity):
     :return: tuple with (number,size) of zerodb namespace required
     :rtype: tuple
     """
-    max_shard_size = 4000  # 4TB
+    max_shard_size = 1000  # 1TB
 
     # compute the require size to be able to store all the data+parity
     required_size = math.ceil((total_size * (data+parity)) / data)
