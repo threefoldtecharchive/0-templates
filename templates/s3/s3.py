@@ -305,9 +305,8 @@ class S3(TemplateBase):
 
         if not mgmt_ip:
             raise RuntimeError('VM has no ip assignments in zerotier network')
-        ip = mgmt_ip
 
-        return get_zrobot(vminfo['node_id'], 'http://{}:6600'.format(mgmt_ip)), ip
+        return get_zrobot("%s_vm" % mgmt_ip, 'http://{}:6600'.format(mgmt_ip)), mgmt_ip
 
     def _deploy_minio_backend_namespaces(self):
         self.logger.info("create namespaces to be used as a backend for minio")
