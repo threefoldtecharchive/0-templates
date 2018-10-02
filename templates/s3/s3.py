@@ -162,15 +162,18 @@ class S3(TemplateBase):
     def install(self):
         def deploy_data_namespaces():
             namespaces = self._deploy_minio_backend_namespaces()
+            self.logger.info("data backend namespaces deployed")
             namespaces_connections = namespaces_connection_info(namespaces)
             return namespaces_connections
 
         def deploy_tlog_namespace():
             namespace = self._deploy_minio_tlog_namespace()
+            self.logger.info("tlog backend namespaces deployed")
             return namespace_connection_info(namespace)
 
         def deploy_vm():
             self._deploy_minio_vm()
+            self.logger.info("minio vm deployed")
             return self._vm_robot_and_ip()
 
         # deploy all namespaces and vm concurrently
