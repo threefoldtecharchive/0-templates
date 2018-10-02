@@ -231,7 +231,7 @@ class S3(TemplateBase):
         port = minio.schedule_action('node_port').wait(die=True).result
 
         self.logger.info("open port %s on minio vm", port)
-        self._vm().schedule_action('add_portforward', args={'name': 'minio', 'target': port, 'source': None}).wait(die=True)
+        self._vm().schedule_action('add_portforward', args={'name': 'minio_%s' % self.guid, 'target': port, 'source': None}).wait(die=True)
 
         self.state.set('actions', 'install', 'ok')
 
