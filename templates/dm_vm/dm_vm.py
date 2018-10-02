@@ -9,8 +9,7 @@ VDISK_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vdisk/0.0.1'
 VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vm/0.0.1'
 ZT_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerotier_client/0.0.1'
 BASEFLIST = 'https://hub.grid.tf/tf-bootable/{}.flist'
-ZEROOSFLIST = 'https://hub.grid.tf/tf-bootable/zero-os-bootable.flist'
-IPXEURL = 'https://bootstrap.grid.tf/ipxe/{}/{}/development ztid={}'
+ZEROOSFLIST = 'https://hub.grid.tf/tf-autobuilder/zero-os-development.flist'
 
 
 class DmVm(TemplateBase):
@@ -125,9 +124,23 @@ class DmVm(TemplateBase):
         if image == 'zero-os':
             if not self.data['ztIdentity']:
                 self.data['ztIdentity'] = vm.schedule_action('generate_identity').wait(die=True).result
-            url = IPXEURL.format(version, self.data['mgmtNic']['id'], self.data['ztIdentity'])
-            vm.schedule_action('update_ipxeurl', args={'url': url}).wait(die=True)
-
+            kernel_args = [
+                {
+                    'name': 'development',
+                    'key':'development'
+                }, 
+                {
+                    'name':'zerotier',
+                    'key': 'zerotier',
+                    'value': self.data['mgmtNic']['id']
+                },
+                {
+                    'name': 'ztid',
+                    'key': 'ztid',
+                    'value': self.data['ztIdentity']
+                }]
+            vm.schedule_action('update_kernelargs', args={'kernel_args': kernel_args}).wait(die=True)
+    
         vm.schedule_action('install').wait(die=True)
         self.data['ztIdentity'] = vm.schedule_action('zt_identity').wait(die=True).result
 

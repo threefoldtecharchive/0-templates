@@ -78,6 +78,9 @@ class Vm(TemplateBase):
 
     def update_ipxeurl(self, url):
         self.data['ipxeUrl'] = url
+    
+    def update_kernelargs(self, kernel_args):
+        self.data['kernelArgs'] = kernel_args
 
     def generate_identity(self):
         self.data['ztIdentity'] = self._node_sal.generate_zerotier_identity()
