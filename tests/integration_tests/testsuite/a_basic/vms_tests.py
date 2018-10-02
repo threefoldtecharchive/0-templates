@@ -5,7 +5,6 @@ import time
 from nose_parameterized import parameterized
 from random import randint
 
-
 class BasicTests(ZOS_BaseTest):
     def __init__(self, *args, **kwargs):
         super(BasicTests, self).__init__(*args, **kwargs)
@@ -59,7 +58,6 @@ class BasicTests(ZOS_BaseTest):
         self.assertFalse(vm)        
         self.log('%s ENDED' % self._testID)
 
-    @unittest.skip('https://github.com/zero-os/0-templates/issues/140')
     def test002_create_vm_with_non_valid_params(self):
         """ ZRT-ZOS-004
         *Test case for creating vm with non-valid parameters*
