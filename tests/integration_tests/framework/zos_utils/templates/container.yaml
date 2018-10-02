@@ -1,5 +1,5 @@
 {% for container_name, value in containers.items() %}
-  - github.com/zero-os/0-templates/container/{{config_params('version')}}__{{container_name}}:
+  - github.com/threefoldtech/0-templates/container/{{config_params('version')}}__{{container_name}}:
 {% for container_param, value2 in value.items() %}
 {% if value2 is mapping %}
       {{container_param}}:

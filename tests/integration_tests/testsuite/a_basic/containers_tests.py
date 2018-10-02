@@ -13,7 +13,7 @@ class BasicTests(ZOS_BaseTest):
 
     def setUp(self):
         super(BasicTests, self).setUp()
-        self.temp_actions = {'container': {'actions': ['install']}}
+        self.temp_actions = {'container': {'actions': ['install'],'service': ''}}
 
     def test001_create_containers(self):
         """ ZRT-ZOS-001
@@ -25,22 +25,30 @@ class BasicTests(ZOS_BaseTest):
         #. Check that the container have been created.
         """
         self.log('%s STARTED' % self._testID)
-
+        self.containers = {}
         self.log('Create a two container on that node, should succeed.')
         self.cont1_name = self.random_string()
-        self.containers = {self.cont1_name: {'hostname': self.cont1_name,
-                                             'flist': self.cont_flist,
-                                             'storage': self.cont_storage}}
-
+        self.container_1 = {self.cont1_name: {'hostname': self.cont1_name,
+                                              'flist': self.cont_flist,
+                                              'storage': self.cont_storage}}
+        self.containers[self.cont1_name] = self.container_1
         self.cont2_name = self.random_string()
-        self.containers.update({self.cont2_name: {'hostname': self.cont2_name,
-                                                  'flist': self.cont_flist,
-                                                  'storage': self.cont_storage}})
+        self.container_2 = {self.cont2_name: {'hostname': self.cont2_name,
+                                              'flist': self.cont_flist,
+                                              'storage': self.cont_storage}}
+        self.containers[self.cont2_name] = self.container_2
+                        
+        self.temp_actions['container']['service'] = self.cont1_name
+        res1 = self.create_container(containers=self.containers[self.cont1_name], temp_actions=self.temp_actions)
 
-        res = self.create_container(containers=self.containers, temp_actions=self.temp_actions)
-        self.assertEqual(type(res), type(dict()))
-        self.wait_for_service_action_status(self.cont1_name, res[self.cont1_name]['install'])
-        self.wait_for_service_action_status(self.cont2_name, res[self.cont2_name]['install'])
+        self.temp_actions['container']['service'] = self.cont2_name
+        res2 = self.create_container(containers=self.containers[self.cont2_name], temp_actions=self.temp_actions)
+
+        self.assertEqual(type(res1), type(dict()))
+        self.assertEqual(type(res2), type(dict()))
+
+        self.wait_for_service_action_status(self.cont1_name, res1[self.cont1_name]['install'])
+        self.wait_for_service_action_status(self.cont2_name, res2[self.cont2_name]['install'])
 
         self.log('Check that the container have been created.')
         conts = self.zos_client.container.list()
@@ -67,12 +75,15 @@ class BasicTests(ZOS_BaseTest):
 
         self.log('Create a container without providing flist parameter, should fail.')
         self.cont1_name = self.random_string()
+        self.temp_actions['container']['service']=self.cont1_name
         self.containers = {self.cont1_name: {}}
+    
         res = self.create_container(containers=self.containers, temp_actions=self.temp_actions)
         self.assertEqual(res, "parameter 'flist' not valid: ")
 
         self.log('Create a container with all possible parameters.')
         self.cont1_name = self.random_string()
+        self.temp_actions['container']['service']=self.cont1_name
         bridge_name = self.random_string()
         env_name = self.random_string()
         env_value = self.random_string()
@@ -124,6 +135,8 @@ class BasicTests(ZOS_BaseTest):
 
         self.log('Create a container (C1)')
         self.cont1_name = self.random_string()
+        self.temp_actions['container']['service'] = self.cont1_name
+
         self.containers = {self.cont1_name: {'hostname': self.cont1_name,
                                              'flist': self.cont_flist,
                                              'storage': self.cont_storage}}

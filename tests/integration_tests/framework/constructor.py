@@ -3,7 +3,7 @@ import uuid
 import logging
 import time
 import unittest
-from js9 import j
+from jumpscale import j
 from testconfig import config
 from requests.exceptions import HTTPError
 from jinja2 import Environment, FileSystemLoader
@@ -96,7 +96,7 @@ class constructor(unittest.TestCase):
                 break
             elif task.state.value == 'error':
                 #print(task.eco.as_json())
-                return task.eco.errormessage
+                return task.eco.message
 
     def check_if_service_exist(self, servicename):
         for service in self.zrobot_client.api.services.listServices()[0]:

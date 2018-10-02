@@ -1,5 +1,5 @@
 {% for action, value in temp_actions.items() %}
-  - template: github.com/zero-os/0-templates/{{action}}/{{config_params('version')}}
+  - template: github.com/threefoldtech/0-templates/{{action}}/{{config_params('version')}}
 {% for actions_param, value2 in value.items() %}
 {% if value2 is mapping %}
     {{actions_param}}:

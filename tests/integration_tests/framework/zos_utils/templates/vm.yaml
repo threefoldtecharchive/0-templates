@@ -1,5 +1,5 @@
 {% for vm_name, value in vms.items() %}
-  - github.com/zero-os/0-templates/vm/{{config_params('version')}}__{{vm_name}}:
+  - github.com/threefoldtech/0-templates/vm/{{config_params('version')}}__{{vm_name}}:
 {% for vm_param, value2 in value.items() %}
 {% if value2 is mapping %}
       {{vm_param}}:

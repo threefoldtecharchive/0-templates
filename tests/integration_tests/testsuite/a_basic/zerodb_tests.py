@@ -40,8 +40,7 @@ class BasicTests(ZOS_BaseTest):
             zdb.schedule_action('install').wait(die=True, timeout=30)
 
             self.log('Check that the params has been reflected correctly.')
-            tag = 'zdb_' + zdb_service_name
-            container = self.zos_client.container.find(tag)
+            container = self.zos_client.container.find(zdb_service_name)
             zdb_cl = self.zos_client.container.client(list(container.keys())[0])
             jobs = zdb_cl.job.list()
             job_id = 'zerodb.' + zdb_service_name

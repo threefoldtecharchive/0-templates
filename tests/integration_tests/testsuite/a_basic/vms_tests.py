@@ -17,7 +17,7 @@ class BasicTests(ZOS_BaseTest):
     def setUp(self):
         super(BasicTests, self).setUp()
         self.temp_actions = {
-                             'vm': {'actions': ['install']}
+                             'vm': {'actions': ['install'],'service':''}
                             }
 
     def test001_create_vm(self):
@@ -36,6 +36,7 @@ class BasicTests(ZOS_BaseTest):
         self.log('Create vm[vm1], should succeed.')
         vm1_name = self.random_string()
         self.vms = {vm1_name: {'flist': self.vm_flist, 'memory': 2048}}
+        self.temp_actions['vm']['service']=vm1_name
         res = self.create_vm(vms=self.vms, temp_actions=self.temp_actions)
         self.assertEqual(type(res), type(dict()))
         self.wait_for_service_action_status(vm1_name, res[vm1_name]['install'])
@@ -47,7 +48,7 @@ class BasicTests(ZOS_BaseTest):
         self.assertEqual(vm[0]['state'], "running")
 
         self.log('Destroy [vm1], should succeed.')
-        temp_actions = {'vm': {'actions': ['uninstall']}}
+        temp_actions = {'vm': {'actions': ['uninstall'], 'service': vm1_name}}
         res = self.create_vm(vms=self.vms, temp_actions=temp_actions)
         self.assertEqual(type(res), type(dict()))
         self.wait_for_service_action_status(vm1_name, res[vm1_name]['uninstall'])        
@@ -70,7 +71,7 @@ class BasicTests(ZOS_BaseTest):
         self.log('Create a vm without providing flist parameter, should fail.')
         vm1_name = self.random_string()
         self.vms = {vm1_name: {}}
-                                                              
+        self.temp_actions['vm']['service'] = vm1_name                                                            
         res = self.create_vm(vms=self.vms, temp_actions=self.temp_actions)
         self.assertEqual(res, "invalid input. Vm requires flist or ipxeUrl to be specifed.")
         self.log('%s ENDED' % self._testID)
@@ -84,11 +85,10 @@ class VM_actions(ZOS_BaseTest):
     def setUpClass(cls):
         self = cls()
         super(VM_actions, cls).setUpClass()
-
-        cls.temp_actions = {
-                             'vm': {'actions': ['install']}
-                            }
         cls.vm1_name = cls.random_string()
+        cls.temp_actions = {
+                             'vm': {'actions': ['install'], 'service': self.vm1_name}
+                            }
         cls.vms = {cls.vm1_name: {'flist': self.vm_flist,
                                   'memory': 2048,
                                   'nics': [{'type': 'default', 'name': cls.random_string()}]}}
@@ -103,7 +103,7 @@ class VM_actions(ZOS_BaseTest):
     @classmethod
     def tearDownClass(cls):
         self = cls()
-        temp_actions = {'vm': {'actions': ['uninstall']}}
+        temp_actions = {'vm': {'actions': ['uninstall'], 'service': self.vm1_name}}
         if self.check_if_service_exist(self.vm1_name):
             res = self.create_vm(vms=self.vms, temp_actions=temp_actions)
             self.wait_for_service_action_status(self.vm1_name, res[self.vm1_name]['uninstall'])
@@ -186,7 +186,6 @@ class VM_actions(ZOS_BaseTest):
 
         self.log('%s ENDED' % self._testID)
 
-    @unittest.skip('https://github.com/zero-os/0-templates/issues/141')
     def test003_enable_and_disable_vm_vnc(self):
         """ ZRT-ZOS-007
         *Test case for testing reset vm*
@@ -219,7 +218,8 @@ class VM_actions(ZOS_BaseTest):
         self.log("Check that vnc_port has been disabled successfully.")
         self.assertFalse(self.check_vnc_connection(self.vm_ip_vncport))
 
-    @parameterized.expand(["reset", "reboot"])
+    @parameterized.expand(["reset", "reboot"])    
+    @unittest.skip("https://github.com/threefoldtech/0-core/issues/35")
     def test004_reset_and_reboot_vm(self, action_type):
         """ ZRT-ZOS-008
         *Test case for testing reset vm*
@@ -234,10 +234,10 @@ class VM_actions(ZOS_BaseTest):
         self.log('%s STARTED' % self._testID)
         
         self.log("Create ssh container. ")
-        temp_actions = {'container': {'actions': ['install']}}
         cont1_name = self.random_string()
+        temp_actions = {'container': {'actions': ['install'],'service': cont1_name}}
         containers = {cont1_name: {'hostname': cont1_name,
-                                   'flist': 'https://hub.gig.tech/ah-elsayed/ubuntu.flist',
+                                   'flist': 'https://hub.grid.tf/dina_magdy/ubuntu_1.flist',
                                    'storage': self.cont_storage,
                                    'nics': [{'type': 'default', 'name': self.random_string()}],
                                    'hostNetworking': True}}
