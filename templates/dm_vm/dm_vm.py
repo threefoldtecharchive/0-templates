@@ -153,6 +153,10 @@ class DmVm(TemplateBase):
                 vdisk.delete()
             except ServiceNotFoundError:
                 pass
+            except:
+                self.logger.warning('Error occured while uninstalling vdisk {}'.format('_'.join([self.guid, disk['label']])))
+                # @todo Add vdisk service to robot deletables
+
         try:
             zt_name = self.data['mgmtNic']['ztClient']
             zt_client = self.api.services.get(name=zt_name, template_uid=ZT_TEMPLATE_UID)
@@ -160,6 +164,10 @@ class DmVm(TemplateBase):
             zt_client.schedule_action('remove_from_robot', args=data).wait(die=True)
         except ServiceNotFoundError:
             pass
+        except:
+            self.logger.warning('Error occured while removing zt client {}'.format(self.guid))
+            # @todo Add vdisk service to robot deletables
+
 
         self.state.delete('actions', 'install')
         self.state.delete('status', 'running')
@@ -220,6 +228,12 @@ class DmVm(TemplateBase):
         self._node_vm.schedule_action('disable_vnc').wait(die=True)
 
     def add_portforward(self, name, target, source=None):
+        for forward in list(self.data['ports']):
+            if forward['name'] == name and forward['target'] != target:
+                raise RuntimeError("port forward with name {} already exist for a different target".format(name))
+            elif forward['name'] == name:
+                return
+
         forward = {
             'name': name,
             'target': target,

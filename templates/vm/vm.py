@@ -199,8 +199,10 @@ class Vm(TemplateBase):
 
     def add_portforward(self, name, target, source=None):
         for forward in list(self.data['ports']):
-            if forward['name'] == name:
-                raise RuntimeError("port forward with name {} already exist".format(name))
+            if forward['name'] == name and forward['target'] != target:
+                raise RuntimeError("port forward with name {} already exist for a different target".format(name))
+            elif forward['name'] == name:
+                return forward
 
         node_sal = self._node_sal
         forward = {
@@ -217,7 +219,7 @@ class Vm(TemplateBase):
     def remove_portforward(self, name):
         for forward in list(self.data['ports']):
             if forward['name'] == name:
-                self.node_sal.client.kvm.remove_portfoward(self._vm_sal.uuid, str(forward['source']), forward['target'])
+                self._node_sal.client.kvm.remove_portfoward(self._vm_sal.uuid, str(forward['source']), forward['target'])
                 self.data['ports'].remove(forward)
                 return
 
