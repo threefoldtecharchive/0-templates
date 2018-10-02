@@ -199,8 +199,8 @@ class Vm(TemplateBase):
 
     def add_portforward(self, name, target, source=None):
         for forward in list(self.data['ports']):
-            if forward['name'] == name and forward['target'] != target:
-                raise RuntimeError("port forward with name {} already exist for a different target".format(name))
+            if forward['name'] == name and (forward['target'] != target or source and source != forward['source']):
+                raise RuntimeError("port forward with name {} already exist for a different target or a different source".format(name))
             elif forward['name'] == name:
                 return forward
 
