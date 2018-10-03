@@ -6,6 +6,8 @@ struct Schema {
     ztIdentity @1 :Text; # ztidentity of the container running 0-etcd
     token @2 :Text;
     cluster @3 :List(Member);
+    password @4 :Text;
+
 
     struct Member {
         name @0 :Text;

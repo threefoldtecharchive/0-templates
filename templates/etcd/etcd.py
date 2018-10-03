@@ -1,6 +1,7 @@
 from jumpscale import j
 
 from zerorobot.template.base import TemplateBase
+from zerorobot.template.state import StateCheckError
 
 
 NODE_CLIENT = 'local'
@@ -23,6 +24,8 @@ class Etcd(TemplateBase):
                 break
         else:
             raise ValueError('Service must contain at least one zerotier nic')
+
+        self.data['password'] = self.data['password'] if self.data['password'] else j.data.idgenerator.generateXCharID(10)
 
     def _deploy(self):
         etcd_sal = self._etcd_sal
@@ -56,6 +59,7 @@ class Etcd(TemplateBase):
             'nics': self.data['nics'],
             'token': self.data['token'],
             'cluster': self.data['cluster'],
+            'password': self.data['password'],
         }
         return j.sal_zos.etcd.get(**kwargs)
 
@@ -72,7 +76,8 @@ class Etcd(TemplateBase):
         self.state.check('actions', 'install', 'ok')
         self.logger.info('Starting etcd %s' % self.name)
         self._deploy()
-        self._etcd_sal.start()
+        etcd_sal = self._etcd_sal
+        etcd_sal.start()
         self.state.set('actions', 'start', 'ok')
         self.state.set('status', 'running', 'ok')
 
@@ -94,20 +99,13 @@ class Etcd(TemplateBase):
 
     def connection_info(self):
         self.state.check('status', 'running', 'ok')
-        etcd_sal = self._etcd_sal
-        return {'peer_url': etcd_sal.peer_url, 'client_url': etcd_sal.client_url}
+        return self._etcd_sal.connection_info()
     
     def update_cluster(self, cluster):
         self.data['cluster'] = cluster
-    
-    def insert_record(self, key, value):
-        self.state.check('status', 'running', 'ok')
-        self._etcd_sal.put(key, value)
-
-    def get_record(self, key):
-        self.state.check('status', 'running', 'ok')
-        return self._etcd_sal.get(key)
-    
-    def delete_record(self, key):
-        self.state.check('status', 'running', 'ok')
-        return self._etcd_sal.delete(key)
+        try:
+            self.state.check('actions', 'start', 'ok')
+            self._etcd_sal.stop()
+            self._etcd_sal.start()
+        except StateCheckError:
+            pass
