@@ -4,7 +4,7 @@
 This is a node template responsible for managing [coredns](https://coredns.io/) server instance.
 
 ### Schema:
-- `etcdServerName`: the name of etcd server that's created to get ip of it
+- `etcd`: instance name of the etcd service used for configuration
 - `nics`: list of nics to create for the coredns container. Must contain at least one zerotier nic.
 - `ztIdentity`: zerotier identity of the coredns container. This is set by the template.
 
@@ -27,8 +27,6 @@ NicType enum:
 - `start`: start coredns service and create coredns config .
 - `stop`: stop the coredns process.
 - `uninstall`: stop the coredns process and remove the container.
-- `register_domain`: add domain to etcd server with ip node ( key/value)
-- `unregister_domain`: delete domain from etcd server
 
 
 ### Usage example via the 0-robot DSL
@@ -37,14 +35,12 @@ NicType enum:
 robot = j.clients.zrobot.robots['local']
 args = {
     'nics': [{'name': 'ten', 'type': 'zerotier', 'ztClient':'zt', 'id': '1d719394044ed153'}],
-    'etcdServerName': 'Etcd server name that created'}  
+    'etcd': 'instance name of the etcd service'}  
     
 coredns = robot.services.create('github.com/threefoldtech/0-templates/coredns/0.0.1', 'coredns1', data=args)
 coredns.schedule_action('install')
 coredns.schedule_action('start')
 coredns.schedule_action('stop')
-coredns.schedule_action('register_domain', args={'domain': 'bola_test.com', 'ip':'10.147.17.252'})
-coredns.schedule_action('unregister_domain', args={'domain': 'bola_test.com'})
 coredns.schedule_action('uninstall')
 ```
 
@@ -56,7 +52,7 @@ To install coredns `coredns1`:
 ```yaml
 services:
     - github.com/threefoldtech/0-templates/coredns/0.0.1__coredns1:
-          etcdServerName: 'Etcd_server_name'
+          etcd: 'instance name of the etcd service'
           nics:
             - name: 'ten'
             - id: 1d719394044ed153
