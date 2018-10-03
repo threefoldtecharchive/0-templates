@@ -4,7 +4,7 @@
 This is a node template responsible for managing [traefik](https://docs.traefik.io/) server instance.
 
 ### Schema:
-- `etcdServerName`: the name of etcd server that's created to get ip of it
+- `etcd`: instance name of the etcd service used for configuration
 - `nics`: list of nics to create for the traefik container. Must contain at least one zerotier nic.
 - `ztIdentity`: zerotier identity of the traefik container. This is set by the template.
 
