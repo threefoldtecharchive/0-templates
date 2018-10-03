@@ -15,6 +15,13 @@ struct Schema {
     ztIdentity @9: Text; # VM zerotier ID
     ipxeUrl @10: Text; # ipxe url for zero-os vm
     mounts @11: List(Mount); # list of mounts to mount on the vm
+    kernelArgs @12 :List(Arg); # list of vm kernel args 
+
+    struct Arg {
+        name @0 :Text;
+        key @1 :Text;
+        value @2 :Text;
+    }
 
     struct Mount {
         name @0: Text;
