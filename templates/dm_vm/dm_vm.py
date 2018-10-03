@@ -108,6 +108,7 @@ class DmVm(TemplateBase):
             'ztIdentity': self.data['ztIdentity'],
             'ports': self.data['ports'],
             'nics': nics,
+            'kernelArgs': self.data['kernelArgs'],
         }
 
         image, _, version = self.data['image'].partition(':')
@@ -120,29 +121,26 @@ class DmVm(TemplateBase):
             vm_data['flist'] = BASEFLIST.format(flist)
 
         vm = self._node_api.services.find_or_create(VM_TEMPLATE_UID, self._node_vm_name, data=vm_data)
+        if not self.data['ztIdentity']:
+            self.data['ztIdentity'] = vm.schedule_action('generate_identity').wait(die=True).result
 
         if image == 'zero-os':
-            if not self.data['ztIdentity']:
-                self.data['ztIdentity'] = vm.schedule_action('generate_identity').wait(die=True).result
-            kernel_args = [
-                {
-                    'name': 'development',
-                    'key':'development'
-                }, 
-                {
+            kernel_keys = [arg['key'] for arg in self.data['kernelArgs']]
+            if 'zerotier' not in kernel_keys:
+                self.data['kernelArgs'].append({
                     'name':'zerotier',
                     'key': 'zerotier',
                     'value': self.data['mgmtNic']['id']
-                },
-                {
+                })
+            if 'ztid' not in kernel_keys:
+                self.data['kernelArgs'].append({
                     'name': 'ztid',
                     'key': 'ztid',
                     'value': self.data['ztIdentity']
-                }]
-            vm.schedule_action('update_kernelargs', args={'kernel_args': kernel_args}).wait(die=True)
+                })
+            vm.schedule_action('update_kernelargs', args={'kernel_args': self.data['kernelArgs']}).wait(die=True)
     
         vm.schedule_action('install').wait(die=True)
-        self.data['ztIdentity'] = vm.schedule_action('zt_identity').wait(die=True).result
 
         self.state.set('actions', 'install', 'ok')
         self.state.set('status', 'running', 'ok')

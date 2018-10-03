@@ -12,7 +12,13 @@ struct Schema {
     configs @6: List(Config); # list of Config
     ztIdentity @7: Text; # VM zerotier ID
     nodeId @8: Text; # the node_id from the capacity registeration of the the node you want to deploy the vm on
+    kernelArgs @9 :List(Arg); # list of vm kernel args 
 
+    struct Arg {
+        name @0 :Text;
+        key @1 :Text;
+        value @2 :Text;
+    }
    struct Config {
         path @0: Text;
         content @1: Text;

@@ -399,6 +399,15 @@ class S3(TemplateBase):
                 'size': 10,  # FIXME: need to compute how much storage is needed on the disk to supprot X number of files in minio
                 'label': 's3vm'
             }],
+            'kernelArgs': [{
+                'name': 'development',
+                'key': 'development'
+            },
+            {
+                'name': 'zerotier',
+                'key': 'zerotier',
+                'value': self.data['mgmtNic']['id']
+            }],
         }
 
         for node in nodes:
