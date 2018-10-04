@@ -8,13 +8,12 @@ struct Schema {
     storageType @4: StorageType; # s3 storage type
     storageSize @5: UInt64; # total s3 storage size in GB
     namespaces @6: List(Namespace); # namespace services created for s3. This is set by the template.
-    tlog @11: Namespace;
-    minioLogin @7: Text; # minio login
-    minioPassword @8: Text; # minio password
-    minioUrl @9: Text; # url to access minio on. This is set by the template.
-    nsPassword @10: Text; # Namespace password
-
-
+    tlog @7: Namespace;
+    minioLogin @8: Text; # minio login
+    minioPassword @9: Text; # minio password
+    minioUrls @10: Urls; # url to access minio on. This is set by the template.
+    nsPassword @11: Text; # Namespace password
+    minioBlockSize @12 :UInt32=1048576; # minio data block size in bytes
 
     enum StorageType {
      hdd @0;
@@ -30,6 +29,11 @@ struct Schema {
       name @0: Text; # namespace service name
       node @1: Text; # node id of the node on which the namespace was created
       url @2: Text; # node zrobot url
+    }
+
+    struct Urls {
+      public @0: Text;
+      storage @1: Text;
     }
 }
 

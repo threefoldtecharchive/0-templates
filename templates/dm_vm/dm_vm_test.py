@@ -24,9 +24,10 @@ class TestVmTemplate(ZrobotBaseTest):
             'cpu': 1,
             'image': 'ubuntu',
             'memory': 128,
-            'zerotier': {
+            'mgmtNic': {
                 'id': 'id',
                 'ztClient': 'main',
+                'type': 'zerotier',
             },
             'disks': [{
                 'diskType': 'hdd',
@@ -38,6 +39,7 @@ class TestVmTemplate(ZrobotBaseTest):
             'configs': [],
             'ztIdentity': '',
             'nodeId': 'main',
+            'ports': []
         }
         cls.vnc_port = 5900
 
@@ -109,6 +111,7 @@ class TestVmTemplate(ZrobotBaseTest):
         zt_client.schedule_action.return_value.wait.return_value.result = 'token'
         self.vm.api.services.get = MagicMock(return_value=zt_client)
         vdisk_name = '_'.join([self.vm.guid, disk['label']])
+        vm_name = '_'.join([self.vm.guid, 'vm'])
         create = self.vm._node_api.services.find_or_create
         create.return_value.name = vdisk_name
         self.vm.install()
@@ -116,10 +119,10 @@ class TestVmTemplate(ZrobotBaseTest):
         assert self.vm._node_api.services.find_or_create.call_count == 2
 
         disks = [{
-            'name': vdisk_name,
             'mountPoint': disk['mountPoint'],
             'filesystem': disk['filesystem'],
             'label': disk['label'],
+            'name': vdisk_name,
         }]
 
         vm_data = {
@@ -129,19 +132,21 @@ class TestVmTemplate(ZrobotBaseTest):
             'configs': self.valid_data['configs'],
             'ztIdentity': self.valid_data['ztIdentity'],
             'nics': [{
-                'id': self.valid_data['zerotier']['id'],
+                'id': self.valid_data['mgmtNic']['id'],
                 'type': 'zerotier',
                 'ztClient': self.vm.guid,
-                'name': 'zerotier_nic',
+                'name': 'mgmt_nic',
             },
-                {'name': 'test',
+                {'name': 'nat0',
                  'type': 'default'
                  }],
-            'flist': 'https://hub.grid.tf/tf-bootable/ubuntu:lts.flist'
+            'flist': 'https://hub.grid.tf/tf-bootable/ubuntu:lts.flist',
+            'ports': self.valid_data['ports'],
         }
         vdisk_create = call(VDISK_TEMPLATE_UID, '_'.join([self.vm.guid, disk['label']]), data=disk)
-        vm_create = call(VM_TEMPLATE_UID, self.vm.guid, data=vm_data)
-        create.assert_has_calls([vdisk_create,  vm_create], any_order=True)
+        vm_create = call(VM_TEMPLATE_UID, vm_name, data=vm_data)
+        assert create.call_args_list[0] == vdisk_create
+        assert create.call_args_list[1] == vm_create
         self.vm.state.check('actions', 'install', 'ok')
         self.vm.state.check('status', 'running', 'ok')
 
@@ -269,14 +274,6 @@ class TestVmTemplate(ZrobotBaseTest):
         self.vm.disable_vnc()
         self.vm._node_vm.schedule_action.assert_called_with('disable_vnc')
 
-    def test_disable_vnc_before_enable(self):
-        """
-        Test disable vnc before enable
-        :return:
-        """
-        with pytest.raises(StateCheckError, message='disable vnc before enable should raise an error'):
-            self.vm.disable_vnc()
-
     def test_monitor_vm_not_running(self):
         """
         Test monitor vm not running
@@ -298,10 +295,3 @@ class TestVmTemplate(ZrobotBaseTest):
 
         self.vm._monitor()
         assert self.vm.state.delete.call_count == 0
-
-    def test_monitor_vm_not_installed(self):
-        """
-        Test monitor vm running
-        """
-        with pytest.raises(StateCheckError, message='disable vnc before enable should raise an error'):
-            self.vm._monitor()

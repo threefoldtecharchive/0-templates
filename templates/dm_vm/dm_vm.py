@@ -9,8 +9,7 @@ VDISK_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vdisk/0.0.1'
 VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vm/0.0.1'
 ZT_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerotier_client/0.0.1'
 BASEFLIST = 'https://hub.grid.tf/tf-bootable/{}.flist'
-ZEROOSFLIST = 'https://hub.grid.tf/tf-bootable/zero-os-bootable.flist'
-IPXEURL = 'https://bootstrap.grid.tf/ipxe/{}/{}/development ztid={}'
+ZEROOSFLIST = 'https://hub.grid.tf/tf-autobuilder/zero-os-development.flist'
 
 
 class DmVm(TemplateBase):
@@ -109,6 +108,7 @@ class DmVm(TemplateBase):
             'ztIdentity': self.data['ztIdentity'],
             'ports': self.data['ports'],
             'nics': nics,
+            'kernelArgs': self.data['kernelArgs'],
         }
 
         image, _, version = self.data['image'].partition(':')
@@ -121,15 +121,26 @@ class DmVm(TemplateBase):
             vm_data['flist'] = BASEFLIST.format(flist)
 
         vm = self._node_api.services.find_or_create(VM_TEMPLATE_UID, self._node_vm_name, data=vm_data)
+        if not self.data['ztIdentity']:
+            self.data['ztIdentity'] = vm.schedule_action('generate_identity').wait(die=True).result
 
         if image == 'zero-os':
-            if not self.data['ztIdentity']:
-                self.data['ztIdentity'] = vm.schedule_action('generate_identity').wait(die=True).result
-            url = IPXEURL.format(version, self.data['mgmtNic']['id'], self.data['ztIdentity'])
-            vm.schedule_action('update_ipxeurl', args={'url': url}).wait(die=True)
-
+            kernel_keys = [arg['key'] for arg in self.data['kernelArgs']]
+            if 'zerotier' not in kernel_keys:
+                self.data['kernelArgs'].append({
+                    'name':'zerotier',
+                    'key': 'zerotier',
+                    'value': self.data['mgmtNic']['id']
+                })
+            if 'ztid' not in kernel_keys:
+                self.data['kernelArgs'].append({
+                    'name': 'ztid',
+                    'key': 'ztid',
+                    'value': self.data['ztIdentity']
+                })
+            vm.schedule_action('update_kernelargs', args={'kernel_args': self.data['kernelArgs']}).wait(die=True)
+    
         vm.schedule_action('install').wait(die=True)
-        self.data['ztIdentity'] = vm.schedule_action('zt_identity').wait(die=True).result
 
         self.state.set('actions', 'install', 'ok')
         self.state.set('status', 'running', 'ok')
@@ -153,6 +164,10 @@ class DmVm(TemplateBase):
                 vdisk.delete()
             except ServiceNotFoundError:
                 pass
+            except:
+                self.logger.warning('Error occured while uninstalling vdisk {}'.format('_'.join([self.guid, disk['label']])))
+                # @todo Add vdisk service to robot deletables
+
         try:
             zt_name = self.data['mgmtNic']['ztClient']
             zt_client = self.api.services.get(name=zt_name, template_uid=ZT_TEMPLATE_UID)
@@ -160,6 +175,10 @@ class DmVm(TemplateBase):
             zt_client.schedule_action('remove_from_robot', args=data).wait(die=True)
         except ServiceNotFoundError:
             pass
+        except:
+            self.logger.warning('Error occured while removing zt client {}'.format(self.guid))
+            # @todo Add vdisk service to robot deletables
+
 
         self.state.delete('actions', 'install')
         self.state.delete('status', 'running')
@@ -174,6 +193,7 @@ class DmVm(TemplateBase):
                                     'ztClient': self.data.get('mgmtNic', {}).get('ztClient'),
                                     'ip': nic.get('ip')}
                 break
+        info['node_id'] = self.data['nodeId']
         return info
 
     def shutdown(self):
@@ -219,6 +239,12 @@ class DmVm(TemplateBase):
         self._node_vm.schedule_action('disable_vnc').wait(die=True)
 
     def add_portforward(self, name, target, source=None):
+        for forward in list(self.data['ports']):
+            if forward['name'] == name and (forward['target'] != target or source and source != forward['source']):
+                raise RuntimeError("port forward with name {} already exist for a different target or a different source".format(name))
+            elif forward['name'] == name:
+                return
+
         forward = {
             'name': name,
             'target': target,
