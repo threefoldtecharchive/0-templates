@@ -18,7 +18,7 @@ class PortalConnection(TemplateBase):
         super().__init__(name=name, guid=guid, data=data)
 
     def validate(self):
-        for param in ['url']:
+        for param in ['url', 'username', 'password']:
             if not self.data[param]:
                 raise ValueError("parameter '%s' needs to be set" % (param))
 
@@ -29,14 +29,14 @@ class PortalConnection(TemplateBase):
         """
         return j.clients.zos.get(NODE_CLIENT)
 
-    def install(self, username, password, robot_url):
-        auth_token = self._authenticate(username, password)
+    def install(self):
+        auth_token = self._authenticate(self.data['username'], self.data['password'], self.data['url'])
 
         cookies = {"beaker.session.id": auth_token}
         node_sal = self._node_sal
         data = {
             'name': node_sal.name,
-            'url': robot_url,
+            'url': "http://%s:6600" % node_sal.management_address,
             'godToken': auth.god_jwt.create(),
             'username': node_sal.client.info.os()['hostname'],
         }
@@ -49,8 +49,8 @@ class PortalConnection(TemplateBase):
 
         self.state.set('actions', 'install', 'ok')
 
-    def uninstall(self, username, password):
-        auth_token = self._authenticate(username, password)
+    def uninstall(self):
+        auth_token = self._authenticate(self.data['username'], self.data['password'], self.data['url'])
         cookies = {"beaker.session.id": auth_token}
 
         data = {'name': self._node_sal.name}
@@ -59,10 +59,11 @@ class PortalConnection(TemplateBase):
 
         self.state.delete('actions', 'install')
 
-    def _authenticate(self, username, password):
-        resp = requests.post(
-            "{base_url}/restmachine/system/usermanager/authenticate".format(base_url=self.data['url']),
-            params={"name": username, "secret": password})
-        resp.raise_for_status()
-        auth_token = resp.json()
-        return auth_token
+
+def _authenticate(username, password, url):
+    resp = requests.post(
+        "{base_url}/restmachine/system/usermanager/authenticate".format(base_url=url),
+        params={"name": username, "secret": password})
+    resp.raise_for_status()
+    auth_token = resp.json()
+    return auth_token
