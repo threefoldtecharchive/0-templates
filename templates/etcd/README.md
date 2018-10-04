@@ -9,6 +9,7 @@ This is a node template responsible for managing [etcd](https://coreos.com/etcd/
 - `ztIdentity`: zerotier identity of the etcd container. This is set by the template.
 - `token`: the token for the cluster
 - `cluster`: a list of type Member. This is the list of the cluster members, it should contain the service itself too. If not supplied, it will default to just one member, the service itself.
+- `password`: password to be used to create root user. If not supplied, the template will generate one.
 
 
 Member:
@@ -35,13 +36,7 @@ NicType enum:
 - `start`: start etcd with the right cluster configuration.
 - `stop`: stop the etcd process.
 - `uninstall`: stop the etcd process and remove the container.
-- `connection_info`: returns both the client and peer url
-- `update_cluster`: updates the cluster value in self.data. This should be used to update the service with info about all the members of this cluster.
-- `insert_record`: inserts a key/value in etcd
-- `get_record`: retrieves a value of a key in etcd
-- `delete_record`: delete record by key from etcd server
-
-
+- `connection_info`: returns etcd connection info
 
 ### Usage example via the 0-robot DSL
 
@@ -55,8 +50,6 @@ args = {
 etcd = robot.services.create('github.com/threefoldtech/0-templates/etcd/0.0.1', 'etcd1', data=args)
 etcd.schedule_action('install')
 etcd.schedule_action('start')
-etcd.schedule_action('insert_record', args={'key': 'one', 'value':'one'})
-etcd.schedule_action('delete_record', args={'key': 'one'})
 etcd.schedule_action('stop')
 ```
 
