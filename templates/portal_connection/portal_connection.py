@@ -33,10 +33,12 @@ class PortalConnection(TemplateBase):
         auth_token = self._authenticate(username, password)
 
         cookies = {"beaker.session.id": auth_token}
+        node_sal = self._node_sal
         data = {
-            'name': self._node_sal.name,
+            'name': node_sal.name,
             'url': robot_url,
-            'godToken': auth.god_jwt.create()
+            'godToken': auth.god_jwt.create(),
+            'username': node_sal.client.info.os()['hostname'],
         }
         resp = requests.post("{base_url}/restmachine/zrobot/client/add".format(base_url=self.data['url']), json=data, cookies=cookies)
         if resp.status_code == 409:
@@ -60,7 +62,7 @@ class PortalConnection(TemplateBase):
     def _authenticate(self, username, password):
         resp = requests.post(
             "{base_url}/restmachine/system/usermanager/authenticate".format(base_url=self.data['url']),
-            params={"name":username, "secret":password})
+            params={"name": username, "secret": password})
         resp.raise_for_status()
         auth_token = resp.json()
         return auth_token
