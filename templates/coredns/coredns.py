@@ -41,16 +41,16 @@ class Coredns(TemplateBase):
             'node': self._node_sal,
             'zt_identity': self.data['ztIdentity'],
             'nics': self.data['nics'],
-            'etcd_endpoint': self._etcd_url
+            'etcd_endpoint': self._etcd_info
         }
         return j.sal_zos.coredns.get(**kwargs)
     @property
     def _etcd(self):
         return self.api.services.get(template_uid=ETCD_TEMPLATE_UID, name=self.data['etcd'])
     @property
-    def _etcd_url(self):
+    def _etcd_info(self):
         result = self._etcd.schedule_action('connection_info').wait(die=True).result
-        return result['client_url']
+        return result
 
     def install(self):
         self.logger.info('Installing CoreDns %s' % self.name)
