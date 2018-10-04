@@ -44,7 +44,7 @@ class Traefik(TemplateBase):
             'etcd_watch':self.data['etcdWatch'],
             'zt_identity': self.data['ztIdentity'],
             'nics': self.data['nics'],
-            'etcd_endpoint': self._etc_url
+            'etcd_endpoint': self._etcd_info
         }
         return j.sal_zos.traefik.get(**kwargs)
         
@@ -52,9 +52,9 @@ class Traefik(TemplateBase):
     def _etcd(self):
         return self.api.services.get(template_uid=ETCD_TEMPLATE_UID, name=self.data['etcd'])
     @property
-    def _etc_url(self):
+    def _etcd_info(self):
         result = self._etcd.schedule_action('connection_info').wait(die=True).result
-        return result['client_url']
+        return result
 
     def install(self):
         self.logger.info('Installing traefik %s' % self.name)

@@ -41,14 +41,14 @@ class Coredns(TemplateBase):
             'node': self._node_sal,
             'zt_identity': self.data['ztIdentity'],
             'nics': self.data['nics'],
-            'etcd_endpoint': self._etc_url
+            'etcd_endpoint': self._etcd_url
         }
         return j.sal_zos.coredns.get(**kwargs)
     @property
     def _etcd(self):
         return self.api.services.get(template_uid=ETCD_TEMPLATE_UID, name=self.data['etcd'])
     @property
-    def _etc_url(self):
+    def _etcd_url(self):
         result = self._etcd.schedule_action('connection_info').wait(die=True).result
         return result['client_url']
 
