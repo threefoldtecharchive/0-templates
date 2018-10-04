@@ -67,7 +67,6 @@ class Minio(TemplateBase):
 
     def install(self):
         self.logger.info('Installing minio %s' % self.name)
-        minio_sal = self._minio_sal
         self.state.set('actions', 'install', 'ok')
 
     def start(self):

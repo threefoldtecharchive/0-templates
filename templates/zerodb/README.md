@@ -8,7 +8,6 @@ This template is responsible for managing 0-db.
 - `mode`: a value from enum Mode representing the 0-db mode. Defaults to `user`.
 - `sync`: boolean indicating whether all write should be sync'd or not. Defaults to `false`.
 - `path`: path to use for storing zdb data. Needs to be a btrfs path.
-- `nodePort`: the node port used in port forwarding. Defaults to 9900 and is incremented by the sal if the port is already being used. The user should not set this.
 - `admin`: admin password. Set by the template if not supplied.
 - `namespaces`: list of Namespace to be deployed on this zerodb. **optional**
 - `nics`: list of nics to create for the zerodb container. **optional**
