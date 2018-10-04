@@ -30,7 +30,7 @@ class PortalConnection(TemplateBase):
         return j.clients.zos.get(NODE_CLIENT)
 
     def install(self):
-        auth_token = self._authenticate(self.data['username'], self.data['password'], self.data['url'])
+        auth_token = _authenticate(self.data['username'], self.data['password'], self.data['url'])
 
         cookies = {"beaker.session.id": auth_token}
         node_sal = self._node_sal
@@ -50,7 +50,7 @@ class PortalConnection(TemplateBase):
         self.state.set('actions', 'install', 'ok')
 
     def uninstall(self):
-        auth_token = self._authenticate(self.data['username'], self.data['password'], self.data['url'])
+        auth_token = _authenticate(self.data['username'], self.data['password'], self.data['url'])
         cookies = {"beaker.session.id": auth_token}
 
         data = {'name': self._node_sal.name}
