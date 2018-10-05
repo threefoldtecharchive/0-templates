@@ -229,8 +229,8 @@ class Node(TemplateBase):
         else:
             disktypes = ['SSD', 'NVME']
 
-        namespace_name = j.data.idgenerator.generateXCharID(10) if not name else name
-        zdb_name = j.data.idgenerator.generateXCharID(5)
+        namespace_name = j.data.idgenerator.generateGUID() if not name else name
+        zdb_name = j.data.idgenerator.generateGUID()
 
         zdb_size = zdb_size if zdb_size else ns_size
         tasks = []
