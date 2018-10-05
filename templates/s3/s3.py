@@ -403,7 +403,7 @@ class S3(TemplateBase):
                 'name': 'development',
                 'key': 'development'
             },
-            {
+                {
                 'name': 'zerotier',
                 'key': 'zerotier',
                 'value': self.data['mgmtNic']['id']
