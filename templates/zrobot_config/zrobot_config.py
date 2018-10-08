@@ -41,7 +41,7 @@ class ZrobotConfig(TemplateBase):
         if not admin_password:
             admin_password = ""
 
-        if j.core.state.configGetFromDict("myconfig", "backend") == "db":
+        if j.core.state.configGetFromDict("myconfig", "backend", "file") == "db":
             j.tools.configmanager.set_namespace(namespace)
             # Robot should be running using a sandbox
             j.tools.configmanager.configure_keys_from_paths(config.config_repo.key, config.config_repo.key + ".pub")
