@@ -423,8 +423,9 @@ class S3(TemplateBase):
             t.wait()
             if t.state != 'ok':
                 vm.delete(wait=True, timeout=60, die=False)
+            return vm
 
-        return vm
+        raise RuntimeError("could not deploy vm for minio")
 
 
 def deploy_namespaces(nr_namepaces, name,  size, storage_type, password, nodes, logger):
@@ -448,6 +449,8 @@ def deploy_namespaces(nr_namepaces, name,  size, storage_type, password, nodes, 
         # sort nodes by the amount of storage available
         nodes = sort_by_less_used(nodes, storage_key)
         logger.info('number of possible nodes to use for namespace deployments %s', len(nodes))
+        if len(nodes) <= 0:
+            return
 
         gls = set()
         for i in range(required_nr_namespaces - deployed_nr_namespaces):
@@ -473,8 +476,7 @@ def deploy_namespaces(nr_namepaces, name,  size, storage_type, password, nodes, 
 
                 yield (namespace, node)
 
-        if len(nodes) <= 0:
-            return
+
 
 
 def list_farm_nodes(farm_organization):
