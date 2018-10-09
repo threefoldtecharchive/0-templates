@@ -95,6 +95,7 @@ class Etcd(TemplateBase):
         self.logger.info('Uninstalling etcd %s' % self.name)
         self._etcd_sal.destroy()
         self.state.delete('actions', 'install')
+        self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
 
     def connection_info(self):

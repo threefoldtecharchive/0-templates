@@ -69,6 +69,7 @@ class Traefik(TemplateBase):
         self.logger.info('Uninstalling traefik %s' % self.name)
         self._traefik_sal.destroy()
         self.state.delete('actions', 'install')
+        self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
 
     def start(self):

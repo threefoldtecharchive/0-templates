@@ -66,6 +66,7 @@ class Coredns(TemplateBase):
         self.logger.info('Uninstalling CoreDns %s' % self.name)
         self._coredns_sal.destroy()
         self.state.delete('actions', 'install')
+        self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
 
     def start(self):
