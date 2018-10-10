@@ -58,6 +58,8 @@ class Minio(TemplateBase):
             'nr_parityshards': self.data['parityShard'],
             'tlog_namespace': self.data.get('tlog').get('namespace'),
             'tlog_address': self.data.get('tlog').get('address'),
+            'master_namespace': self.data.get('master').get('namespace'),
+            'master_address': self.data.get('master').get('address'),
             'block_size': self.data['blockSize'],
         }
         return j.sal_zos.minio.get(**kwargs)
@@ -106,6 +108,17 @@ class Minio(TemplateBase):
 
     def update_tlog(self, namespace, address):
         self.data['tlog'] = {
+            'namespace': namespace,
+            'address': address
+        }
+        # if minio is running and we update the config, tell it to reload the config
+        minio_sal = self._minio_sal
+        if minio_sal.is_running():
+            minio_sal.create_config()
+            minio_sal.reload()
+
+    def update_master(self, namespace, address):
+        self.data['master'] = {
             'namespace': namespace,
             'address': address
         }
