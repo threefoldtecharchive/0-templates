@@ -10,10 +10,16 @@ This template is responsible for managing [minio](https://minio.io/) server inst
 - `nsSecret`: secret to use to have access to the namespace on the 0-db servers
 - `login`: minio login. End user need to know this login to have access to minio
 - `password`: minio password. End user need to know this login to have access to minio
-- `container`: reference to the container on which minio will be running. This is set by the template
 - `privateKey`: encryption private key
 - `metaPrivateKey`: metadata encryption private key
 - `blockSize`:  block size of the data on minio. Defaults to 1048576 bytes.
+- `tlog`: entry of type Tlog. Used to fill the tlog config of the [Transaction Log](https://github.com/threefoldtech/minio/tree/zerostor/cmd/gateway/zerostor#transaction-log).
+- `master`: entry of type Tlog. Used to fill the master config of the [Transaction Log](https://github.com/threefoldtech/minio/tree/zerostor/cmd/gateway/zerostor#transaction-log).
+
+
+Tlog:
+- `namespace`: namespace name
+- `address`: zerdb address
 
 ### Actions
 - `install`: install the minio server. It will create a container on the node and run minio inside the container
