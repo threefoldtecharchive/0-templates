@@ -3,7 +3,7 @@
 
 
 struct Schema {
-    memory @0: UInt16 = 128; # Amount of memory in MiB
+    memory @0: UInt16 = 1024; # Amount of memory in MiB
     cpu @1: UInt16 = 1; # Number of virtual CPUs
     mgmtNic @2: Nic; # zerotier nic to attach to the vm
     image @3: Text; # image name specifying if it is a `zero-os` or `ubuntu` image
