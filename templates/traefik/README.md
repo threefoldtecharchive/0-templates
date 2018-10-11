@@ -37,7 +37,7 @@ NicType enum:
 robot = j.clients.zrobot.robots['local']
 args = {
     'nics': [{'name': 'ten', 'type': 'zerotier', 'ztClient':'zt', 'id': '1d719394044ed153'}],
-    'etcdServerName': 'Etcd server name that created'
+    'etcd': 'Etcd server name that created'
     }  
     
 traefik = robot.services.create('github.com/threefoldtech/0-templates/traefik/0.0.1', 'traefik1', data=args)
@@ -57,7 +57,7 @@ To install traefik `traefik1`:
 ```yaml
 services:
     - github.com/threefoldtech/0-templates/traefik/0.0.1__traefik1:
-          etcdServerName: 'Etcd_server_name'
+          etcd: 'Etcd_server_name'
           nics:
             - name: 'ten'
             - id: 1d719394044ed153
