@@ -14,6 +14,8 @@ NETWORK_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/network/0.0.1'
 BRIDGE_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/bridge/0.0.1'
 NODE_CLIENT = 'local'
 
+GiB = 1024 ** 3
+
 
 class NoNamespaceAvailability(Exception):
     pass
@@ -37,14 +39,6 @@ class Node(TemplateBase):
         if network:
             self._validate_network(network)
 
-    def _validate_network(self, network):
-        cidr = network.get('cidr')
-        if cidr:
-            netaddr.IPNetwork(cidr)
-        vlan = network.get('vlan')
-        if not isinstance(vlan, int):
-            raise ValueError('Network should have vlan configured')
-
     @property
     def _node_sal(self):
         """
@@ -55,7 +49,6 @@ class Node(TemplateBase):
     def _monitor(self):
         self.logger.info('Monitoring node %s' % self.name)
         self.state.check('actions', 'install', 'ok')
-        self._rename_cache()
 
         # make sure cache is always mounted
         sp = self._node_sal.storagepools.get('zos-cache')
@@ -69,7 +62,7 @@ class Node(TemplateBase):
         self.data['uptime'] = self._node_sal.uptime()
 
         try:
-            self._node_sal.zerodbs.partition_and_mount_disks()
+            self._node_sal.zerodbs.prepare()
             self.state.set('disks', 'mounted', 'ok')
         except:
             self.state.delete('disks', 'mounted')
@@ -77,8 +70,8 @@ class Node(TemplateBase):
         try:
             # check if the node was rebooting and start containers and vms
             self.state.check('status', 'rebooting', 'ok')
-            self._start_all_containers()
-            self._start_all_vms()
+            # self._start_all_containers()
+            # self._start_all_vms()
             self.state.delete('status', 'rebooting')
         except StateCheckError:
             pass
@@ -108,34 +101,6 @@ class Node(TemplateBase):
                                      data={},
                                      public=True)
 
-    def _rename_cache(self):
-        """Rename old cache storage pool to new convention if needed"""
-        try:
-            self.state.check("migration", "fs_cache_renamed", "ok")
-            return
-        except StateCheckError:
-            pass
-
-        poolname = '{}_fscache'.format(self._node_sal.name)
-        try:
-            sp = self._node_sal.storagepools.get(poolname)
-        except ValueError:
-            return
-
-        if sp.mountpoint:
-            self.logger.info("rename mounted volume %s..." % poolname)
-            cmd = 'btrfs filesystem label %s sp_zos-cache' % sp.mountpoint
-        else:
-            self.logger.info("rename unmounted volume %s..." % poolname)
-            cmd = 'btrfs filesystem label %s sp_zos-cache' % sp.devices[0]
-        result = self._node_sal.client.system(cmd).get()
-        if result.state == "SUCCESS":
-            self.logger.info("Rebooting %s ..." % self._node_sal.name)
-            self.state.set("migration", "fs_cache_renamed", "ok")
-            self.reboot()
-            raise RuntimeWarning("Aborting monitor because system is rebooting for a migration.")
-        self.logger.error('error: %s' % result.stderr)
-
     @retry(Exception, tries=2, delay=2)
     def install(self):
         self.logger.info('Installing node %s' % self.name)
@@ -148,7 +113,15 @@ class Node(TemplateBase):
         self.data['uptime'] = self._node_sal.uptime()
         self.state.set('actions', 'install', 'ok')
 
-    def zdb_path(self, disktype, size, name, zdbinfo=None):
+    def reboot(self):
+        self._stop_all_containers()
+        self._stop_all_vms()
+
+        self.logger.info('Rebooting node %s' % self.name)
+        self.state.set('status', 'rebooting', 'ok')
+        self._node_sal.reboot()
+
+    def zdb_path(self, disktype, size, name):
         """Create zdb mounpoint and subvolume
 
         :param disktype: type of the disk the zerodb will be deployed on
@@ -162,30 +135,132 @@ class Node(TemplateBase):
         :return: zerodb mountpoint, subvolume name
         :rtype: (string, string)
         """
+        node_sal = self._node_sal
+
+        disks_types_map = {
+            'hdd': ['HDD', 'ARCHIVE'],
+            'ssd': ['SSD', 'NVME'],
+        }
+
+        # get all usable filesystem path for this type of disk and amount of storage
+        def usable_storagepool(sp):
+            if sp.type.value not in disks_types_map[disktype]:
+                return False
+            if (sp.size - sp.total_quota() / GiB) <= size:
+                return False
+            return True
+
+        # all storage pool path of type disktypes and with more then size storage available
+        storagepools = list(filter(usable_storagepool, node_sal.storagepools.list()))
+        if not storagepools:
+            raise ZDBPathNotFound("all storagepools are already used by a zerodb")
+
+        if disktype == 'hdd':
+            # sort less used pool first
+            storagepools.sort(key=lambda sp: sp.size - sp.total_quota(), reverse=True)
+            fs_paths = []
+            for sp in storagepools:
+                try:
+                    fs = sp.get('zdb')
+                    fs_paths.append(fs.path)
+                except ValueError:
+                    pass  # no zdb filesystem on this storagepool
+
+            # all path used by installed zerodb services
+            zdb_infos = self._list_zdbs_info()
+            zdb_infos = filter(lambda info: info['service_name'] != name, zdb_infos)
+            # sort result by free size, first item of the list is the the one with bigger free size
+            results = sorted(zdb_infos, key=lambda r: r['free'], reverse=True)
+            zdb_paths = [res['path'] for res in results]
+
+            # path that are not used by zerodb services but have a storagepool, so we can use them
+            free_path = list(set(fs_paths) - set(zdb_paths))
+            if len(free_path) <= 0:
+                raise ZDBPathNotFound("all storagepools are already used by a zerodb")
+            return free_path[0]
+
+        if disktype == 'ssd':
+            # all storage pool path of type disktypes and with more then size storage available
+            storagepools = list(filter(usable_storagepool, node_sal.storagepools.list()))
+            if not storagepools:
+                raise ZDBPathNotFound("Could not find any usable  storage pool. Not enough space for disk type %s" % disktype)
+
+            fs = storagepools[0].create('zdb_{}'.format(name), size * GiB)
+            return fs.path
+
+        raise RuntimeError("unsupported disktype:%s" % disktype)
+
+    def create_zdb_namespace(self, disktype, mode, password, public, ns_size, name='', zdb_size=None):
+        if disktype not in ['hdd', 'ssd']:
+            raise ValueError('Disktype should be hdd or ssd')
+        if mode not in ['seq', 'user', 'direct']:
+            raise ValueError('ZDB mode should be user, direct or seq')
+
         if disktype == 'hdd':
             disktypes = ['HDD', 'ARCHIVE']
-            tasks = []
-            potentials = {info['mountpoint']: info['disk'] for info in self._node_sal.zerodbs.partition_and_mount_disks()}
-            if not zdbinfo:
-                zdbs = self.api.services.find(template_uid=ZDB_TEMPLATE_UID)
-                for zdb in zdbs:
-                    if zdb.name != name:
-                        tasks.append(zdb.schedule_action('info'))
-                results = self._wait_all(tasks, timeout=120, die=True)
-                zdbinfo = sorted(list(zip(zdbs, results)), key=lambda x: x[1]['free'],  reverse=True)
-            for zdb, info in zdbinfo:
-                if info['path'] in potentials:
-                    potentials.pop(info['path'])
-
-            disks = [(self._node_sal.disks.get(diskname), mountpoint) for mountpoint, diskname in potentials.items()]
-            disks = list(filter(lambda disk: (disk[0].size / 1024 ** 3) > size and disk[0].type.value in disktypes, disks))
-            disks.sort(key=lambda disk: disk[0].size, reverse=True)
-            if not disks:
-                return ''
-            return disks[0][1]
-        else:
+        elif disktype == 'ssd':
             disktypes = ['SSD', 'NVME']
-            return self._node_sal.zerodbs.create_and_mount_subvolume(name, size, disktypes)
+        else:
+            raise ValueError("disk type %s not supported" % disktype)
+
+        namespace_name = j.data.idgenerator.generateGUID() if not name else name
+        zdb_name = j.data.idgenerator.generateGUID()
+
+        zdb_size = zdb_size if zdb_size else ns_size
+        namespace = {
+            'name': namespace_name,
+            'size': ns_size,
+            'password': password,
+            'public': public,
+        }
+        try:
+            mountpoint = self.zdb_path(disktype, zdb_size, zdb_name)
+            self._create_zdb(zdb_name, mountpoint, mode, zdb_size, disktype, [namespace])
+            return zdb_name, namespace_name
+        except ZDBPathNotFound:
+            # at this point we could find a place where to create a new zerodb
+            # let's look at the already existing one
+            pass
+
+        def usable_zdb(info):
+            if info['mode'] != mode:
+                return False
+            if info['free'] / GiB < zdb_size:
+                return False
+            if info['type'] not in disktypes:
+                return False
+            return True
+
+        zdbinfos = list(filter(usable_zdb, self._list_zdbs_info()))
+        if len(zdbinfos) <= 0:
+            message = 'Not enough free space for namespace creation with size {} and type {}'.format(ns_size, ','.join(disktypes))
+            raise NoNamespaceAvailability(message)
+
+        # sort result by free size, first item of the list is the the one with bigger free size
+        for zdbinfo in sorted(zdbinfos, key=lambda r: r['free'], reverse=True):
+            zdb = self.api.services.get(template_name=ZDB_TEMPLATE_UID, name=zdbinfo['service_name'])
+            namespaces = [ns['name'] for ns in zdb.schedule_action('namespace_list').wait(die=True).result]
+            if namespace_name not in namespaces:
+                zdb.schedule_action('namespace_create', namespace).wait(die=True)
+                return zdb.name, namespace_name
+        message = 'Namespace {} already exists on all zerodbs'.format(namespace_name)
+        raise NoNamespaceAvailability(message)
+
+    @timeout(30, error_message='info action timeout')
+    def info(self):
+        return self._node_sal.client.info.os()
+
+    @timeout(30, error_message='stats action timeout')
+    def stats(self):
+        return self._node_sal.client.aggregator.query()
+
+    @timeout(30, error_message='processes action timeout')
+    def processes(self):
+        return self._node_sal.client.process.list()
+
+    @timeout(30, error_message='os_version action timeout')
+    def os_version(self):
+        return self._node_sal.client.ping()[13:].strip()
 
     def _create_zdb(self, name, mountpoint, mode, zdb_size, disktype, namespaces):
         """Create a zerodb service
@@ -218,83 +293,25 @@ class Node(TemplateBase):
         zdb.schedule_action('install').wait(die=True)
         zdb.schedule_action('start').wait(die=True)
 
-    def create_zdb_namespace(self, disktype, mode, password, public, ns_size, name='', zdb_size=None):
-        if disktype not in ['hdd', 'ssd']:
-            raise ValueError('Disktype should be hdd or ssd')
-        if mode not in ['seq', 'user', 'direct']:
-            raise ValueError('ZDB mode should be user, direct or seq')
+    def _list_zdbs_info(self):
+        """
+        list the paths used by all the zerodbs installed on the node
 
-        if disktype == 'hdd':
-            disktypes = ['HDD', 'ARCHIVE']
-        else:
-            disktypes = ['SSD', 'NVME']
+        :param excepted: list of zerodb service name that should be skipped
+        :type excepted: [str]
 
-        namespace_name = j.data.idgenerator.generateGUID() if not name else name
-        zdb_name = j.data.idgenerator.generateGUID()
-
-        zdb_size = zdb_size if zdb_size else ns_size
-        tasks = []
+        :return: a list of zerodb path sorted by free size descending
+        :rtype: [str]
+        """
         zdbs = self.api.services.find(template_uid=ZDB_TEMPLATE_UID)
-        for zdb in zdbs:
-            tasks.append(zdb.schedule_action('info'))
-        results = self._wait_all(tasks, timeout=120, die=True)
-        zdbinfo = sorted(list(zip(zdbs, results)), key=lambda x: x[1]['free'],  reverse=True)
-        namespace = {
-            'name': namespace_name,
-            'size': ns_size,
-            'password': password,
-            'public': public,
-        }
-        mountpoint = self.zdb_path(disktype, zdb_size, zdb_name, zdbinfo)
-        if mountpoint:
-            self._create_zdb(zdb_name, mountpoint, mode, zdb_size, disktype, [namespace])
-            return zdb_name, namespace_name
+        tasks = [zdb.schedule_action('info') for zdb in zdbs]
+        results = []
+        for t in tasks:
+            result = t.wait(timeout=120, die=True).result
+            result['service_name'] = t.service.name
+            results.append(result)
+        return results
 
-        zdbinfo = list(filter(lambda info: info[1]['mode'] == mode and (info[1]['free'] / 1024 ** 3) > zdb_size and info[1]['type'] in disktypes, zdbinfo))
-        if not zdbinfo:
-            message = 'Not enough free space for namespace creation with size {} and type {}'.format(ns_size, ','.join(disktypes))
-            raise NoNamespaceAvailability(message)
-
-        for bestzdb, _ in zdbinfo:
-            namespaces = [ns['name'] for ns in bestzdb.schedule_action('namespace_list').wait(die=True).result]
-            if namespace_name not in namespaces:
-                bestzdb.schedule_action('namespace_create', namespace).wait(die=True)
-                return bestzdb.name, namespace_name
-
-        message = 'Namespace {} already exists on all zerodbs'.format(namespace_name)
-        raise NoNamespaceAvailability(message)
-
-    def reboot(self):
-        self._stop_all_containers()
-        self._stop_all_vms()
-
-        self.logger.info('Rebooting node %s' % self.name)
-        self.state.set('status', 'rebooting', 'ok')
-        self._node_sal.reboot()
-
-    @timeout(30, error_message='info action timeout')
-    def info(self):
-        return self._node_sal.client.info.os()
-
-    @timeout(30, error_message='stats action timeout')
-    def stats(self):
-        return self._node_sal.client.aggregator.query()
-
-    @timeout(30, error_message='processes action timeout')
-    def processes(self):
-        return self._node_sal.client.process.list()
-
-    @timeout(30, error_message='os_version action timeout')
-    def os_version(self):
-        return self._node_sal.client.ping()[13:].strip()
-
-    def _start_all_containers(self):
-        for container in self.api.services.find(template_uid=CONTAINER_TEMPLATE_UID):
-            container.schedule_action('start')
-
-    def _start_all_vms(self):
-        # TODO
-        pass
 
     def _stop_all_containers(self):
         tasks = []
@@ -306,8 +323,5 @@ class Node(TemplateBase):
         # TODO
         pass
 
-    def _wait_all(self, tasks, timeout=60, die=False):
-        results = []
-        for t in tasks:
-            results.append(t.wait(timeout=timeout, die=die).result)
-        return results
+class ZDBPathNotFound(Exception):
+    pass
