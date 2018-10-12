@@ -491,7 +491,14 @@ def list_farm_nodes(farm_organization):
     capacity = j.clients.threefold_directory.get(interactive=False)
     resp = capacity.api.ListCapacity(query_params={'farmer': farm_organization})[1]
     resp.raise_for_status()
-    return resp.json()
+    nodes = resp.json()
+
+    def f(node):
+        for key in ['total_resources', 'used_resources', 'robot_address']:
+            if key not in node:
+                return False
+        return True
+    return list(filter(f, nodes))
 
 
 def install_namespace(node, name, disk_type, size, password):
