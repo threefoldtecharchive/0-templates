@@ -37,7 +37,7 @@ class Node(TemplateBase):
 
         network = self.data.get('network')
         if network:
-            self._validate_network(network)
+            _validate_network(network)
 
     @property
     def _node_sal(self):
@@ -313,15 +313,14 @@ class Node(TemplateBase):
         return results
 
 
-    def _stop_all_containers(self):
-        tasks = []
-        for container in self.api.services.find(template_uid=CONTAINER_TEMPLATE_UID):
-            tasks.append(container.schedule_action('stop'))
-        self._wait_all(tasks)
+def _validate_network(network):
+    cidr = network.get('cidr')
+    if cidr:
+        netaddr.IPNetwork(cidr)
+    vlan = network.get('vlan')
+    if not isinstance(vlan, int):
+        raise ValueError('Network should have vlan configured')
 
-    def _stop_all_vms(self):
-        # TODO
-        pass
 
 class ZDBPathNotFound(Exception):
     pass
