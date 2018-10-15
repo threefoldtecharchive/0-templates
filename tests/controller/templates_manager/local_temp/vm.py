@@ -25,6 +25,10 @@ class VMManager:
         else:
             return self._vm_service
 
+    @property
+    def install_state(self):
+        return self.service.state.check('actions', 'install', 'ok')
+
     def install(self, wait=True, **kwargs):
         ssh_port = random.randint(22022, 22922)
         default_data = {
