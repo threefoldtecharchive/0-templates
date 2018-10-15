@@ -6,6 +6,7 @@ from testconfig import config
 class VMManager:
     def __init__(self, parent, service_name=None):
         self._parent = parent
+        self.logger = self._parent.logger
         self.robot = self._parent.robot
 
         if service_name:
@@ -21,7 +22,7 @@ class VMManager:
     @property
     def service(self):
         if self._vm_service == None:
-            self._parent.logger.error('- VM_service is None, Install it first.')
+            self.logger.error('- VM_service is None, Install it first.')
         else:
             return self._vm_service
 
@@ -40,10 +41,14 @@ class VMManager:
             default_data.update(kwargs)
 
         self.vm_service_name = "vm_{}".format(self._parent._generate_random_string())
-        self._parent.logger.info('Install {} vm'.format(self.vm_service_name))
+        self.logger.info('Install {} vm'.format(self.vm_service_name))
         self._vm_service = self.robot.services.create(self.vm_template, self.vm_service_name, default_data)
         self._vm_service.schedule_action('install').wait(die=wait)
 
     def uninstall(self, wait=True):
-        self._parent.logger.info('Uninstall {} vm'.format(self.vm_service_name))
-        self._vm_service.schedule_action('uninstall').wait(die=wait)
+        self.logger.info('Uninstall {} vm'.format(self.vm_service_name))
+        self.service.schedule_action('uninstall').wait(die=wait)
+
+    def info(self):
+        return self.service.schedule_action('info')
+
