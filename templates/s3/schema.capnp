@@ -32,6 +32,7 @@ struct Schema {
       name @0: Text; # namespace service name
       node @1: Text; # node id of the node on which the namespace was created
       url @2: Text; # node zrobot url
+      address @3: Text; # zerodb address
     }
 
     struct Urls {

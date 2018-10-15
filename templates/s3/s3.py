@@ -114,22 +114,36 @@ class S3(TemplateBase):
             self.data['current_namespaces_connections'] = namespaces_connection
 
         self.logger.info("verify tlog namespace connections")
-        if 'tlog' not in self.data or not self.data['tlog'].get('node') or not self.data['tlog'].get('node'):
-            return
+        tlog = self.data.get('tlog', {})
+        if tlog.get('node') and tlog.get('url'):
+            robot = get_zrobot(self.data['tlog']['node'], self.data['tlog']['url'])
+            namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['tlog']['name'])
 
-        robot = get_zrobot(self.data['tlog']['node'], self.data['tlog']['url'])
-        namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['tlog']['name'])
+            connection_info = namespace_connection_info(namespace)
+            if tlog.get('address') and tlog['address'] != connection_info:
+                self.logger.info("tlog namespace connection in service data is not correct, updating minio configuration")
+                t = minio.schedule_action('update_tlog', args={'namespace': self._tlog_namespace,
+                                                            'address': connection_info})
+                t.wait(die=True)
+                self.data['tlog']['address'] = connection_info
+            else:
+                self.logger.info("tlog namespace connection in service data is in sync with reality")
 
-        connection_info = namespace_connection_info(namespace)
-        if self.data['tlog'].get('address') and self.data['tlog']['address'] == connection_info:
-            self.logger.info("tlog namespace connection in service data is in sync with reality")
-            return
+        self.logger.info("verify master namespace connections")
+        master = self.data.get('master', {})
+        if master.get('node') and master.get('url'):
+            robot = get_zrobot(master['node'], master['url'])
+            namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=master['name'])
 
-        self.logger.info("tlog namespace connection in service data is not correct, updating minio configuration")
-        t = minio.schedule_action('update_tlog', args={'namespace': self._tlog_namespace,
-                                                       'address': connection_info})
-        t.wait(die=True)
-        self.data['tlog']['address'] = connection_info
+            connection_info = namespace_connection_info(namespace)
+            if master.get('address') and master != connection_info:
+                self.logger.info("master namespace connection in service data is not correct, updating minio configuration")
+                t = minio.schedule_action('update_master', args={'namespace': self._tlog_namespace,
+                                                            'address': connection_info})
+                t.wait(die=True)
+                self.data['master']['address'] = connection_info
+            else:
+                self.logger.info("master namespace connection in service data is in sync with reality")
 
     def _monitor(self):
         try:
@@ -186,8 +200,11 @@ class S3(TemplateBase):
         def get_master_info():
             robot = get_zrobot(self.data['master']['node'], self.data['master']['url'])
             namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['master']['name'])
+            master_connection = namespace_connection_info(namespace)
+            self.data['master']['address'] = master_connection
+
             return {
-                'address': namespace_connection_info(namespace),
+                'address': master_connection,
                 'namespace': self._tlog_namespace,
             }
 
@@ -214,6 +231,7 @@ class S3(TemplateBase):
         if ns_tlog_gl.exception:
             raise ns_tlog_gl.exception
         tlog_connection = ns_tlog_gl.value
+        self.data['tlog']['address'] = tlog_connection
 
         if vm_gl.exception:
             raise vm_gl.exception

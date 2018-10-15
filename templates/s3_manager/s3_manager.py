@@ -27,7 +27,6 @@ class S3Manager(TemplateBase):
         if not self.data['minioLogin']:
                 raise ValueError('Invalid minio login')
     
-
         if not self.data['nsPassword']:
             self.data['nsPassword'] = j.data.idgenerator.generateXCharID(32)
     
