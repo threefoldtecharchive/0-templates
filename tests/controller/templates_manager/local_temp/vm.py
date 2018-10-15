@@ -1,13 +1,14 @@
-from jumpsacle import j
+from jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from testconfig import config
 
 
 class VMManager:
     def __init__(self, parent, service_name=None):
+        self.vm_template = 'github.com/threefoldtech/0-templates/vm/0.0.1'
         self._parent = parent
         self.logger = self._parent.logger
-        self.robot = self._parent.robot
+        self.robot = self._parent.remote_robot
 
         if service_name:
             try:
@@ -16,8 +17,6 @@ class VMManager:
                 self._vm_service = None
         else:
             self._vm_service = None
-
-        self.vm_template = 'github.com/threefoldtech/0-templates/vm/0.0.1'
 
     @property
     def service(self):
