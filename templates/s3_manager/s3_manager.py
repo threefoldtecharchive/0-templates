@@ -53,22 +53,26 @@ class S3Manager(TemplateBase):
         self.state.set('actions', 'install', 'ok')
 
     def uninstall(self):
-        try:
-            self.logger.info("uninstall and delete active s3")
-            active_s3 = self._active_s3()
-            active_s3.schedule_action('uninstall').wait(die=True)
-            active_s3.delete()
-        except ServiceNotFoundError:
-            pass
+        s3s = [self._active_s3, self._passive_s3]
+        tasks = []
+        services = []
+        for s3 in s3s:
+            try:
+                self.logger.info("uninstall and delete s3")
+                service = s3()
+                tasks.append(service.schedule_action('uninstall'))
+                services.append(service)
+            except ServiceNotFoundError:
+                pass
 
-        try:
-            self.logger.info("uninstall and delete passive s3")
-            passive_s3 = self._passive_s3()
-            passive_s3.schedule_action('uninstall').wait(die=True)
-            passive_s3.delete()
-        except ServiceNotFoundError:
-            pass
-    
+        for task in tasks:
+            task.wait(die=True)
+        
+        for service in services:
+            service.delete()
+        
+        self.state.delete('actions', 'install')
+        
     def urls(self):
         self.state.check('actions', 'install', 'ok')
         active_urls = self._active_s3().schedule_action('url').wait(die=True)
