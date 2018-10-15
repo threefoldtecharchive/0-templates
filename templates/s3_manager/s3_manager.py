@@ -77,3 +77,31 @@ class S3Manager(TemplateBase):
             'active_urls': active_urls,
             'passive_urls': passive_urls,
         }
+    
+    def start_active(self):
+        self.state.check('actions', 'install', 'ok')
+        active_s3 = self._active_s3()
+        active_s3.schedule_action('start').wait(die=True)
+        
+    def stop_active(self):
+        self.state.check('actions', 'install', 'ok')
+        active_s3 = self._active_s3()
+        active_s3.schedule_action('stop').wait(die=True)
+    
+    def upgrade_active(self):
+        self.stop_active()
+        self.start_active()
+
+    def start_passive(self):
+        self.state.check('actions', 'install', 'ok')
+        passive_s3 = self._passive_s3()
+        passive_s3.schedule_action('start').wait(die=True)
+        
+    def stop_passive(self):
+        self.state.check('actions', 'install', 'ok')
+        passive_s3 = self._passive_s3()
+        passive_s3.schedule_action('stop').wait(die=True)
+
+    def upgrade_passive(self):
+        self.stop_passive()
+        self.start_passive()
