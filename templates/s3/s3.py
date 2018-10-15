@@ -45,7 +45,7 @@ class S3(TemplateBase):
 
     @property
     def _tlog_namespace(self):
-        '{}_tlog'.format(self.data['nsName'])
+        return '{}_tlog'.format(self.data['nsName'])
 
     @property
     def _nodes(self):

@@ -22,11 +22,5 @@ struct Schema {
       id @0: Text; # Zerotier network id
       ztClient @1: Text;
     }
-
-
-    struct Urls {
-      public @0: Text;
-      storage @1: Text;
-    }
 }
 

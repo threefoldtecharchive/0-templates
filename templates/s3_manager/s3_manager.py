@@ -67,7 +67,7 @@ class S3Manager(TemplateBase):
 
         for task in tasks:
             task.wait(die=True)
-        
+
         for service in services:
             service.delete()
         
