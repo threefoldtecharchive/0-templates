@@ -75,8 +75,8 @@ class S3Manager(TemplateBase):
         
     def urls(self):
         self.state.check('actions', 'install', 'ok')
-        active_urls = self._active_s3().schedule_action('url').wait(die=True)
-        passive_urls = self._passive_s3().schedule_action('url').wait(die=True)
+        active_urls = self._active_s3().schedule_action('url').wait(die=True).result
+        passive_urls = self._passive_s3().schedule_action('url').wait(die=True).result
         return {
             'active_urls': active_urls,
             'passive_urls': passive_urls,

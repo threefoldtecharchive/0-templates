@@ -488,7 +488,7 @@ def deploy_namespaces(nr_namepaces, name,  size, storage_type, password, nodes, 
         # sort nodes by the amount of storage available
         nodes = sort_by_less_used(nodes, storage_key)
         if master_nodes:
-            nodes = sort_by_master_node(nodes, master_nodes)
+            nodes = sort_by_master_nodes(nodes, master_nodes)
         logger.info('number of possible nodes to use for namespace deployments %s', len(nodes))
         if len(nodes) <= 0:
             return
@@ -617,7 +617,7 @@ def sort_by_less_used(nodes, storage_key):
         return node['total_resources'][storage_key] - node['used_resources'][storage_key]
     return sorted(nodes, key=key, reverse=True)
 
-def sort_by_master_node(nodes, master_nodes):
+def sort_by_master_nodes(nodes, master_nodes):
     nodes_copy = list(nodes)
     for node in nodes:
         if node['node_id'] in master_nodes:
