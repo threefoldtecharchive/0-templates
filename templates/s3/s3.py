@@ -36,8 +36,16 @@ class S3(TemplateBase):
         if len(self.data['minioPassword']) < 8:
             raise ValueError("minio password need to be at least 8 characters")
 
+        for key in ['minioLogin', 'nsName']:
+            if not self.data[key]:
+                    raise ValueError('Invalid {}'.format(key))
+    
         if not self.data['nsPassword']:
             self.data['nsPassword'] = j.data.idgenerator.generateXCharID(32)
+
+    @property
+    def _tlog_namespace(self):
+        '{}_tlog'.format(self.data['nsName'])
 
     @property
     def _nodes(self):
@@ -84,7 +92,6 @@ class S3(TemplateBase):
 
         self.logger.info("verify data backend namespace connections")
 
-        zdbs_connection = []
         # gather all the namespace services
         namespaces = []
         for namespace in self.data['namespaces']:
@@ -119,7 +126,7 @@ class S3(TemplateBase):
             return
 
         self.logger.info("tlog namespace connection in service data is not correct, updating minio configuration")
-        t = minio.schedule_action('update_tlog', args={'namespace': self.guid+'_tlog',
+        t = minio.schedule_action('update_tlog', args={'namespace': self._tlog_namespace,
                                                        'address': connection_info})
         t.wait(die=True)
         self.data['tlog']['address'] = connection_info
@@ -175,13 +182,29 @@ class S3(TemplateBase):
             self._deploy_minio_vm()
             self.logger.info("minio vm deployed")
             return self._vm_robot_and_ip()
+        
+        def get_master_info():
+            robot = get_zrobot(self.data['master']['node'], self.data['master']['url'])
+            namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['master']['name'])
+            return {
+                'address': namespace_connection_info(namespace),
+                'namespace': self._tlog_namespace,
+            }
+
 
         # deploy all namespaces and vm concurrently
         ns_data_gl = gevent.spawn(deploy_data_namespaces)
         ns_tlog_gl = gevent.spawn(deploy_tlog_namespace)
         vm_gl = gevent.spawn(deploy_vm)
+        tasks = [ns_data_gl, ns_tlog_gl, vm_gl]
+
+        master = {'namespace': '', 'address': ''}
+        if self.data['master']['name']:
+            master_gl = gevent.spawn(get_master_info)
+            tasks.append(master_gl)
+
         self.logger.info("wait for all namespaces and vm to be installed")
-        gevent.wait([ns_data_gl, ns_tlog_gl, vm_gl])
+        gevent.wait(tasks)
 
         if ns_data_gl.exception:
             raise ns_data_gl.exception
@@ -195,20 +218,27 @@ class S3(TemplateBase):
         if vm_gl.exception:
             raise vm_gl.exception
         vm_robot, ip = vm_gl.value
+    
+        if self.data['master']['name']:
+            if master_gl.exception:
+                raise master_gl.exception
+            master = master_gl.value
+
 
         self.logger.info("create the minio service on the vm")
         minio_data = {
             'zerodbs': namespaces_connections,
-            'namespace': self.guid,
+            'namespace': self.data['nsName'],
             'nsSecret': self.data['nsPassword'],
             'login': self.data['minioLogin'],
             'password': self.data['minioPassword'],
             'dataShard': self.data['dataShards'],
             'parityShard': self.data['parityShards'],
             'tlog': {
-                'namespace': self.guid + '_tlog',
+                'namespace': self._tlog_namespace,
                 'address': tlog_connection,
             },
+            'master': master,
             'blockSize': self.data['minioBlockSize'],
         }
 
@@ -275,6 +305,7 @@ class S3(TemplateBase):
         self.state.delete('status', 'running')
 
     def url(self):
+        self.state.check('actions', 'install', 'ok')
         if not self.data['minioUrls']['public'] or not self.data['minioUrls']['storage']:
             self._update_url()
         return self.data['minioUrls']
@@ -294,6 +325,12 @@ class S3(TemplateBase):
     def upgrade(self):
         self.stop()
         self.start()
+    
+    def tlog(self):
+        return self.data['tlog']
+    
+    def namespaces_nodes(self):
+        return [namespace['node'] for namespace in self.data['namespaces']]
 
     def _vm(self):
         return self.api.services.get(template_uid=VM_TEMPLATE_UID, name=self.guid)
@@ -328,12 +365,13 @@ class S3(TemplateBase):
         self.logger.info("namespaces already deployed %d", len(deployed_namespaces))
         required_nr_namespaces = required_nr_namespaces - len(deployed_namespaces)
         for namespace, node in deploy_namespaces(nr_namepaces=required_nr_namespaces,
-                                                 name=self.guid,
+                                                 name=self.data['nsName'],
                                                  size=namespace_size,
                                                  storage_type=self.data['storageType'],
                                                  password=self.data['nsPassword'],
                                                  nodes=self._nodes,
-                                                 logger=self.logger):
+                                                 logger=self.logger,
+                                                 master_nodes=self.data['masterNodes']):
             deployed_namespaces.append(namespace)
             self.data['namespaces'].append({'name': namespace.name,
                                             'url': node['robot_address'],
@@ -360,12 +398,13 @@ class S3(TemplateBase):
 
         tlog_namespace = None
         for namespace, node in deploy_namespaces(nr_namepaces=1,
-                                                 name=self.guid + '_tlog',
+                                                 name=self._tlog_namespace,
                                                  size=10,  # TODO: compute how much is needed
                                                  storage_type='ssd',
                                                  password=self.data['nsPassword'],
                                                  nodes=self._nodes,
-                                                 logger=self.logger):
+                                                 logger=self.logger,
+                                                 master_nodes=self.data['masterNodes']):
             tlog_namespace = namespace
             self.data['tlog'] = {'name': tlog_namespace.name,
                                  'url': node['robot_address'],
@@ -428,7 +467,7 @@ class S3(TemplateBase):
         raise RuntimeError("could not deploy vm for minio")
 
 
-def deploy_namespaces(nr_namepaces, name,  size, storage_type, password, nodes, logger):
+def deploy_namespaces(nr_namepaces, name,  size, storage_type, password, nodes, logger, master_nodes=None):
     """
     generic function to deploy a group namespaces
 
@@ -448,6 +487,8 @@ def deploy_namespaces(nr_namepaces, name,  size, storage_type, password, nodes, 
     while deployed_nr_namespaces < required_nr_namespaces:
         # sort nodes by the amount of storage available
         nodes = sort_by_less_used(nodes, storage_key)
+        if master_nodes:
+            nodes = sort_by_master_node(nodes, master_nodes)
         logger.info('number of possible nodes to use for namespace deployments %s', len(nodes))
         if len(nodes) <= 0:
             return
@@ -475,8 +516,6 @@ def deploy_namespaces(nr_namepaces, name,  size, storage_type, password, nodes, 
                 nodes[nodes.index(node)]['used_resources'][storage_key] += size
 
                 yield (namespace, node)
-
-
 
 
 def list_farm_nodes(farm_organization):
@@ -578,6 +617,13 @@ def sort_by_less_used(nodes, storage_key):
         return node['total_resources'][storage_key] - node['used_resources'][storage_key]
     return sorted(nodes, key=key, reverse=True)
 
+def sort_by_master_node(nodes, master_nodes):
+    nodes_copy = list(nodes)
+    for node in nodes:
+        if node['node_id'] in master_nodes:
+            nodes_copy.append(node)
+            nodes_copy.remove(node)
+    return nodes_copy
 
 def filter_node_online(nodes):
     def url_ping(node):

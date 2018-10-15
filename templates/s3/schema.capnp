@@ -9,11 +9,14 @@ struct Schema {
     storageSize @5: UInt64; # total s3 storage size in GB
     namespaces @6: List(Namespace); # namespace services created for s3. This is set by the template.
     tlog @7: Namespace;
-    minioLogin @8: Text; # minio login
-    minioPassword @9: Text; # minio password
-    minioUrls @10: Urls; # url to access minio on. This is set by the template.
-    nsPassword @11: Text; # Namespace password
-    minioBlockSize @12 :UInt32=1048576; # minio data block size in bytes
+    master @8 :Namespace;
+    minioLogin @9: Text; # minio login
+    minioPassword @10: Text; # minio password
+    minioUrls @11: Urls; # url to access minio on. This is set by the template.
+    nsPassword @12: Text; # Namespace password
+    minioBlockSize @13 :UInt32=1048576; # minio data block size in bytes
+    masterNodes @14 :List(Text);
+    nsName @15 :Text; # List of the nodes that the master s3 used for namespaces
 
     enum StorageType {
      hdd @0;
