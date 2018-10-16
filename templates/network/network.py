@@ -38,7 +38,6 @@ class Network(TemplateBase):
         """
         return j.clients.zos.get(NODE_CLIENT)
 
-    @property
     def _can_ping(self):
         """
         The test is simply pinging the test ip as follows
@@ -47,26 +46,32 @@ class Network(TemplateBase):
         so we do `ping -c r -W 1 -nq <ip>` instead
         """
 
-        test_ip = self.data.get('testIp')
-        if not test_ip:
-            return True # assume network is working
+        def ping(test_ip):
+            result = self._node_sal.client.system('ping -c r -W 1 -nq "%s"' % test_ip).get()
+            if result.state != 'SUCCESS':
+                # no need to parse output, we know network is not working
+                return False
 
-        result = self._node_sal.client.system('ping -c r -W 1 -nq "%s"' % test_ip).get()
-        if result.state != 'SUCCESS':
-            # no need to parse output, we know network is not working
-            return False
+            match = re.search(
+                r'^(\d+) packets transmitted, (\d+) packets received, (\d+)% packet loss$',
+                result.stdout,
+                re.MULTILINE
+            )
 
-        match = re.search(
-            r'^(\d+) packets transmitted, (\d+) packets received, (\d+)% packet loss$',
-            result.stdout,
-            re.MULTILINE
-        )
+            if match is None:
+                self.logger.error('failed to parse ping output')
+                return True  # avoid taking action to not disturb network until the parser is fixed
 
-        if match is None:
-            self.logger.error('failed to parse ping output')
-            return True # avoid taking action to not disturb network until the parser is fixed
+            return not bool(match.group(3))  # percentage, 0 is good, anything else is bad
 
-        return not bool(match.group(3)) # percentage, 0 is good, anything else is bad
+        ips = self.data.get('testIps', [])
+        if not ips:
+            return True  # assume network is working
+
+        for ip in ips:
+            if ping(ip):
+                return True
+        return False
 
     def _restart_bond(self):
         self._node_sal.network.restart_bond(
@@ -89,8 +94,9 @@ class Network(TemplateBase):
             # the check is only for bonded interfaces
             return
 
-        if not self._can_ping:
-            self.logger.info('cannot ping test ip %s. restarting bond slaves' % self.data.get('testIp'))
+        if not self._can_ping():
+            ips = ','.join(self.data.get('testIps', []))
+            self.logger.info('cannot ping test ips %s. restarting bond slaves' % ips)
             self._restart_bond()
 
     def configure(self):
