@@ -1,7 +1,11 @@
-from jumpscale import j
+import time
+from json import JSONDecodeError
 
+from jumpscale import j
 from zerorobot.template.base import TemplateBase
-from zerorobot.template.state import StateCheckError
+from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
+                                      SERVICE_STATE_SKIPPED,
+                                      SERVICE_STATE_WARNING, StateCheckError)
 
 NODE_CLIENT = 'local'
 
@@ -127,3 +131,48 @@ class Minio(TemplateBase):
         if minio_sal.is_running():
             minio_sal.create_config()
             minio_sal.reload()
+
+    def _process_logs(self):
+        def callback(level, msg, flag):
+            health_monitoring(self.state, level, msg, flag)
+
+        while True:
+            # wait for the process to be running before processing the logs
+            try:
+                self.state.check('status', 'running', 'ok')
+            except StateCheckError:
+                time.sleep(5)
+                continue
+
+            # once the process is started, start monitoring the logs
+            # the greenlet will parse the stream of logs
+            # and self-heal when needed
+            gl = self.gl_mgr.add("minio_process", self._minio_sal.stream(callback))
+            # we block here until the process stops streaming (usually that means the process has stopped)
+            gl.join()
+
+
+def health_monitoring(state, level, msg, flag):
+    if level in [LOG_LVL_MESSAGE_INTERNAL, LOG_LVL_OPS_ERROR, LOG_LVL_CRITICAL_ERROR]:
+        msg = j.data.serializer.json.loads(msg)
+        if 'data_shard' in msg:
+            state.set('data_shards', msg['data_shard'], SERVICE_STATE_ERROR)
+        if 'tlog_shard' in msg:
+            state.set('tlog_shards', msg['tlog_shard'], SERVICE_STATE_ERROR)
+
+
+LOG_LVL_STDOUT = 1
+LOG_LVL_STDERR = 2
+LOG_LVL_MESSAGE_PUBLIC = 3
+LOG_LVL_MESSAGE_INTERNAL = 4
+LOG_LVL_LOG_UNKNOWN = 5
+LOG_LVL_LOG_STRUCTURED = 6
+LOG_LVL_WARNING = 7
+LOG_LVL_OPS_ERROR = 8
+LOG_LVL_CRITICAL_ERROR = 9
+LOG_LVL_STATISTICS = 10
+LOG_LVL_RESULT_JSON = 20
+LOG_LVL_RESULT_YAML = 21
+LOG_LVL_RESULT_TOML = 22
+LOG_LVL_RESULT_HRD = 23
+LOG_LVL_JOB = 30
