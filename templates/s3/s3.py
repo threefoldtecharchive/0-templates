@@ -157,7 +157,6 @@ class S3(TemplateBase):
             vm_robot, _ = self._vm_robot_and_ip()
             minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
 
-
             try:
                 minio.state.check('status', 'running', 'ok')
                 self.state.set('status', 'running', 'ok')
