@@ -5,4 +5,5 @@ struct Schema {
     vlan @1: Int32; # VlanTag to be used for vxlan traffic
     bonded @2: Bool; # should the backend be bonded over 2 interfaces? @optional
     driver @3: Text; # will ensure kernel module is loaded and interfaces are up @optional
+    testIp @4 Text; # a test ip used by the monitor routine, network assumed broken if not pingable
 }
