@@ -17,6 +17,7 @@ class Minio(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
+        self._healer = Healer(self)
         self.add_delete_callback(self.uninstall)
         self.recurring_action('_monitor', 30)  # every 30 seconds
 
@@ -74,6 +75,10 @@ class Minio(TemplateBase):
     def install(self):
         self.logger.info('Installing minio %s' % self.name)
         self.state.set('actions', 'install', 'ok')
+        for addr in self.data['zerodbs']:
+            self.state.set('data_shards', addr, SERVICE_STATE_OK)
+        if self.data['tlog']:
+            self.state.set('tlog_shards', self.data['tlog']['address'], SERVICE_STATE_OK)
 
     def start(self):
         """
@@ -83,6 +88,7 @@ class Minio(TemplateBase):
         self.logger.info('Starting minio %s' % self.name)
         minio_sal = self._minio_sal
         minio_sal.start()
+        self._healer.start()
         self.state.set('actions', 'start', 'ok')
         self.state.set('status', 'running', 'ok')
 
@@ -93,11 +99,13 @@ class Minio(TemplateBase):
         self.state.check('actions', 'install', 'ok')
         self.logger.info('Stopping minio %s' % self.name)
         self._minio_sal.stop()
+        self._healer.stop()
         self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
 
     def uninstall(self):
         self.logger.info('Uninstalling minio %s' % self.name)
+        self.healer.stop()
         self._minio_sal.destroy()
         self.state.delete('actions', 'install')
         self.state.delete('status', 'running')
@@ -110,6 +118,10 @@ class Minio(TemplateBase):
             minio_sal.create_config()
             minio_sal.reload()
 
+        # we consider shards info to be valid when we update them
+        for addr in self.data['zerodbs']:
+            self.state.set('data_shards', addr, SERVICE_STATE_OK)
+
     def update_tlog(self, namespace, address):
         self.data['tlog'] = {
             'namespace': namespace,
@@ -121,6 +133,10 @@ class Minio(TemplateBase):
             minio_sal.create_config()
             minio_sal.reload()
 
+        # we consider shards info to be valid when we update them
+        if self.data['tlog']:
+            self.state.set('tlog_shards', self.data['tlog']['address'], SERVICE_STATE_OK)
+
     def update_master(self, namespace, address):
         self.data['master'] = {
             'namespace': namespace,
@@ -131,34 +147,6 @@ class Minio(TemplateBase):
         if minio_sal.is_running():
             minio_sal.create_config()
             minio_sal.reload()
-
-    def _process_logs(self):
-        def callback(level, msg, flag):
-            health_monitoring(self.state, level, msg, flag)
-
-        while True:
-            # wait for the process to be running before processing the logs
-            try:
-                self.state.check('status', 'running', 'ok')
-            except StateCheckError:
-                time.sleep(5)
-                continue
-
-            # once the process is started, start monitoring the logs
-            # the greenlet will parse the stream of logs
-            # and self-heal when needed
-            gl = self.gl_mgr.add("minio_process", self._minio_sal.stream(callback))
-            # we block here until the process stops streaming (usually that means the process has stopped)
-            gl.join()
-
-
-def health_monitoring(state, level, msg, flag):
-    if level in [LOG_LVL_MESSAGE_INTERNAL, LOG_LVL_OPS_ERROR, LOG_LVL_CRITICAL_ERROR]:
-        msg = j.data.serializer.json.loads(msg)
-        if 'data_shard' in msg:
-            state.set('data_shards', msg['data_shard'], SERVICE_STATE_ERROR)
-        if 'tlog_shard' in msg:
-            state.set('tlog_shards', msg['tlog_shard'], SERVICE_STATE_ERROR)
 
 
 LOG_LVL_STDOUT = 1
@@ -176,3 +164,43 @@ LOG_LVL_RESULT_YAML = 21
 LOG_LVL_RESULT_TOML = 22
 LOG_LVL_RESULT_HRD = 23
 LOG_LVL_JOB = 30
+
+
+class Healer:
+
+    def __init__(self, minio):
+        self.service = minio
+        self.logger = minio.logger
+
+    def start(self):
+        self.logger.info("start minio logs processing")
+        self.service.gl_mgr.add("minio_process", self._process_logs)
+
+    def stop(self):
+        self.logger.info("stop minio logs processing")
+        self.service.gl_mgr.stop("minio_process", wait=True, timeout=5)
+
+    def _process_logs(self):
+        def callback(level, msg, flag):
+            _health_monitoring(self.service.state, level, msg, flag)
+
+        while True:
+            # wait for the process to be running before processing the logs
+            try:
+                self.service.state.check('status', 'running', 'ok')
+            except StateCheckError:
+                time.sleep(5)
+                continue
+
+            # once the process is started, start monitoring the logs
+            # this will block until the process stops streaming (usually that means the process has stopped)
+            self.service._minio_sal.stream(callback)
+
+
+def _health_monitoring(state, level, msg, flag):
+    if level in [LOG_LVL_MESSAGE_INTERNAL, LOG_LVL_OPS_ERROR, LOG_LVL_CRITICAL_ERROR]:
+        msg = j.data.serializer.json.loads(msg)
+        if 'data_shard' in msg:
+            state.set('data_shards', msg['data_shard'], SERVICE_STATE_ERROR)
+        if 'tlog_shard' in msg:
+            state.set('tlog_shards', msg['tlog_shard'], SERVICE_STATE_ERROR)
