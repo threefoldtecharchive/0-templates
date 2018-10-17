@@ -15,8 +15,8 @@ struct Schema {
     minioUrls @11: Urls; # url to access minio on. This is set by the template.
     nsPassword @12: Text; # Namespace password
     minioBlockSize @13 :UInt32=1048576; # minio data block size in bytes
-    masterNodes @14 :List(Text);
-    nsName @15 :Text; # List of the nodes that the master s3 used for namespaces
+    masterNodes @14 :List(Text); # List of the nodes that the master s3 used for namespaces
+    nsName @15 :Text;
 
     enum StorageType {
      hdd @0;

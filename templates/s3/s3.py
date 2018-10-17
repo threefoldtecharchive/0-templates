@@ -38,8 +38,8 @@ class S3(TemplateBase):
 
         for key in ['minioLogin', 'nsName']:
             if not self.data[key]:
-                    raise ValueError('Invalid {}'.format(key))
-    
+                raise ValueError('Invalid {}'.format(key))
+
         if not self.data['nsPassword']:
             self.data['nsPassword'] = j.data.idgenerator.generateXCharID(32)
 
@@ -123,7 +123,7 @@ class S3(TemplateBase):
             if tlog.get('address') and tlog['address'] != connection_info:
                 self.logger.info("tlog namespace connection in service data is not correct, updating minio configuration")
                 t = minio.schedule_action('update_tlog', args={'namespace': self._tlog_namespace,
-                                                            'address': connection_info})
+                                                               'address': connection_info})
                 t.wait(die=True)
                 self.data['tlog']['address'] = connection_info
             else:
@@ -139,7 +139,7 @@ class S3(TemplateBase):
             if master.get('address') and master != connection_info:
                 self.logger.info("master namespace connection in service data is not correct, updating minio configuration")
                 t = minio.schedule_action('update_master', args={'namespace': self._tlog_namespace,
-                                                            'address': connection_info})
+                                                                 'address': connection_info})
                 t.wait(die=True)
                 self.data['master']['address'] = connection_info
             else:
@@ -156,6 +156,8 @@ class S3(TemplateBase):
         def update_state():
             vm_robot, _ = self._vm_robot_and_ip()
             minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
+
+
             try:
                 minio.state.check('status', 'running', 'ok')
                 self.state.set('status', 'running', 'ok')
@@ -196,7 +198,7 @@ class S3(TemplateBase):
             self._deploy_minio_vm()
             self.logger.info("minio vm deployed")
             return self._vm_robot_and_ip()
-        
+
         def get_master_info():
             robot = get_zrobot(self.data['master']['node'], self.data['master']['url'])
             namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['master']['name'])
@@ -207,7 +209,6 @@ class S3(TemplateBase):
                 'address': master_connection,
                 'namespace': self._tlog_namespace,
             }
-
 
         # deploy all namespaces and vm concurrently
         ns_data_gl = gevent.spawn(deploy_data_namespaces)
@@ -236,12 +237,11 @@ class S3(TemplateBase):
         if vm_gl.exception:
             raise vm_gl.exception
         vm_robot, ip = vm_gl.value
-    
+
         if self.data['master']['name']:
             if master_gl.exception:
                 raise master_gl.exception
             master = master_gl.value
-
 
         self.logger.info("create the minio service on the vm")
         minio_data = {
@@ -343,10 +343,10 @@ class S3(TemplateBase):
     def upgrade(self):
         self.stop()
         self.start()
-    
+
     def tlog(self):
         return self.data['tlog']
-    
+
     def namespaces_nodes(self):
         return [namespace['node'] for namespace in self.data['namespaces']]
 
@@ -635,6 +635,7 @@ def sort_by_less_used(nodes, storage_key):
         return node['total_resources'][storage_key] - node['used_resources'][storage_key]
     return sorted(nodes, key=key, reverse=True)
 
+
 def sort_by_master_nodes(nodes, master_nodes):
     nodes_copy = list(nodes)
     for node in nodes:
@@ -642,6 +643,7 @@ def sort_by_master_nodes(nodes, master_nodes):
             nodes_copy.append(node)
             nodes_copy.remove(node)
     return nodes_copy
+
 
 def filter_node_online(nodes):
     def url_ping(node):
