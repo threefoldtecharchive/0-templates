@@ -121,6 +121,7 @@ class Network(TemplateBase):
     def uninstall(self):
         try:
             container = self._node_sal.containers.get('ovs')
+            self._node_sal.network.unconfigure()
             container.stop()
         except LookupError:
             pass
