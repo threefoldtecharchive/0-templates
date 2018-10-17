@@ -113,6 +113,7 @@ class Network(TemplateBase):
             vlan_tag=self.data['vlan'],
             ovs_container_name='ovs',
             bonded=self.data.get('bonded', False),
+            mtu=self.data.get('mtu', 9000) or 9000,
         )
 
         self.state.set('actions', 'install', 'ok')
