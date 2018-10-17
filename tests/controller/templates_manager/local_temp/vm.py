@@ -3,20 +3,19 @@ from zerorobot.service_collection import ServiceNotFoundError
 from testconfig import config
 import random
 
+VMFLIST = 'https://hub.grid.tf/tf-bootable/ubuntu:latest.flist'
 class VMManager:
     def __init__(self, parent, service_name=None):
         self.vm_template = 'github.com/threefoldtech/0-templates/vm/0.0.1'
         self._parent = parent
         self.logger = self._parent.logger
         self.robot = self._parent.remote_robot
-
+        self._vm_service = None
         if service_name:
             try:
                 self._vm_service = self.robot.service.get(name=service_name)
             except ServiceNotFoundError:
                 self._vm_service = None
-        else:
-            self._vm_service = None
 
     @property
     def service(self):
@@ -35,7 +34,7 @@ class VMManager:
             'memory': 2048,
             'cpu': 1,
             'nics': [{'type': 'default', 'name': 'defaultnic'}],
-            'flist': 'https://hub.grid.tf/tf-bootable/ubuntu:latest.flist',
+            'flist': VMFLIST,
             'ports': [{'source': ssh_port, 'target': 22, 'name': 'ssh'}],
             'configs': [
                 {'path': '/root/.ssh/authorized_keys', 'content': config['vm']['ssh'],
@@ -56,3 +55,29 @@ class VMManager:
     def info(self):
         return self.service.schedule_action('info')
 
+    def shutdown(self, force=True):
+        return self.service.schedule_action('info',args={"force":force})
+    
+    def start(self):
+        return self.service.schedule_action('start')
+
+    def stop(self):
+        return self.service.schedule_action('stop')
+    
+    def pause(self):
+        return self.service.schedule_action('pause')    
+
+    def resume(self):
+        return self.service.schedule_action('resume')    
+
+    def reboot(self):
+        return self.service.schedule_action('reboot')    
+
+    def reset(self):
+        return self.service.schedule_action('reset')    
+
+    def enable_vnc(self):
+        return self.service.schedule_action('enable_vnc')    
+
+    def disable_vnc(self):
+        return self.service.schedule_action('disable_vnc')    
