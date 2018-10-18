@@ -3,7 +3,7 @@ from zerorobot.service_collection import ServiceNotFoundError
 from testconfig import config
 import random
 
-VMFLIST = 'https://hub.grid.tf/tf-bootable/ubuntu:latest.flist'
+VMFLIST = 'https://hub.grid.tf/tf-bootable/ubuntu:lts.flist'
 class VMManager:
     def __init__(self, parent, service_name=None):
         self.vm_template = 'github.com/threefoldtech/0-templates/vm/0.0.1'
@@ -28,24 +28,9 @@ class VMManager:
     def install_state(self):
         return self.service.state.check('actions', 'install', 'ok')
 
-    def install(self, wait=True, **kwargs):
-        ssh_port = random.randint(22022, 22922)
-        default_data = {
-            'memory': 2048,
-            'cpu': 1,
-            'nics': [{'type': 'default', 'name': 'defaultnic'}],
-            'flist': VMFLIST,
-            'ports': [{'source': ssh_port, 'target': 22, 'name': 'ssh'}],
-            'configs': [
-                {'path': '/root/.ssh/authorized_keys', 'content': config['vm']['ssh'],
-                 'name': 'sshkey'}]
-        }
-        if kwargs:
-            default_data.update(kwargs)
-
-        self.vm_service_name = "vm_{}".format(self._parent._generate_random_string())
-        self.logger.info('Install {} vm, ssh port : {} '.format(self.vm_service_name, ssh_port))
-        self._vm_service = self.robot.services.create(self.vm_template, self.vm_service_name, default_data)
+    def install(self, data, wait=True):
+        self.vm_service_name = data['name']
+        self._vm_service = self.robot.services.create(self.vm_template, self.vm_service_name, data)
         self._vm_service.schedule_action('install').wait(die=wait)
 
     def uninstall(self, wait=True):
@@ -56,7 +41,7 @@ class VMManager:
         return self.service.schedule_action('info')
 
     def shutdown(self, force=True):
-        return self.service.schedule_action('info',args={"force":force})
+        return self.service.schedule_action('shutdown')
     
     def start(self):
         return self.service.schedule_action('start')

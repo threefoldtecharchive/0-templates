@@ -21,7 +21,7 @@ class Controller:
         # remote robot
         j.clients.zrobot.get(self.config['robot']['remote_client'], data={'url': config['robot']['remote_server']})
         self.remote_robot = j.clients.zrobot.robots[self.config['robot']['remote_client']]
-        self.node = j.clients.zos.get('remote_node', data={'host':self.config['robot']['remote_client'][7:-5]})
+        self.node = j.clients.zos.get('remote_node', data={'host':self.config['robot']['remote_server'][7:-5]})
 
         # get instance from all templates_manager
         self.vm_manager = vm.VMManager(parent=self, service_name=None)
