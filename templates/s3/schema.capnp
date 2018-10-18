@@ -16,7 +16,7 @@ struct Schema {
     nsPassword @12: Text; # Namespace password
     minioBlockSize @13 :UInt32=1048576; # minio data block size in bytes
     masterNodes @14 :List(Text); # List of the nodes that the master s3 used for namespaces
-    nsName @15 :Text;
+    nsName @15 :Text; # Namespace name prefix that will be used for naming all zdb reservations. Should be unique between different S3 deployments.
 
     enum StorageType {
      hdd @0;
