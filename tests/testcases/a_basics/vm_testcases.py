@@ -45,7 +45,6 @@ class TESTVM(BaseTest):
         vm = [vm for vm in vms if vm['name'] == vm_name]
         self.assertFalse(vm)
 
-
     def test002_create_vm_with_non_valid_params(self):
         """ ZRT-ZOS-004
         *Test case for creating vm with non-valid parameters*
@@ -62,7 +61,6 @@ class TESTVM(BaseTest):
         with self.assertRaises(Exception) as e:
             vm.install(data, wait=True)
         self.assertIn( "invalid input. Vm requires flist or ipxeUrl to be specifed.", e.exception.args[0])
-
     
 class VM_actions(BaseTest):
 

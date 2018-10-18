@@ -96,7 +96,6 @@ class BaseTest(TestCase):
         return ssh
 
     def get_vm_default_data(self, **kwargs):
-       
         default_data = {
             'name' : self.random_string(),
             'memory': 2048,
