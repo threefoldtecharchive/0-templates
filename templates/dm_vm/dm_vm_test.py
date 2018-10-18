@@ -86,8 +86,9 @@ class TestVmTemplate(ZrobotBaseTest):
         capacity.api.GetCapacity.return_value = (MagicMock(robot_address='url'), None)
         patch('jumpscale.j.clients.threefold_directory.get.return_value', capacity).start()
         vm = DmVm('vm', data=self.valid_data)
+        vm.api.robots = MagicMock()
         vm.validate()
-        j.clients.zrobot.get.assert_called_with(self.valid_data['nodeId'], data={'url': 'url'})
+        vm.api.robots.get.assert_called_with(self.valid_data['nodeId'], data={'url': 'url'})
         assert vm.data == self.valid_data
 
     def test_node_vm(self):

@@ -95,7 +95,7 @@ class S3(TemplateBase):
         # gather all the namespace services
         namespaces = []
         for namespace in self.data['namespaces']:
-            robot = get_zrobot(namespace['node'], namespace['url'])
+            robot = self.api.robots.get(namespace['node'], namespace['url'])
             namespaces.append(robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name']))
 
         namespaces_connection = sorted(namespaces_connection_info(namespaces))
@@ -116,7 +116,7 @@ class S3(TemplateBase):
         self.logger.info("verify tlog namespace connections")
         tlog = self.data.get('tlog', {})
         if tlog.get('node') and tlog.get('url'):
-            robot = get_zrobot(self.data['tlog']['node'], self.data['tlog']['url'])
+            robot = self.api.robots.get(self.data['tlog']['node'], self.data['tlog']['url'])
             namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['tlog']['name'])
 
             connection_info = namespace_connection_info(namespace)
@@ -132,7 +132,7 @@ class S3(TemplateBase):
         self.logger.info("verify master namespace connections")
         master = self.data.get('master', {})
         if master.get('node') and master.get('url'):
-            robot = get_zrobot(master['node'], master['url'])
+            robot = self.api.robots.get(master['node'], master['url'])
             namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=master['name'])
 
             connection_info = namespace_connection_info(namespace)
@@ -200,7 +200,7 @@ class S3(TemplateBase):
             return self._vm_robot_and_ip()
 
         def get_master_info():
-            robot = get_zrobot(self.data['master']['node'], self.data['master']['url'])
+            robot = self.api.robots.get(self.data['master']['node'], self.data['master']['url'])
             namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['master']['name'])
             master_connection = namespace_connection_info(namespace)
             self.data['master']['address'] = master_connection
@@ -290,7 +290,7 @@ class S3(TemplateBase):
         # uninstall and delete all the created namespaces
         def delete_namespace(namespace):
             self.logger.info("deleting namespace %s on node %s", namespace['node'], namespace['url'])
-            robot = get_zrobot(namespace['node'], namespace['url'])
+            robot = self.api.robots.get(namespace['node'], namespace['url'])
             try:
                 ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
                 ns.schedule_action('uninstall').wait(die=True)
@@ -361,7 +361,7 @@ class S3(TemplateBase):
         if not mgmt_ip:
             raise RuntimeError('VM has no ip assignments in zerotier network')
 
-        return get_zrobot("%s_vm" % mgmt_ip, 'http://{}:6600'.format(mgmt_ip)), mgmt_ip
+        return self.api.robots.get("%s_vm" % mgmt_ip, 'http://{}:6600'.format(mgmt_ip)), mgmt_ip
 
     def _deploy_minio_backend_namespaces(self):
         self.logger.info("create namespaces to be used as a backend for minio")
@@ -375,7 +375,7 @@ class S3(TemplateBase):
         # Check if namespaces have already been created in a previous install attempt
         if self.data['namespaces']:
             for namespace in self.data['namespaces']:
-                robot = get_zrobot(namespace['node'], namespace['url'])
+                robot = self.api.robots.get(namespace['node'], namespace['url'])
                 namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
                 deployed_namespaces.append(namespace)
 
@@ -409,7 +409,7 @@ class S3(TemplateBase):
 
         # Check if namespaces have already been created in a previous install attempt
         if self.data.get('tlog') and self.data['tlog']['node'] and self.data['tlog']['url']:
-            robot = get_zrobot(self.data['tlog']['node'], self.data['tlog']['url'])
+            robot = self.api.robots.get(self.data['tlog']['node'], self.data['tlog']['url'])
             namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['tlog']['name'])
             namespace.schedule_action('install').wait(die=True)
             return namespace
@@ -560,7 +560,7 @@ def list_farm_nodes(farm_organization):
 
 def install_namespace(node, name, disk_type, size, password):
     try:
-        robot = get_zrobot(node['node_id'], node['robot_address'])
+        robot = self.api.robots.get(node['node_id'], node['robot_address'])
         data = {
             'diskType': disk_type,
             'mode': 'direct',
@@ -623,11 +623,6 @@ def namespace_connection_info(namespace):
     # if there is not special storage network configured,
     # then the sal return the zerotier as storage address
     return '{}:{}'.format(result['storage_ip'], result['port'])
-
-
-def get_zrobot(name, url):
-    j.clients.zrobot.get(name, data={'url': url})
-    return j.clients.zrobot.robots[name]
 
 
 def sort_by_less_used(nodes, storage_key):
