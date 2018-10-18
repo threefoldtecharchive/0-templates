@@ -66,20 +66,22 @@ class TESTVM(BaseTest):
     
 class VM_actions(BaseTest):
 
-    def setUp(self):
-        super().setUp()
-        self.vm_name = self.random_string()
-        self.port_name = self.random_string()
-        self.source_port = random.randint(1000, 2000)
+    @classmethod
+    def setUpClass(cls):
+        self = cls()
+        cls.vm_name = self.random_string()
+        cls.port_name = self.random_string()
+        cls.source_port = random.randint(1000, 2000)
         port = [{'name': self.port_name, 'source': self.source_port, 'target': 22}]
-        self.data = self.get_vm_default_data(name=self.vm_name, ports=port)
-        self.vm = self.controller.vm_manager
-        self.vm.install(self.data, wait=True)
+        cls.data = self.get_vm_default_data(name=self.vm_name, ports=port)
+        cls.vm = self.controller.vm_manager
+        cls.vm.install(self.data, wait=True)
         result = self.ssh_vm_execute_command(vm_ip=self.node_ip, port=self.source_port, cmd='pwd')
         self.assertEqual(result, '/root')
 
-    def teardown(self):
-        self.vm.uninstall()
+    @classmethod
+    def tearDownClass(cls):
+        cls.vm.uninstall()
 
     def test001_pause_and_resume_vm(self):
         """ ZRT-ZOS-005
@@ -159,8 +161,8 @@ class VM_actions(BaseTest):
         self.vm.enable_vnc()
 
         self.log("Check that vnc_port has been enabled successfully.")
-        info = self.controller.vm_manager.info()
-        vnc_port = info.result['vnc'] - 5900
+        info = self.vm.info().result
+        vnc_port = info['vnc'] - 5900
         response = self.check_vnc_connection('{}:{}'.format(self.node_ip, vnc_port))
         self.assertFalse(response.returncode)
 

@@ -3,7 +3,6 @@ from zerorobot.service_collection import ServiceNotFoundError
 from testconfig import config
 import random
 
-VMFLIST = 'https://hub.grid.tf/tf-bootable/ubuntu:lts.flist'
 class VMManager:
     def __init__(self, parent, service_name=None):
         self.vm_template = 'github.com/threefoldtech/0-templates/vm/0.0.1'
