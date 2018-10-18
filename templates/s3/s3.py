@@ -157,7 +157,6 @@ class S3(TemplateBase):
             vm_robot, _ = self._vm_robot_and_ip()
             minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
 
-
             try:
                 minio.state.check('status', 'running', 'ok')
                 self.state.set('status', 'running', 'ok')
@@ -382,14 +381,13 @@ class S3(TemplateBase):
         self.logger.info("namespaces required: %d of %dGB", required_nr_namespaces, namespace_size)
         self.logger.info("namespaces already deployed %d", len(deployed_namespaces))
         required_nr_namespaces = required_nr_namespaces - len(deployed_namespaces)
-        for namespace, node in deploy_namespaces(nr_namepaces=required_nr_namespaces,
-                                                 name=self.data['nsName'],
-                                                 size=namespace_size,
-                                                 storage_type=self.data['storageType'],
-                                                 password=self.data['nsPassword'],
-                                                 nodes=self._nodes,
-                                                 logger=self.logger,
-                                                 master_nodes=self.data['masterNodes']):
+        for namespace, node in self._deploy_namespaces(nr_namepaces=required_nr_namespaces,
+                                                       name=self.data['nsName'],
+                                                       size=namespace_size,
+                                                       storage_type=self.data['storageType'],
+                                                       password=self.data['nsPassword'],
+                                                       nodes=self._nodes,
+                                                       master_nodes=self.data['masterNodes']):
             deployed_namespaces.append(namespace)
             self.data['namespaces'].append({'name': namespace.name,
                                             'url': node['robot_address'],
@@ -415,14 +413,13 @@ class S3(TemplateBase):
             return namespace
 
         tlog_namespace = None
-        for namespace, node in deploy_namespaces(nr_namepaces=1,
-                                                 name=self._tlog_namespace,
-                                                 size=10,  # TODO: compute how much is needed
-                                                 storage_type='ssd',
-                                                 password=self.data['nsPassword'],
-                                                 nodes=self._nodes,
-                                                 logger=self.logger,
-                                                 master_nodes=self.data['masterNodes']):
+        for namespace, node in self._deploy_namespaces(nr_namepaces=1,
+                                                       name=self._tlog_namespace,
+                                                       size=10,  # TODO: compute how much is needed
+                                                       storage_type='ssd',
+                                                       password=self.data['nsPassword'],
+                                                       nodes=self._nodes,
+                                                       master_nodes=self.data['masterNodes']):
             tlog_namespace = namespace
             self.data['tlog'] = {'name': tlog_namespace.name,
                                  'url': node['robot_address'],
@@ -484,56 +481,76 @@ class S3(TemplateBase):
 
         raise RuntimeError("could not deploy vm for minio")
 
+    def _deploy_namespaces(self, nr_namepaces, name,  size, storage_type, password, nodes, master_nodes=None):
+        """
+        generic function to deploy a group namespaces
 
-def deploy_namespaces(nr_namepaces, name,  size, storage_type, password, nodes, logger, master_nodes=None):
-    """
-    generic function to deploy a group namespaces
+        This function will yield namespaces as they are created
+        It can return once nr_namespaces has been created or if we cannot create namespaces on any nodes.
+        It is up to the caller to count the number of namespaces received from this function to know if the deployed enough namespaces
+        """
 
-    This function will yield namespaces as they are created
-    It can return once nr_namespaces has been created or if we cannot create namespaces on any nodes.
-    It is up to the caller to count the number of namespaces received from this function to know if the deployed enough namespaces
-    """
+        if storage_type not in ['ssd', 'hdd']:
+            raise ValueError("storage_type must be 'ssd' or 'hdd', not %s" % storage_type)
 
-    if storage_type not in ['ssd', 'hdd']:
-        raise ValueError("storage_type must be 'ssd' or 'hdd', not %s" % storage_type)
+        storage_key = 'sru' if storage_type == 'ssd' else 'hru'
 
-    storage_key = 'sru' if storage_type == 'ssd' else 'hru'
+        required_nr_namespaces = nr_namepaces
+        deployed_nr_namespaces = 0
+        nodes = filter_node_online(nodes.copy())
+        while deployed_nr_namespaces < required_nr_namespaces:
+            # sort nodes by the amount of storage available
+            nodes = sort_by_less_used(nodes, storage_key)
+            if master_nodes:
+                nodes = sort_by_master_nodes(nodes, master_nodes)
+            self.logger.info('number of possible nodes to use for namespace deployments %s', len(nodes))
+            if len(nodes) <= 0:
+                return
 
-    required_nr_namespaces = nr_namepaces
-    deployed_nr_namespaces = 0
-    nodes = filter_node_online(nodes.copy())
-    while deployed_nr_namespaces < required_nr_namespaces:
-        # sort nodes by the amount of storage available
-        nodes = sort_by_less_used(nodes, storage_key)
-        if master_nodes:
-            nodes = sort_by_master_nodes(nodes, master_nodes)
-        logger.info('number of possible nodes to use for namespace deployments %s', len(nodes))
-        if len(nodes) <= 0:
-            return
+            gls = set()
+            for i in range(required_nr_namespaces - deployed_nr_namespaces):
+                node = nodes[i % len(nodes)]
+                self.logger.info("try to install namespace %s on node %s", name, node['node_id'])
+                gls.add(gevent.spawn(self._install_namespace,
+                                     node=node,
+                                     name=name,
+                                     disk_type=storage_type,
+                                     size=size,
+                                     password=password))
 
-        gls = set()
-        for i in range(required_nr_namespaces - deployed_nr_namespaces):
-            node = nodes[i % len(nodes)]
-            logger.info("try to install namespace %s on node %s", name, node['node_id'])
-            gls.add(gevent.spawn(install_namespace,
-                                 node=node,
-                                 name=name,
-                                 disk_type=storage_type,
-                                 size=size,
-                                 password=password))
+            for g in gevent.iwait(gls):
+                if g.exception and g.exception.node in nodes:
+                    self.logger.error("we could not deploy on node %s, remove it from the possible node to use", node['node_id'])
+                    nodes.remove(g.exception.node)
+                else:
+                    namespace, node = g.value
+                    deployed_nr_namespaces += 1
 
-        for g in gevent.iwait(gls):
-            if g.exception and g.exception.node in nodes:
-                logger.error("we could not deploy on node %s, remove it from the possible node to use", node['node_id'])
-                nodes.remove(g.exception.node)
-            else:
-                namespace, node = g.value
-                deployed_nr_namespaces += 1
+                    # update amount of ressource so the next iteration of the loop will sort the list of nodes properly
+                    nodes[nodes.index(node)]['used_resources'][storage_key] += size
 
-                # update amount of ressource so the next iteration of the loop will sort the list of nodes properly
-                nodes[nodes.index(node)]['used_resources'][storage_key] += size
+                    yield (namespace, node)
 
-                yield (namespace, node)
+    def _install_namespace(self, node, name, disk_type, size, password):
+        robot = self.api.robots.get(node['node_id'], node['robot_address'])
+        try:
+            data = {
+                'diskType': disk_type,
+                'mode': 'direct',
+                'password': password,
+                'public': False,
+                'size': size,
+                'nsName': name,
+            }
+            namespace = robot.services.create(template_uid=NS_TEMPLATE_UID, data=data)
+            task = namespace.schedule_action('install').wait(timeout=300)
+            if task.eco:
+                namespace.delete()
+                raise NamespaceDeployError(task.eco.message, node)
+            return namespace, node
+
+        except Exception as err:
+            raise NamespaceDeployError(str(err), node)
 
 
 def list_farm_nodes(farm_organization):
@@ -556,28 +573,6 @@ def list_farm_nodes(farm_organization):
                 return False
         return True
     return list(filter(f, nodes))
-
-
-def install_namespace(node, name, disk_type, size, password):
-    try:
-        robot = self.api.robots.get(node['node_id'], node['robot_address'])
-        data = {
-            'diskType': disk_type,
-            'mode': 'direct',
-            'password': password,
-            'public': False,
-            'size': size,
-            'nsName': name,
-        }
-        namespace = robot.services.create(template_uid=NS_TEMPLATE_UID, data=data)
-        task = namespace.schedule_action('install').wait(timeout=300)
-        if task.eco:
-            namespace.delete()
-            raise NamespaceDeployError(task.eco.message, node)
-        return namespace, node
-
-    except Exception as err:
-        raise NamespaceDeployError(str(err), node)
 
 
 def compute_minimum_namespaces(total_size, data, parity):
