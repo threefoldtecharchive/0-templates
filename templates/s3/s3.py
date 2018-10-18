@@ -38,8 +38,8 @@ class S3(TemplateBase):
 
         for key in ['minioLogin', 'nsName']:
             if not self.data[key]:
-                    raise ValueError('Invalid {}'.format(key))
-    
+                raise ValueError('Invalid {}'.format(key))
+
         if not self.data['nsPassword']:
             self.data['nsPassword'] = j.data.idgenerator.generateXCharID(32)
 
@@ -95,7 +95,7 @@ class S3(TemplateBase):
         # gather all the namespace services
         namespaces = []
         for namespace in self.data['namespaces']:
-            robot = get_zrobot(namespace['node'], namespace['url'])
+            robot = self.api.robots.get(namespace['node'], namespace['url'])
             namespaces.append(robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name']))
 
         namespaces_connection = sorted(namespaces_connection_info(namespaces))
@@ -116,14 +116,14 @@ class S3(TemplateBase):
         self.logger.info("verify tlog namespace connections")
         tlog = self.data.get('tlog', {})
         if tlog.get('node') and tlog.get('url'):
-            robot = get_zrobot(self.data['tlog']['node'], self.data['tlog']['url'])
+            robot = self.api.robots.get(self.data['tlog']['node'], self.data['tlog']['url'])
             namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['tlog']['name'])
 
             connection_info = namespace_connection_info(namespace)
             if tlog.get('address') and tlog['address'] != connection_info:
                 self.logger.info("tlog namespace connection in service data is not correct, updating minio configuration")
                 t = minio.schedule_action('update_tlog', args={'namespace': self._tlog_namespace,
-                                                            'address': connection_info})
+                                                               'address': connection_info})
                 t.wait(die=True)
                 self.data['tlog']['address'] = connection_info
             else:
@@ -132,14 +132,14 @@ class S3(TemplateBase):
         self.logger.info("verify master namespace connections")
         master = self.data.get('master', {})
         if master.get('node') and master.get('url'):
-            robot = get_zrobot(master['node'], master['url'])
+            robot = self.api.robots.get(master['node'], master['url'])
             namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=master['name'])
 
             connection_info = namespace_connection_info(namespace)
             if master.get('address') and master != connection_info:
                 self.logger.info("master namespace connection in service data is not correct, updating minio configuration")
                 t = minio.schedule_action('update_master', args={'namespace': self._tlog_namespace,
-                                                            'address': connection_info})
+                                                                 'address': connection_info})
                 t.wait(die=True)
                 self.data['master']['address'] = connection_info
             else:
@@ -156,6 +156,8 @@ class S3(TemplateBase):
         def update_state():
             vm_robot, _ = self._vm_robot_and_ip()
             minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
+
+
             try:
                 minio.state.check('status', 'running', 'ok')
                 self.state.set('status', 'running', 'ok')
@@ -196,9 +198,9 @@ class S3(TemplateBase):
             self._deploy_minio_vm()
             self.logger.info("minio vm deployed")
             return self._vm_robot_and_ip()
-        
+
         def get_master_info():
-            robot = get_zrobot(self.data['master']['node'], self.data['master']['url'])
+            robot = self.api.robots.get(self.data['master']['node'], self.data['master']['url'])
             namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['master']['name'])
             master_connection = namespace_connection_info(namespace)
             self.data['master']['address'] = master_connection
@@ -207,7 +209,6 @@ class S3(TemplateBase):
                 'address': master_connection,
                 'namespace': self._tlog_namespace,
             }
-
 
         # deploy all namespaces and vm concurrently
         ns_data_gl = gevent.spawn(deploy_data_namespaces)
@@ -236,12 +237,11 @@ class S3(TemplateBase):
         if vm_gl.exception:
             raise vm_gl.exception
         vm_robot, ip = vm_gl.value
-    
+
         if self.data['master']['name']:
             if master_gl.exception:
                 raise master_gl.exception
             master = master_gl.value
-
 
         self.logger.info("create the minio service on the vm")
         minio_data = {
@@ -290,7 +290,7 @@ class S3(TemplateBase):
         # uninstall and delete all the created namespaces
         def delete_namespace(namespace):
             self.logger.info("deleting namespace %s on node %s", namespace['node'], namespace['url'])
-            robot = get_zrobot(namespace['node'], namespace['url'])
+            robot = self.api.robots.get(namespace['node'], namespace['url'])
             try:
                 ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
                 ns.schedule_action('uninstall').wait(die=True)
@@ -343,10 +343,10 @@ class S3(TemplateBase):
     def upgrade(self):
         self.stop()
         self.start()
-    
+
     def tlog(self):
         return self.data['tlog']
-    
+
     def namespaces_nodes(self):
         return [namespace['node'] for namespace in self.data['namespaces']]
 
@@ -361,7 +361,7 @@ class S3(TemplateBase):
         if not mgmt_ip:
             raise RuntimeError('VM has no ip assignments in zerotier network')
 
-        return get_zrobot("%s_vm" % mgmt_ip, 'http://{}:6600'.format(mgmt_ip)), mgmt_ip
+        return self.api.robots.get("%s_vm" % mgmt_ip, 'http://{}:6600'.format(mgmt_ip)), mgmt_ip
 
     def _deploy_minio_backend_namespaces(self):
         self.logger.info("create namespaces to be used as a backend for minio")
@@ -375,7 +375,7 @@ class S3(TemplateBase):
         # Check if namespaces have already been created in a previous install attempt
         if self.data['namespaces']:
             for namespace in self.data['namespaces']:
-                robot = get_zrobot(namespace['node'], namespace['url'])
+                robot = self.api.robots.get(namespace['node'], namespace['url'])
                 namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
                 deployed_namespaces.append(namespace)
 
@@ -409,7 +409,7 @@ class S3(TemplateBase):
 
         # Check if namespaces have already been created in a previous install attempt
         if self.data.get('tlog') and self.data['tlog']['node'] and self.data['tlog']['url']:
-            robot = get_zrobot(self.data['tlog']['node'], self.data['tlog']['url'])
+            robot = self.api.robots.get(self.data['tlog']['node'], self.data['tlog']['url'])
             namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['tlog']['name'])
             namespace.schedule_action('install').wait(die=True)
             return namespace
@@ -560,7 +560,7 @@ def list_farm_nodes(farm_organization):
 
 def install_namespace(node, name, disk_type, size, password):
     try:
-        robot = get_zrobot(node['node_id'], node['robot_address'])
+        robot = self.api.robots.get(node['node_id'], node['robot_address'])
         data = {
             'diskType': disk_type,
             'mode': 'direct',
@@ -625,15 +625,11 @@ def namespace_connection_info(namespace):
     return '{}:{}'.format(result['storage_ip'], result['port'])
 
 
-def get_zrobot(name, url):
-    j.clients.zrobot.get(name, data={'url': url})
-    return j.clients.zrobot.robots[name]
-
-
 def sort_by_less_used(nodes, storage_key):
     def key(node):
         return node['total_resources'][storage_key] - node['used_resources'][storage_key]
     return sorted(nodes, key=key, reverse=True)
+
 
 def sort_by_master_nodes(nodes, master_nodes):
     nodes_copy = list(nodes)
@@ -642,6 +638,7 @@ def sort_by_master_nodes(nodes, master_nodes):
             nodes_copy.append(node)
             nodes_copy.remove(node)
     return nodes_copy
+
 
 def filter_node_online(nodes):
     def url_ping(node):

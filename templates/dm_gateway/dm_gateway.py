@@ -40,8 +40,7 @@ class DmGateway(TemplateBase):
             raise err
 
         self._robot_url = node.robot_address
-        j.clients.zrobot.get(self.data['nodeId'], data={'url': self._robot_url})
-        self._robot_api = j.clients.zrobot.robots[self.data['nodeId']]
+        self._robot_api = self.api.robots.get(self.data['nodeId'], self._robot_url)
 
     @property
     def _public_robot_api(self):
@@ -49,8 +48,7 @@ class DmGateway(TemplateBase):
             self.data['publicGatewayRobot'] = random.choice(PUBLIC_GW_ROBOTS)
         roboturl = self.data['publicGatewayRobot']
         robotname = urlparse(roboturl).netloc
-        j.clients.zrobot.get(robotname, {'url': roboturl}, interactive=False)
-        return j.clients.zrobot.robots[robotname]
+        return self.api.robots.get(robotname, roboturl)
 
     def _get_gw_service(self):
         return self._robot_api.services.get(template_uid=GW_UID, name=self.guid)

@@ -40,12 +40,6 @@ class TestS3Template(ZrobotBaseTest):
     def tearDown(self):
         patch.stopall()
 
-    def test_get_zrobot(self):
-        patch('jumpscale.j.clients.zrobot', MagicMock(robots={'main': 'main'})).start()
-        robot = self.s3._get_zrobot('main', 'url')
-        assert j.clients.zrobot.get.called_once_with('main', data={'url': 'url'})
-        assert robot == 'main'
-
     def test_invalid_data(self):
         with pytest.raises(ValueError, message='template should fail if parityShards are higher than dataShards'):
             data = dict(self.valid_data)
