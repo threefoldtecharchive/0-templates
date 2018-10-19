@@ -36,9 +36,9 @@ class S3(TemplateBase):
         if len(self.data['minioPassword']) < 8:
             raise ValueError("minio password need to be at least 8 characters")
 
-        for key in ['minioLogin', 'nsName']:
+        for key in ['minioLogin', 'nsName', 'storageSize']:
             if not self.data[key]:
-                raise ValueError('Invalid {}'.format(key))
+                raise ValueError('Invalid value for {}'.format(key))
 
         if not self.data['nsPassword']:
             self.data['nsPassword'] = j.data.idgenerator.generateXCharID(32)

@@ -7,9 +7,9 @@ from zerorobot.template.state import StateCheckError
 S3_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/s3/0.0.1'
 
 
-class S3Manager(TemplateBase):
+class S3Redundant(TemplateBase):
     version = '0.0.1'
-    template_name = "s3_manager"
+    template_name = "s3_redundant"
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
@@ -24,9 +24,10 @@ class S3Manager(TemplateBase):
         if len(self.data['minioPassword']) < 8:
             raise ValueError('minio password need to be at least 8 characters')
 
-        if not self.data['minioLogin']:
-                raise ValueError('Invalid minio login')
-    
+        for key in ['minioLogin', 'storageSize']:
+            if not self.data[key]:
+                raise ValueError('Invalid value for {}'.format(key))
+
         if not self.data['nsPassword']:
             self.data['nsPassword'] = j.data.idgenerator.generateXCharID(32)
     
