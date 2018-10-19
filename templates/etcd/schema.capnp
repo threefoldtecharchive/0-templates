@@ -5,14 +5,8 @@ struct Schema {
     nics @0 :List(Nic); # Configuration of the attached nics to the etcd container
     ztIdentity @1 :Text; # ztidentity of the container running 0-etcd
     token @2 :Text;
-    cluster @3 :List(Member);
+    cluster @3 :Text;
     password @4 :Text;
-
-
-    struct Member {
-        name @0 :Text;
-        address @1 :Text;
-    }
 
     struct Nic {
         type @0 :NicType;
