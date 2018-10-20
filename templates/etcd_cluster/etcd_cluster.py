@@ -16,10 +16,11 @@ class EtcdCluster(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        # self.add_delete_callback(self.uninstall)
-        # self.recurring_action('_monitor', 30)  # every 30 seconds
-        self._robots = {}
+        self.add_delete_callback(self.uninstall)
+        self.recurring_action('_monitor', 30)  # every 30 seconds
+        self.recurring_action('_ensure_etcds_connections', 300)
 
+        self._robots = {}
 
     def validate(self):
         self.state.delete('status', 'running')
@@ -37,19 +38,56 @@ class EtcdCluster(TemplateBase):
 
     @property
     def _farm(self):
-        return j.sal_zos.farm(self.data['farmIyoOrg'])
+        return j.sal_zos.farm(self.data['farmerIyoOrg'])
 
     def _nodes(self):
-        # @todo remove testing hack when done
-        return [{'node_id': 'local', 'robot_address': 'http://localhost:6600'}]
-        # keep a cache for a few minutes
-        nodes = self._farm.list_nodes()
-        if not nodes:
+        # # @todo remove testing hack when done
+        # return [{'node_id': 'local', 'robot_address': 'http://localhost:6600'}]
+        if not self._farm.list_nodes():
             raise ValueError('There are no nodes in this farm')
         nodes = self._farm.filter_online_nodes() 
         if not nodes:
             raise ValueError('There are no online nodes in this farm')
         return nodes
+
+    def _monitor(self):
+        try:
+            self.state.check('actions', 'start', 'ok')
+        except StateCheckError:
+            return
+        
+        for etcd in self.data['etcds']:
+            robot = self.api.robots.get(etcd['node'], etcd['url'])
+            service = robot.services.get(template_uid=ETCD_TEMPLATE_UID, name=etcd['name'])
+            try:
+                service.state.check('status', 'running', 'ok')
+            except StateCheckError:
+                self.state.delete('status', 'running')
+                return
+        self.state.set('status', 'runnning', 'ok')
+
+    def _ensure_etcds_connections(self):
+        try:
+            self.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            return
+
+        self.logger.info("verify etcds connections")
+
+        # gather all the etcd services
+        etcds = []
+        for etcd in self.data['etcds']:
+            robot = self.api.robots.get(etcd['node'], etcd['url'])
+            etcds.append(robot.services.get(template_uid=ETCD_TEMPLATE_UID, name=etcd['name']))
+
+        connection = cluster_connection(etcds)
+        if not self.data.get('clusterConnections'):
+            self.data['clusterConnections'] = connection
+        
+        if connection != self.data['clusterConnections']:
+            for etcd in etcds:
+                etcd.schedule_action('update_cluster', args={'cluster': connection}).wait(die=True)
+        self.data['clusterConnections'] = connection
 
     def _deploy_etcd_cluster(self):
         self.logger.info('create etcds for the etcd cluster')
@@ -80,25 +118,36 @@ class EtcdCluster(TemplateBase):
     def _deploy_etcds(self, required_etcds):
         nodes = self._nodes().copy()
         nr_deployed_etcds = 0
+        etcds = []
         while nr_deployed_etcds < required_etcds:
             self.logger.info('number of possible nodes to use for namespace deployments %s', len(nodes))
             if len(nodes) <= 0:
                 return
             
-            gls = set()
             for i in range(required_etcds - nr_deployed_etcds):
                 node = nodes[i % len(nodes)]
                 self.logger.info("try to install etcd on node %s" % node['node_id'])
-                gls.add(gevent.spawn(self._install_etcd, node=node))
+                try:
+                   etcds.append(self._install_etcd(node))
+                   nr_deployed_etcds += 1
+                except:
+                    nodes.remove(node)
+        return etcds
+            
+            # gls = set()
+            # for i in range(required_etcds - nr_deployed_etcds):
+            #     node = nodes[i % len(nodes)]
+            #     self.logger.info("try to install etcd on node %s" % node['node_id'])
+            #     gls.add(gevent.spawn(self._install_etcd, node=node))
 
-            for g in gevent.iwait(gls):
-                if g.exception and g.exception.node in nodes:
-                    self.logger.error("we could not deploy on node %s, remove it from the possible node to use", node['node_id'])
-                    nodes.remove(g.exception.node)
-                else:
-                    etcd, node = g.value
-                    nr_deployed_etcds += 1
-                    yield (etcd, node)
+            # for g in gevent.iwait(gls):
+            #     if g.exception and g.exception.node in nodes:
+            #         self.logger.error("we could not deploy on node %s, remove it from the possible node to use", node['node_id'])
+            #         nodes.remove(g.exception.node)
+            #     else:
+            #         etcd, node = g.value
+            #         nr_deployed_etcds += 1
+            #         yield (etcd, node)
 
     def _install_etcd(self, node):
         robot = self.api.robots.get(node['node_id'], node['robot_address'])
@@ -122,15 +171,18 @@ class EtcdCluster(TemplateBase):
     def install(self):
         self.logger.info('Installing etcd cluster {}'.format(self.name))
         etcds = self._deploy_etcd_cluster()
-        cluster_connection = ','.join(etcds_cluster_connection(etcds))
-        self.data['clusterConnections'] = cluster_connection
-
-        tasks = list()
+        self.data['clusterConnections'] = cluster_connection(etcds)
         for etcd in etcds:
-            tasks.append(etcd.schedule_action('update_cluster', args={'cluster': cluster_connection}))
-            tasks.append(etcd.schedule_action('start'))
-        for task in tasks:
-            task.wait(die=True)
+            etcd.schedule_action('update_cluster', args={'cluster': self.data['clusterConnections']}).wait(die=True)
+            etcd.schedule_action('start').wait(die=True)
+        etcd.schedule_action('enable_auth').wait(die=True)
+    
+        # tasks = list()
+        # for etcd in etcds:
+        #     tasks.append(etcd.schedule_action('update_cluster', args={'cluster': cluster_connection}))
+        #     tasks.append(etcd.schedule_action('start'))
+        # for task in tasks:
+        #     task.wait(die=True)
         self.state.set('actions', 'install', 'ok')
         self.state.set('actions', 'start', 'ok')
         self.state.set('status', 'running', 'ok')
@@ -150,27 +202,45 @@ class EtcdCluster(TemplateBase):
             if etcd in self.data['etcds']:
                 self.data['etcds'].remove(etcd)
 
-        group = gevent.pool.Group()
-        group.imap_unordered(delete_etcd, self.data['etcds'])
-        group.join()
+        for etcd in list(self.data['etcds']):
+            delete_etcd(etcd)
+        # group = gevent.pool.Group()
+        # group.imap_unordered(delete_etcd, self.data['etcds'])
+        # group.join()
         self.data['clusterConnections'] = None
 
         self.state.delete('actions', 'install')
         self.state.delete('status', 'running')
 
-def etcds_cluster_connection(etcds):
+    def connection_info(self):
+        etcds = []
+        for etcd in self.data['etcds']:
+            robot = self.api.robots.get(etcd['node'], etcd['url'])
+            etcds.append(robot.services.get(template_uid=ETCD_TEMPLATE_UID, name=etcd['name']))
+        connections = etcds_connection(etcds)
+        return {
+            'user': 'root',
+            'password': self.data['password'],
+            'etcds': connections,
+        }
+
+
+def cluster_connection(etcds):
+    connections = etcds_connection(etcds)
+    return ','.join(sorted([connection['cluster_entry'] for connection in connections]))
+
+
+def etcds_connection(etcds):
     # group = gevent.pool.Group()
     # return list(group.imap_unordered(etcd_cluster_connection, etcds))
+    result = []
     for etcd in etcds:
-        yield(etcd_cluster_connection(etcd))
+        result.append(etcd_connection(etcd))
+    return result
 
 
-
-def etcd_cluster_connection(etcd):
-    result = etcd.schedule_action('connection_info').wait(die=True).result
-    # if there is not special storage network configured,
-    # then the sal return the zerotier as storage address
-    return '{}={}'.format(etcd.guid, result['peer_url'])
+def etcd_connection(etcd):
+    return etcd.schedule_action('connection_info').wait(die=True).result
 
 
 class EtcdDeployError(RuntimeError):

@@ -46,12 +46,6 @@ class Zerodb(TemplateBase):
         node = self.api.services.get(template_account='threefoldtech', template_name='node')
         node.state.check('disks', 'mounted', 'ok')
 
-        if self.data['diskType'] == 'ssd':
-            try:
-                self.state.check('status', 'running', 'ok')
-            except StateCheckError:
-                self._node_sal.zerodbs.mount_subvolume(self.name, self.data['path'])
-
         if not self._zerodb_sal.is_running():
             self.state.delete('status', 'running')
             self._deploy()

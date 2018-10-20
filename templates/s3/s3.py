@@ -165,7 +165,7 @@ class S3(TemplateBase):
                 self.state.delete('status', 'running')
                 zdbs_connection = []
                 for namespace in self.data['namespaces']:
-                    robot = get_zrobot(namespace['node'], namespace['url'])
+                    robot = self.api.robots.get(namespace['node'], namespace['url'])
                     ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
                     try:
                         ns.state.check('status', 'running', 'ok')

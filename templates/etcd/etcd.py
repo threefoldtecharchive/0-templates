@@ -110,3 +110,6 @@ class Etcd(TemplateBase):
             self._etcd_sal.start()
         except StateCheckError:
             pass
+
+    def enable_auth(self):
+        self._etcd_sal.enable_auth()
