@@ -65,7 +65,7 @@ class DmGateway(TemplateBase):
         for network in gwdata['networks']:
             if network['type'] == 'zerotier' and network.get('ztClient'):
                 zerotierservice = self.api.services.get(name=network['ztClient'])
-                data = {'url': self._robot_url, 'serviceguid': self.guid}
+                data = {'url': self._robot_url, 'name': self.guid}
                 zerotierservice.schedule_action('add_to_robot', args=data).wait(die=True)
                 # set the name of the zerotier client to the name of the client created on the node robot
                 network['ztClient'] = self.guid
@@ -309,5 +309,5 @@ class DmGateway(TemplateBase):
         for network in self.data['networks']:
             if network['type'] == 'zerotier' and network.get('ztClient'):
                 zerotierservice = self.api.services.get(name=network['ztClient'])
-                data = {'url': self._robot_url, 'serviceguid': self.guid}
+                data = {'url': self._robot_url, 'name': self.guid}
                 zerotierservice.schedule_action('remove_from_robot', args=data).wait(die=True)

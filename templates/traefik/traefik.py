@@ -1,10 +1,8 @@
 from jumpscale import j
 from zerorobot.template.base import TemplateBase
 
-
-ETCD_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/etcd/0.0.1'
-
 NODE_CLIENT = 'local'
+
 
 class Traefik(TemplateBase):
     version = '0.0.1'
@@ -15,6 +13,17 @@ class Traefik(TemplateBase):
         self.add_delete_callback(self.uninstall)
         self.recurring_action('_monitor', 30)  # every 30 seconds
 
+    def validate(self):
+        self.state.delete('status', 'running')
+        for nic in self.data['nics']:
+            if nic['type'] == 'zerotier':
+                break
+        else:
+            raise ValueError('Service must contain at least one zerotier nic')
+        
+        for key in ['etcdEndpoint', 'etcdPassword']:
+            if not self.data[key]:
+                raise ValueError('Invalid value for {}'.format(key))
 
     def _monitor(self):
         self.logger.info('Monitor traefik %s' % self.name)
@@ -44,17 +53,10 @@ class Traefik(TemplateBase):
             'etcd_watch':self.data['etcdWatch'],
             'zt_identity': self.data['ztIdentity'],
             'nics': self.data['nics'],
-            'etcd_endpoint': self._etcd_info
+            'etcd_endpoint': self.data['etcdEndpoint'],
+            'etcd_password': self.data['etcdPassword'],
         }
         return j.sal_zos.traefik.get(**kwargs)
-        
-    @property
-    def _etcd(self):
-        return self.api.services.get(template_uid=ETCD_TEMPLATE_UID, name=self.data['etcd'])
-    @property
-    def _etcd_info(self):
-        result = self._etcd.schedule_action('connection_info').wait(die=True).result
-        return result
 
     def install(self):
         self.logger.info('Installing traefik %s' % self.name)

@@ -1,3 +1,4 @@
+from copy import deepcopy
 import gevent
 from jumpscale import j
 
@@ -7,6 +8,7 @@ from zerorobot.service_collection import ServiceNotFoundError
 
 
 ETCD_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/etcd/0.0.1'
+ZT_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zt_client/0.0.1'
 
 
 class EtcdCluster(TemplateBase):
@@ -29,12 +31,12 @@ class EtcdCluster(TemplateBase):
                 break
         else:
             raise ValueError('Service must contain at least one zerotier nic')
-        
-        for key in ['token', 'farmerIyoOrg']:
-            if not self.data[key]:
-                raise ValueError('Invalid value for {}'.format(key))
+
+        if not self.data['farmerIyoOrg']:
+            raise ValueError('Invalid value for farmerIyoOrg')
 
         self.data['password'] = self.data['password'] if self.data['password'] else j.data.idgenerator.generateXCharID(10)
+        self.data['token'] = self.data['token'] if self.data['token'] else j.data.idgenerator.generateXCharID(10)
 
     @property
     def _farm(self):
@@ -149,19 +151,41 @@ class EtcdCluster(TemplateBase):
             #         nr_deployed_etcds += 1
             #         yield (etcd, node)
 
+    def _create_zt_clients(self, nics, node_url):
+        result = deepcopy(nics)
+        for nic in result:
+            zt_name = nic['ztClient']
+            zt_client = self.api.services.get(name=zt_name, template_uid=ZT_TEMPLATE_UID)
+            node_zt_name = '{}_{}'.format(zt_name, self.guid)
+            data = {'url': node_url, 'name': node_zt_name}
+            zt_client.schedule_action('add_to_robot', args=data).wait(die=True)
+            nic['ztClient'] = node_zt_name
+
+        return result
+
+    def _remove_zt_clients(self, nics, node_url):
+        for nic in nics:
+            zt_name = nic['ztClient']
+            zt_client = self.api.services.get(name=zt_name, template_uid=ZT_TEMPLATE_UID)
+            node_zt_name = '{}_{}'.format(zt_name, self.guid)
+            data = {'url': node_url, 'name': node_zt_name}
+            zt_client.schedule_action('remove_from_robot', args=data).wait(die=True)
+
     def _install_etcd(self, node):
         robot = self.api.robots.get(node['node_id'], node['robot_address'])
         robot = self.api.robots.get('local')
         try:
+            nics = self._create_zt_clients(self.data['nics'], node['robot_address'])
             data = {
                 'token': self.data['token'],
                 'password': self.data['password'],
-                'nics': self.data['nics'],
+                'nics': nics,
             }
             etcd = robot.services.create(template_uid=ETCD_TEMPLATE_UID, data=data)
             task = etcd.schedule_action('install').wait(timeout=300)
             if task.eco:
                 etcd.delete()
+                self._remove_zt_clients(self.data['nics'], node['robot_address'])
                 raise EtcdDeployError(task.eco.message, node)
             return etcd, node
 
@@ -188,11 +212,12 @@ class EtcdCluster(TemplateBase):
         self.state.set('status', 'running', 'ok')
 
     def uninstall(self):
-        # uninstall and delete all the created namespaces
+        # uninstall and delete all the created etcds
         def delete_etcd(etcd):
             self.logger.info("deleting etcd %s on node %s", etcd['node'], etcd['url'])
             robot = self.api.robots.get(etcd['node'], etcd['url'])
             try:
+                self._remove_zt_clients(self.data['nics'], etcd['url'])
                 service = robot.services.get(template_uid=ETCD_TEMPLATE_UID, name=etcd['name'])
                 service.schedule_action('uninstall').wait(die=True)
                 service.delete()

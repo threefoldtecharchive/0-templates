@@ -1,10 +1,10 @@
 @0xaf3b04a861b5a7f1;
 
 struct Schema {
-    etcd @0: Text; #instance name of the etcd service used for configuration
-    nics @1 :List(Nic); # Configuration of the attached nics to the traefik container
-    ztIdentity @2 :Text; # ztidentity of the container running traefik
-
+    etcdEndpoint @0 :Text; # etcd endpoint
+    etcdPassword @1 :Text; # etcd root user password
+    nics @2 :List(Nic); # configuration of the attached nics to the traefik container
+    ztIdentity @3 :Text; # ztidentity of the container running traefik
 
     struct Nic {
         type @0 :NicType;
