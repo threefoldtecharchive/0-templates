@@ -9,14 +9,12 @@ class VMManager:
         self._parent = parent
         self.logger = self._parent.logger
         self.robot = self._parent.remote_robot
-
+        self._vm_service = service_name
         if service_name:
             try:
                 self._vm_service = self.robot.service.get(name=service_name)
             except ServiceNotFoundError:
                 self._vm_service = None
-        else:
-            self._vm_service = None
 
     @property
     def service(self):
@@ -56,3 +54,29 @@ class VMManager:
     def info(self):
         return self.service.schedule_action('info')
 
+    def shutdown(self, force=True):
+        return self.service.schedule_action('shutdown')
+    
+    def start(self):
+        return self.service.schedule_action('start')
+
+    def stop(self):
+        return self.service.schedule_action('stop')
+    
+    def pause(self):
+        return self.service.schedule_action('pause')    
+
+    def resume(self):
+        return self.service.schedule_action('resume')    
+
+    def reboot(self):
+        return self.service.schedule_action('reboot')    
+
+    def reset(self):
+        return self.service.schedule_action('reset')    
+
+    def enable_vnc(self):
+        return self.service.schedule_action('enable_vnc')    
+
+    def disable_vnc(self):
+        return self.service.schedule_action('disable_vnc')    
