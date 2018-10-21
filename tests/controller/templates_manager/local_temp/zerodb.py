@@ -24,10 +24,6 @@ class ZDBManager:
         else:
             return self._zdb_service
 
-    @property
-    def install_state(self):
-        return self.service.state.check('actions', 'install', 'ok')
-
     def install(self, data, wait=True):
         self.zdb_service_name = data['name']
         self._zdb_service = self.robot.services.create(self.zdb_template, self.zdb_service_name, data)

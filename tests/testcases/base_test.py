@@ -20,7 +20,8 @@ class BaseTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        pass
+        self = cls()
+        cls.mount_paths = self.node.zerodbs.prepare()
 
     @classmethod
     def tearDownClass(cls):
@@ -97,3 +98,15 @@ class BaseTest(TestCase):
 
     def random_string(self):
         return str(uuid4()).replace('-', '')[10:]
+
+    def get_zdb_default_data(self, **kwargs):
+        default_data = {
+            'name' : self.random_string(),
+            'sync': True,
+            'mode': 'user',
+            'admin': self.random_string(),
+            'path': self.mount_paths[0]
+        }
+        if kwargs:
+            default_data.update(kwargs)
+        return default_data
