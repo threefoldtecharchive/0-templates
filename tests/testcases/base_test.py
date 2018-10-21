@@ -16,6 +16,7 @@ class BaseTest(TestCase):
         self.controller = Controller(config=self.config, god_token=None)
         self.ssh_key = self.load_ssh_key()
         self.node_ip = self.config['robot']['remote_server'][7:-5]
+        self.node = self.controller.node
 
     @classmethod
     def setUpClass(cls):
