@@ -17,8 +17,13 @@ class NodeIp(TemplateBase):
 
     def validate(self):
         cidr = self.data.get('cidr')
-        if cidr:
+        if not cidr:
+            raise ValueError('interface should be provided')
+
+        try:
             netaddr.IPNetwork(cidr)
+        except netaddr.AddrFormatError:
+            raise ValueError('cidr format is not valid')
 
         vlan = self.data.get('interface')
         if not vlan:
