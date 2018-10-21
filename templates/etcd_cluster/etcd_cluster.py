@@ -45,8 +45,6 @@ class EtcdCluster(TemplateBase):
     def _nodes(self):
         # # @todo remove testing hack when done
         # return [{'node_id': 'local', 'robot_address': 'http://localhost:6600'}]
-        if not self._farm.list_nodes():
-            raise ValueError('There are no nodes in this farm')
         nodes = self._farm.filter_online_nodes() 
         if not nodes:
             raise ValueError('There are no online nodes in this farm')
