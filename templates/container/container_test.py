@@ -96,14 +96,13 @@ class TestContainerTemplate(ZrobotBaseTest):
         container = Container('container', data=self.valid_data)
         container.api.services.get = MagicMock()
         container.node_sal.containers.create = MagicMock()
-        patch('jumpscale.j.sal_zos.utils.format_ports', MagicMock(return_value={80: 80})).start()
 
         container.install()
 
         container.state.check('actions', 'start', 'ok')
         assert container.node_sal.containers.create.called
-        assert container.node_sal.containers.create.call_args[1]['ports'] == {80: 80}, \
-            "ports forward list should have been converted to dict of int"
+        assert container.node_sal.containers.create.call_args[1]['ports'] == {'80': 80}, \
+            "ports forward list should have been converted to dict"
 
     def test_start_container_before_install(self):
         """
