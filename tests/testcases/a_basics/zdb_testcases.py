@@ -4,8 +4,23 @@ import unittest
 import time, random
 
 class BasicTests(BaseTest):
+    @classmethod
+    def setUpClass(cls):
+        self = cls()
+        cls.mount_paths = self.node.zerodbs.prepare()
+        cls.zdbs = []
+        
     def setUp(self):
         super().setUp()
+
+    @classmethod
+    def tearDownClass(cls):
+        for zdb in cls.zdbs:
+            namespaces = zdb.namespace_list().result
+            for namespace in namespaces:
+                zdb.namespace_delete(namespace['name'])
+            zdb.stop()
+        cls.zdbs.clear()
         
     def test001_get_list_zerodb_info(self):
         """ ZRT-ZOS-009
@@ -22,20 +37,20 @@ class BasicTests(BaseTest):
         #. Check that NS setting has been changed.
         """
         self.log('Create zerodb (zdb) with basic params, should succeed')
-        data = self.get_zdb_default_data()
+        admin_passwd = self.random_string()
         zdb = self.controller.zdb_manager
-        zdb.install(data, wait=True)
+        zdb.install(wait=True, path=self.mount_paths[0], admin=admin_passwd)
 
         self.log('Check that the params has been reflected correctly.')
-        container_name = 'zerodb_' + data['name']
+        container_name = 'zerodb_' + zdb.zdb_service_name
         container = self.node.client.container.find(container_name)
         zdb_cl = self.node.client.container.client(list(container.keys())[0])
         jobs = zdb_cl.job.list()
-        job_id = 'zerodb.' + data['name']
+        job_id = 'zerodb.' + zdb.zdb_service_name
         job_args = [job for job in jobs if job['cmd']['id'] == job_id][0]['cmd']['arguments']['args']
         self.assertIn('user', job_args)
         self.assertIn('--sync', job_args)
-        self.assertIn(data['admin'], job_args)
+        self.assertIn(admin_passwd, job_args)
 
         self.log('list the namespaces, should be empty')
         namespaces = zdb.namespace_list()
@@ -64,9 +79,7 @@ class BasicTests(BaseTest):
         self.assertEqual(ns_info.result['password'], 'yes')
         namespaces = zdb.namespace_list()
         self.assertEqual(namespaces.result[0]['size'], size)
-
-        zdb.namespace_delete(ns_name)
-        zdb.stop().wait(die=True, timeout=30)
+        self.zdbs.append(zdb)
 
     def test002_start_stop_zerodb(self):
         """ ZRT-ZOS-010
@@ -81,9 +94,8 @@ class BasicTests(BaseTest):
         #. Start zerodb service, should succeed.
         #. Check that Namespace (NS) is still there.
         """
-        data = self.get_zdb_default_data()
         zdb = self.controller.zdb_manager
-        zdb.install(data, wait=True)
+        zdb.install(wait=True, path=self.mount_paths[0])
 
         self.log('Create namespace (NS), should succeed')
         ns_name = self.random_string()
@@ -96,17 +108,15 @@ class BasicTests(BaseTest):
 
         self.log('Make sure zerodb container has been removed')
         conts = self.node.client.container.list()
-        self.assertFalse([c for c in conts.values() if data['name'] in c['container']['arguments']['name']])
+        self.assertFalse([c for c in conts.values() if zdb.zdb_service_name in c['container']['arguments']['name']])
 
         self.log('Start zerodb service, should succeed.')
         zdb.start().wait(die=True, timeout=30)
         conts = self.node.client.container.list()
-        self.assertTrue([c for c in conts.values() if data['name'] in c['container']['arguments']['name']])
+        self.assertTrue([c for c in conts.values() if zdb.zdb_service_name in c['container']['arguments']['name']])
 
         self.log('Check that Namespace (NS) is still there.')
         namespaces = zdb.namespace_list()
         self.assertEqual(len(namespaces.result), 1)
         self.assertEqual(namespaces.result[0]['name'], ns_name)
-        
-        zdb.namespace_delete(ns_name)
-        zdb.stop()
+        self.zdbs.append(zdb)

@@ -10,7 +10,7 @@ class ZDBManager:
         self._parent = parent
         self.logger = self._parent.logger
         self.robot = self._parent.remote_robot
-        self._zdb_service = None
+        self._zdb_service = service_name
         if service_name:
             try:
                 self._zdb_service = self.robot.service.get(name=service_name)
@@ -24,13 +24,23 @@ class ZDBManager:
         else:
             return self._zdb_service
 
-    def install(self, data, wait=True):
-        self.zdb_service_name = data['name']
-        self._zdb_service = self.robot.services.create(self.zdb_template, self.zdb_service_name, data)
+    def install(self, path, wait=True, **kwargs):
+        default_data = {
+            'name' : self._parent._generate_random_string(),
+            'sync': True,
+            'mode': 'user',
+            'admin': self._parent._generate_random_string(),
+            'path': path
+        }
+        if kwargs:
+            default_data.update(kwargs)
+
+        self.zdb_service_name = default_data['name']
+        self._zdb_service = self.robot.services.create(self.zdb_template, self.zdb_service_name, default_data)
         self._zdb_service.schedule_action('install').wait(die=wait)
 
     def info(self):
-        return self.service.schedule_action('info')
+        return self.service.schedule_action('info').wait()
     
     def start(self):
         return self.service.schedule_action('start')
