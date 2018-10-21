@@ -18,7 +18,7 @@ class NodeIp(TemplateBase):
     def validate(self):
         cidr = self.data.get('cidr')
         if not cidr:
-            raise ValueError('interface should be provided')
+            raise ValueError('cidr should be provided')
 
         try:
             netaddr.IPNetwork(cidr)
@@ -40,7 +40,7 @@ class NodeIp(TemplateBase):
         interface = self.data['interface']
         cidr = self.data['address']
 
-        ips = node.client.ip.list(cidr)
+        ips = node.client.ip.list(interface)
         if cidr not in ips:
             node.client.ip.addr.add(interface, cidr)
 
@@ -49,6 +49,6 @@ class NodeIp(TemplateBase):
         interface = self.data['interface']
         cidr = self.data['address']
 
-        ips = node.client.ip.list(cidr)
+        ips = node.client.ip.list(interface)
         if cidr in ips:
             node.client.ip.addr.delete(interface, cidr)
