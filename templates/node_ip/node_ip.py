@@ -38,17 +38,19 @@ class NodeIp(TemplateBase):
     def install(self):
         node = self._node_sal()
         interface = self.data['interface']
-        cidr = self.data['address']
+        cidr = self.data['cidr']
 
-        ips = node.client.ip.list(interface)
+        ips = node.client.ip.addr.list(interface)
         if cidr not in ips:
             node.client.ip.addr.add(interface, cidr)
+        self.state.set('actions', 'install', 'ok')
 
     def uninstall(self):
         node = self._node_sal()
         interface = self.data['interface']
-        cidr = self.data['address']
+        cidr = self.data['cidr']
 
-        ips = node.client.ip.list(interface)
+        ips = node.client.ip.addr.list(interface)
         if cidr in ips:
             node.client.ip.addr.delete(interface, cidr)
+        self.state.delete('actions', 'install')
