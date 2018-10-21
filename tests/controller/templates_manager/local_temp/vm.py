@@ -9,7 +9,7 @@ class VMManager:
         self._parent = parent
         self.logger = self._parent.logger
         self.robot = self._parent.remote_robot
-        self._vm_service = None
+        self._vm_service = service_name
         if service_name:
             try:
                 self._vm_service = self.robot.service.get(name=service_name)
@@ -27,9 +27,24 @@ class VMManager:
     def install_state(self):
         return self.service.state.check('actions', 'install', 'ok')
 
-    def install(self, data, wait=True):
-        self.vm_service_name = data['name']
-        self._vm_service = self.robot.services.create(self.vm_template, self.vm_service_name, data)
+    def install(self, wait=True, **kwargs):
+        ssh_port = random.randint(22022, 22922)
+        default_data = {
+            'memory': 2048,
+            'cpu': 1,
+            'nics': [{'type': 'default', 'name': 'defaultnic'}],
+            'flist': 'https://hub.grid.tf/tf-bootable/ubuntu:latest.flist',
+            'ports': [{'source': ssh_port, 'target': 22, 'name': 'ssh'}],
+            'configs': [
+                {'path': '/root/.ssh/authorized_keys', 'content': config['vm']['ssh'],
+                 'name': 'sshkey'}]
+        }
+        if kwargs:
+            default_data.update(kwargs)
+
+        self.vm_service_name = "vm_{}".format(self._parent._generate_random_string())
+        self.logger.info('Install {} vm, ssh port : {} '.format(self.vm_service_name, ssh_port))
+        self._vm_service = self.robot.services.create(self.vm_template, self.vm_service_name, default_data)
         self._vm_service.schedule_action('install').wait(die=wait)
 
     def uninstall(self, wait=True):

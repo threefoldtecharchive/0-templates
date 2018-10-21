@@ -7,7 +7,6 @@ from subprocess import Popen, PIPE, run
 import time, os, hashlib
 
 logger = j.logger.get('testsuite.log')
-VMFLIST = 'https://hub.grid.tf/tf-bootable/ubuntu:lts.flist'
 
 class BaseTest(TestCase):
     def __init__(self, *args, **kwargs):
@@ -94,22 +93,6 @@ class BaseTest(TestCase):
             run(cmd, shell=True, stdout=PIPE, stderr=PIPE)
             ssh = self.load_ssh_key()
         return ssh
-
-    def get_vm_default_data(self, **kwargs):
-        default_data = {
-            'name' : self.random_string(),
-            'memory': 2048,
-            'cpu': 1,
-            'nics': [{'type': 'default', 'name': 'defaultnic'}],
-            'flist': VMFLIST,
-            'ports': [],
-            'configs': [
-                {'path': '/root/.ssh/authorized_keys', 'content': self.ssh_key,
-                 'name': 'sshkey'}]
-        }
-        if kwargs:
-            default_data.update(kwargs)
-        return default_data
 
     def random_string(self):
         return str(uuid4()).replace('-', '')[10:]

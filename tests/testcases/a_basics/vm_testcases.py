@@ -20,13 +20,10 @@ class TESTVM(BaseTest):
         #. Check that [vm1] has been destroyed successfully.
         """
         self.log('Create vm[vm1], should succeed.')
-        vm_name = self.random_string()
-        source_port = random.randint(1000, 2000)
-        port_name = self.random_string()
-        port = [{'name': port_name, 'source': source_port, 'target': 22}]
-        data = self.get_vm_default_data(name=vm_name, ports=port)        
+        ssh_config = [{'path': '/root/.ssh/authorized_keys', 'content': self.ssh_key, 'name': 'sshkey'}]       
         vm1 = self.controller.vm_manager
-        vm1.install(data, wait=True)
+        vm1.install(wait=True, configs=ssh_config)
+        source_port = int(vm1.info().result['ports'].popitem()[0])
 
         self.log('Check that the vm have been created.')
         self.assertTrue(vm1.install_state, " Installtion state is False")
@@ -42,7 +39,7 @@ class TESTVM(BaseTest):
 
         self.log("Check that [vm1] has been destroyed successfully.")
         vms = self.controller.node.client.kvm.list()
-        vm = [vm for vm in vms if vm['name'] == vm_name]
+        vm = [vm for vm in vms if vm['name'] == vm1.vm_service_name]
         self.assertFalse(vm)
 
     def test002_create_vm_with_non_valid_params(self):
@@ -55,11 +52,10 @@ class TESTVM(BaseTest):
         """
         self.log('Create a vm without providing flist parameter, should fail.')
         vm_name = self.random_string()
-        data = self.get_vm_default_data(name=vm_name, flist='')
         vm = self.controller.vm_manager
 
         with self.assertRaises(Exception) as e:
-            vm.install(data, wait=True)
+            vm.install(wait=True, name=vm_name, flist='')
         self.assertIn( "invalid input. Vm requires flist or ipxeUrl to be specifed.", e.exception.args[0])
     
 class VM_actions(BaseTest):
@@ -67,13 +63,10 @@ class VM_actions(BaseTest):
     @classmethod
     def setUpClass(cls):
         self = cls()
-        cls.vm_name = self.random_string()
-        cls.port_name = self.random_string()
-        cls.source_port = random.randint(1000, 2000)
-        port = [{'name': self.port_name, 'source': self.source_port, 'target': 22}]
-        cls.data = self.get_vm_default_data(name=self.vm_name, ports=port)
+        ssh_config = [{'path': '/root/.ssh/authorized_keys', 'content': self.ssh_key, 'name': 'sshkey'}]       
         cls.vm = self.controller.vm_manager
-        cls.vm.install(self.data, wait=True)
+        cls.vm.install(wait=True, configs=ssh_config)
+        cls.source_port = int(cls.vm.info().result['ports'].popitem()[0])
         result = self.ssh_vm_execute_command(vm_ip=self.node_ip, port=self.source_port, cmd='pwd')
         self.assertEqual(result, '/root')
 
