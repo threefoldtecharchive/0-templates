@@ -4,7 +4,7 @@ struct Schema {
     etcd @0: Text; #instance name of the etcd service used for configuration
     nics @1 :List(Nic); # Configuration of the attached nics to the traefik container
     ztIdentity @2 :Text; # ztidentity of the container running traefik
-    backplane @3 :Text; #the network interface name that will answer dns queries only
+    backplane @3 :Text="backplane"; #the network interface name that will answer dns queries only
 
 
     struct Nic {
