@@ -41,6 +41,7 @@ class Coredns(TemplateBase):
             'node': self._node_sal,
             'zt_identity': self.data['ztIdentity'],
             'nics': self.data['nics'],
+            'backplane': self.data['backplane'],
             'etcd_endpoint': self._etcd_info
         }
         return j.sal_zos.coredns.get(**kwargs)
