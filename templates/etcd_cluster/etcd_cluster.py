@@ -8,7 +8,7 @@ from zerorobot.service_collection import ServiceNotFoundError
 
 
 ETCD_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/etcd/0.0.1'
-ZT_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zt_client/0.0.1'
+ZT_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerotier_client/0.0.1'
 
 
 class EtcdCluster(TemplateBase):
@@ -35,8 +35,8 @@ class EtcdCluster(TemplateBase):
         if not self.data['farmerIyoOrg']:
             raise ValueError('Invalid value for farmerIyoOrg')
 
-        self.data['password'] = self.data['password'] if self.data['password'] else j.data.idgenerator.generateXCharID(10)
-        self.data['token'] = self.data['token'] if self.data['token'] else j.data.idgenerator.generateXCharID(10)
+        self.data['password'] = self.data['password'] if self.data['password'] else j.data.idgenerator.generateXCharID(16)
+        self.data['token'] = self.data['token'] if self.data['token'] else self.guid
 
     @property
     def _farm(self):
@@ -44,7 +44,7 @@ class EtcdCluster(TemplateBase):
 
     def _nodes(self):
         # # @todo remove testing hack when done
-        # return [{'node_id': 'local', 'robot_address': 'http://localhost:6600'}]
+        return [{'node_id': 'local', 'robot_address': 'http://localhost:6600'}]
         nodes = self._farm.filter_online_nodes() 
         if not nodes:
             raise ValueError('There are no online nodes in this farm')
@@ -120,11 +120,10 @@ class EtcdCluster(TemplateBase):
         nr_deployed_etcds = 0
         etcds = []
         while nr_deployed_etcds < required_etcds:
-            self.logger.info('number of possible nodes to use for namespace deployments %s', len(nodes))
-            if len(nodes) <= 0:
-                return
-            
             for i in range(required_etcds - nr_deployed_etcds):
+                self.logger.info('number of possible nodes to use for namespace deployments %s', len(nodes))
+                if len(nodes) <= 0:
+                    return etcds
                 node = nodes[i % len(nodes)]
                 self.logger.info("try to install etcd on node %s" % node['node_id'])
                 try:
@@ -197,7 +196,8 @@ class EtcdCluster(TemplateBase):
         for etcd in etcds:
             etcd.schedule_action('update_cluster', args={'cluster': self.data['clusterConnections']}).wait(die=True)
             etcd.schedule_action('start').wait(die=True)
-        etcd.schedule_action('enable_auth').wait(die=True)
+        etcd.schedule_action('_enable_auth').wait(die=True)
+        etcd.schedule_action('_prepare_traefik').wait(die=True)
     
         # tasks = list()
         # for etcd in etcds:

@@ -11,7 +11,7 @@ from zerorobot.service_collection import ServiceNotFoundError
 
 ETCD_CLUSTER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/etcd_cluster/0.0.1'
 TRAEFIK_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/traefik/0.0.1'
-ZT_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zt_client/0.0.1'
+ZT_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerotier_client/0.0.1'
 COREDNS_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/coredns/0.0.1'
 
 
@@ -41,27 +41,33 @@ class WebGateway(TemplateBase):
             if not self.data[key]:
                 raise ValueError('Invalid value for {}'.format(key))
             
-        capacity = j.clients.threefold_directory.get(interactive=False)
+        # capacity = j.clients.threefold_directory.get(interactive=False)
 
-        try:
-            node, _ = capacity.api.GetCapacity(self.data['traefikNode'])
-            self._traefik_api = self.api.robots.get(self.data['traefikNode'], node.robot_address)
-            self._traefik_url = node.robot_address
-        except HTTPError as err:
-            if err.response.status_code == 404:
-                raise ValueError('Traefik node {} does not exist'.format(self.data['traefikNode']))
-            raise err
+        # try:
+        #     node, _ = capacity.api.GetCapacity(self.data['traefikNode'])
+        #     self._traefik_api = self.api.robots.get(self.data['traefikNode'], node.robot_address)
+        #     self._traefik_url = node.robot_address
+        # except HTTPError as err:
+        #     if err.response.status_code == 404:
+        #         raise ValueError('Traefik node {} does not exist'.format(self.data['traefikNode']))
+        #     raise err
     
-        try:
-            node, _ = capacity.api.GetCapacity(self.data['corednsNode'])
-            self._coredns_api = self.api.robots.get(self.data['corednsNode'], node.robot_address)
-            self._coredns_url = node.robot_address
-        except HTTPError as err:
-            if err.response.status_code == 404:
-                raise ValueError('Coredns node {} does not exist'.format(self.data['corednsNode']))
-            raise err
+        # try:
+        #     node, _ = capacity.api.GetCapacity(self.data['corednsNode'])
+        #     self._coredns_api = self.api.robots.get(self.data['corednsNode'], node.robot_address)
+        #     self._coredns_url = node.robot_address
+        # except HTTPError as err:
+        #     if err.response.status_code == 404:
+        #         raise ValueError('Coredns node {} does not exist'.format(self.data['corednsNode']))
+        #     raise err
+        
+        # @todo remove testing hack
+        self._traefik_api = self.api.robots.get('local', 'http://localhost:6600')
+        self._traefik_url = 'http://localhost:6600'
+        self._coredns_api = self.api.robots.get('local', 'http://localhost:6600')
+        self._coredns_url = 'http://localhost:6600'
 
-        self.data['etcdPassword'] = self.data['etcdPassword'] if self.data['etcdPassword'] else j.data.idgenerator.generateXCharID(10)
+        self.data['etcdPassword'] = self.data['etcdPassword'] if self.data['etcdPassword'] else j.data.idgenerator.generateXCharID(16)
 
     @property
     def _etcd_cluster(self):
@@ -80,7 +86,7 @@ class WebGateway(TemplateBase):
         self.logger.info('Installing etcd cluster')
         cluster_data = {
             'nrEtcds': self.data['nrEtcds'],
-            'password': self.data['password'],
+            'password': self.data['etcdPassword'],
             'farmerIyoOrg': self.data['farmerIyoOrg'],
             'nics': self.data['nics'],
         }
