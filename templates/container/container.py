@@ -31,12 +31,12 @@ class Container(TemplateBase):
         return self._container
 
     def _monitor(self):
-        self.logger.info('Monitor container %s' % self.name)
         try:
             self.state.check('actions', 'start', 'ok')
         except StateCheckError:
             return
 
+        self.logger.info('Monitor container %s' % self.name)
         if not self._container_sal.is_running():
             self.state.delete('status', 'running')
             self.install()

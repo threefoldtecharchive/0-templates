@@ -56,7 +56,7 @@ class TestContainerTemplate(ZrobotBaseTest):
         """
         get_node = patch('jumpscale.j.clients.zos.get', MagicMock(return_value='node')).start()
         container = Container('container', data=self.valid_data)
-        node_sal = container.node_sal
+        node_sal = container._node_sal
         assert get_node.called
         assert node_sal == 'node'
 
@@ -65,29 +65,22 @@ class TestContainerTemplate(ZrobotBaseTest):
         Test container_sal property when container is exists
         """
         container = Container('container', data=self.valid_data)
-        container_sal_return = 'container_sal'
-        container.node_sal.containers.get = MagicMock(return_value=container_sal_return)
+        container._container = 'container'
         container.install = MagicMock()
-        container_sal = container.container_sal
+        container_sal = container._container_sal
 
-        container.node_sal.containers.get.assert_called_once_with(container.name)
-        assert container_sal == container_sal_return
+        assert container_sal == container._container
         assert container.install.called is False
 
     def test_container_sal_container_not_installed(self):
         """
         Test container_sal property when container doesn't exist
         """
-        container_sal_return = 'container_sal'
         container = Container('container', data=self.valid_data)
-        container.node_sal.containers.get = MagicMock(side_effect=[LookupError, container_sal_return])
-
         container.install = MagicMock()
-        container_sal = container.container_sal
+        container._node_sal.containers.get.return_value = 'container'
 
-        assert container_sal == container_sal_return
-        assert container.install.called
-        assert container.node_sal.containers.get.call_count == 2
+        assert container._container_sal == 'container'
 
     def test_install_container_success(self):
         """
@@ -95,13 +88,13 @@ class TestContainerTemplate(ZrobotBaseTest):
         """
         container = Container('container', data=self.valid_data)
         container.api.services.get = MagicMock()
-        container.node_sal.containers.create = MagicMock()
+        container._node_sal.containers.create = MagicMock()
 
         container.install()
 
         container.state.check('actions', 'start', 'ok')
-        assert container.node_sal.containers.create.called
-        assert container.node_sal.containers.create.call_args[1]['ports'] == {'80': 80}, \
+        assert container._node_sal.containers.create.called
+        assert container._node_sal.containers.create.call_args[1]['ports'] == {'80': 80}, \
             "ports forward list should have been converted to dict"
 
     def test_start_container_before_install(self):
@@ -121,7 +114,7 @@ class TestContainerTemplate(ZrobotBaseTest):
         container.start()
 
         assert container.state.check('actions', 'start', 'ok')
-        assert container.container_sal.start.called
+        assert container._container_sal.start.called
 
     def test_stop_container_before_install(self):
         """
@@ -141,7 +134,7 @@ class TestContainerTemplate(ZrobotBaseTest):
 
         container.stop()
 
-        assert container.container_sal.stop.called
+        assert container._container_sal.stop.called
         container.state.delete.assert_called_once_with('actions', 'start')
 
     def test_uninstall_container_before_install(self):
