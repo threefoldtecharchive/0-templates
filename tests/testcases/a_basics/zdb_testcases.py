@@ -3,7 +3,7 @@ from nose_parameterized import parameterized
 import unittest
 import time, random
 
-class BasicTests(BaseTest):
+class ZDBTestCases(BaseTest):
     @classmethod
     def setUpClass(cls):
         self = cls()
@@ -21,20 +21,15 @@ class BasicTests(BaseTest):
                 zdb.namespace_delete(namespace['name'])
             zdb.stop()
         cls.zdbs.clear()
-        
-    def test001_get_list_zerodb_info(self):
+
+    def test001_create_zdb(self):
         """ ZRT-ZOS-009
-        *Test case for listing and getting zerodb information*
+        *Test case for creating zerodb *
 
         **Test Scenario:**
 
         #. Create zerodb (zdb) with basic params, should succeed.
         #. Check that the params has been reflected correctly.
-        #. List the namespaces, should be empty.
-        #. Create namespace (NS), should succeed.
-        #. List namespaces, NS should be found.
-        #. Set the namespace (Ns) settings.
-        #. Check that NS setting has been changed.
         """
         self.log('Create zerodb (zdb) with basic params, should succeed')
         admin_passwd = self.random_string()
@@ -51,6 +46,23 @@ class BasicTests(BaseTest):
         self.assertIn('user', job_args)
         self.assertIn('--sync', job_args)
         self.assertIn(admin_passwd, job_args)
+        self.zdbs.append(zdb)
+        
+    def test002_create_list_namespaces(self):
+        """ ZRT-ZOS-010
+        *Test case for creating and listing namespaces*
+
+        **Test Scenario:**
+
+        #. Create zerodb (zdb) with basic params, should succeed.
+        #. List the namespaces, should be empty.
+        #. Create namespace (NS), should succeed.
+        #. List namespaces, NS should be found.
+        """
+        self.log('Create zerodb (zdb) with basic params, should succeed')
+        admin_passwd = self.random_string()
+        zdb = self.controller.zdb_manager
+        zdb.install(wait=True, path=self.mount_paths[0], admin=admin_passwd)
 
         self.log('list the namespaces, should be empty')
         namespaces = zdb.namespace_list()
@@ -66,6 +78,29 @@ class BasicTests(BaseTest):
         namespaces = zdb.namespace_list()
         self.assertEqual(len(namespaces.result), 1)
         self.assertEqual(namespaces.result[0]['name'], ns_name)
+        self.zdbs.append(zdb)
+
+    def test003_set_namespace_properities(self):
+        """ ZRT-ZOS-011
+        *Test case for setting namespace properities*
+
+        **Test Scenario:**
+
+        #. Create zerodb (zdb) with basic params, should succeed.
+        #. Create namespace (NS), should succeed.
+        #. set the namespace (NS) properities.
+        #. Check that NS properities has been changed.
+        """
+        self.log('Create zerodb (zdb) with basic params, should succeed')
+        admin_passwd = self.random_string()
+        zdb = self.controller.zdb_manager
+        zdb.install(wait=True, path=self.mount_paths[0], admin=admin_passwd)
+
+        self.log('Create namespace (NS), should succeed')
+        ns_name = self.random_string()
+        namespace = zdb.namespace_create(data={'name': ns_name})
+        time.sleep(2)
+        self.assertEqual(namespace.state, 'ok')
 
         self.log('set the namespace (NS) settings')
         size = random.randint(1, 9)
@@ -81,8 +116,8 @@ class BasicTests(BaseTest):
         self.assertEqual(namespaces.result[0]['size'], size)
         self.zdbs.append(zdb)
 
-    def test002_start_stop_zerodb(self):
-        """ ZRT-ZOS-010
+    def test004_start_stop_zerodb(self):
+        """ ZRT-ZOS-012
         *Test case for starting and stopping zerodb service*
 
         **Test Scenario:**
