@@ -18,7 +18,6 @@ This template is responsible for managing s3 instance. It supports creating both
 - `minioPassword`: minio web password, minimum 8 characters.
 - `minioUrls`: the minio web urls, this is set by the template.
 - `minioBlockSize`: block size of the data on minio. Defaults to 1048576 bytes.
-- `masterNodes`: if this is a passive s3, the masterNodes will be a list of node ids used by the master s3 for the namespaces. The idea is to avoid creating passive namespaces on these nodes as much as possible.
 - `nsName`: the namespace name.
 - `nsPassowrd`: the namespace password. If not supplied, a random one will be generated. **optional**
 
