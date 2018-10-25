@@ -7,6 +7,7 @@ This is a node template responsible for managing [coredns](https://coredns.io/) 
 - `etcd`: instance name of the etcd service used for configuration
 - `nics`: list of nics to create for the coredns container. Must contain at least one zerotier nic.
 - `ztIdentity`: zerotier identity of the coredns container. This is set by the template.
+- `backplane` : the network interface name that will answer dns queries only  teh default value (backplane)
 
 Nic:
 - `id`: vxlan or vlan id or zerotier network id

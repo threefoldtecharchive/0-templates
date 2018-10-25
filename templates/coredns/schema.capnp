@@ -5,6 +5,8 @@ struct Schema {
     etcdPassword @1 :Text; # etcd root user password
     nics @2 :List(Nic); # configuration of the attached nics to the traefik container
     ztIdentity @3 :Text; # ztidentity of the container running traefik
+    backplane @4 :Text="backplane"; #the network interface name that will answer dns queries only
+
 
     struct Nic {
         type @0 :NicType;

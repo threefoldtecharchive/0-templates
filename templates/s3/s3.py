@@ -349,8 +349,8 @@ class S3(TemplateBase):
     def tlog(self):
         return self.data['tlog']
 
-    def namespaces_nodes(self):
-        return [namespace['node'] for namespace in self.data['namespaces']]
+    def namespaces(self):
+        return self.data['namespaces']
 
     def _vm(self):
         return self.api.services.get(template_uid=VM_TEMPLATE_UID, name=self.guid)
@@ -389,8 +389,7 @@ class S3(TemplateBase):
                                                        size=namespace_size,
                                                        storage_type=self.data['storageType'],
                                                        password=self.data['nsPassword'],
-                                                       nodes=self._nodes,
-                                                       master_nodes=self.data['masterNodes']):
+                                                       nodes=self._nodes):
             deployed_namespaces.append(namespace)
             self.data['namespaces'].append({'name': namespace.name,
                                             'url': node['robot_address'],
@@ -421,8 +420,7 @@ class S3(TemplateBase):
                                                        size=10,  # TODO: compute how much is needed
                                                        storage_type='ssd',
                                                        password=self.data['nsPassword'],
-                                                       nodes=self._nodes,
-                                                       master_nodes=self.data['masterNodes']):
+                                                       nodes=self._nodes):
             tlog_namespace = namespace
             self.data['tlog'] = {'name': tlog_namespace.name,
                                  'url': node['robot_address'],
@@ -480,11 +478,12 @@ class S3(TemplateBase):
             t.wait()
             if t.state != 'ok':
                 vm.delete(wait=True, timeout=60, die=False)
-            return vm
+            else:
+                return vm
 
         raise RuntimeError("could not deploy vm for minio")
 
-    def _deploy_namespaces(self, nr_namepaces, name,  size, storage_type, password, nodes, master_nodes=None):
+    def _deploy_namespaces(self, nr_namepaces, name,  size, storage_type, password, nodes):
         """
         generic function to deploy a group namespaces
 
@@ -503,8 +502,6 @@ class S3(TemplateBase):
         while deployed_nr_namespaces < required_nr_namespaces:
             # sort nodes by the amount of storage available
             nodes = sort_by_less_used(nodes, storage_key)
-            if master_nodes:
-                nodes = sort_by_master_nodes(nodes, master_nodes)
             self.logger.info('number of possible nodes to use for namespace deployments %s', len(nodes))
             if len(nodes) <= 0:
                 return
@@ -628,13 +625,6 @@ def sort_by_less_used(nodes, storage_key):
     return sorted(nodes, key=key, reverse=True)
 
 
-def sort_by_master_nodes(nodes, master_nodes):
-    nodes_copy = list(nodes)
-    for node in nodes:
-        if node['node_id'] in master_nodes:
-            nodes_copy.append(node)
-            nodes_copy.remove(node)
-    return nodes_copy
 
 
 class NamespaceDeployError(RuntimeError):

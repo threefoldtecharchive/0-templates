@@ -43,11 +43,11 @@ class S3Redundant(TemplateBase):
         active_s3 = self.api.services.find_or_create(S3_TEMPLATE_UID, self._active_name, data=active_data)
         active_s3.schedule_action('install').wait(die=True)
         active_tlog = active_s3.schedule_action('tlog').wait(die=True).result
-        nodes = active_s3.schedule_action('namespaces_nodes').wait(die=True).result
+        namespaces = active_s3.schedule_action('namespaces').wait(die=True).result
 
         passive_data = dict(active_data)
         passive_data['master'] = active_tlog
-        passive_data['masterNodes'] = nodes
+        passive_data['namespaces'] = namespaces
         passive_s3 = self.api.services.find_or_create(S3_TEMPLATE_UID, self._passive_name, data=passive_data)
         passive_s3.schedule_action('install').wait(die=True)
         self.state.set('actions', 'install', 'ok')
