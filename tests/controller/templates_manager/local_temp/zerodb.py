@@ -20,7 +20,7 @@ class ZDBManager:
     @property
     def service(self):
         if self._zdb_service == None:
-            self.logger.error('- ZDB_service is None, Install it first.')
+            self.logger.error('ZDB_service is None, Install it first.')
         else:
             return self._zdb_service
 

@@ -6,15 +6,14 @@ import time, random
 class ZDBTestCases(BaseTest):
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         self = cls()
         cls.mount_paths = self.node.zerodbs.prepare()
         cls.zdbs = []
-        
-    def setUp(self):
-        super().setUp()
 
     @classmethod
     def tearDownClass(cls):
+        super().tearDownClass()
         for zdb in cls.zdbs:
             namespaces = zdb.namespace_list().result
             for namespace in namespaces:
@@ -22,7 +21,9 @@ class ZDBTestCases(BaseTest):
             zdb.stop()
         cls.zdbs.clear()
 
-    def test001_create_zdb(self):
+    @parameterized.expand(['user', 'seq', 'direct'])
+    @unittest.skip('https://github.com/threefoldtech/jumpscale_lib/issues/208')
+    def test001_create_zdb(self, mode):
         """ ZRT-ZOS-009
         *Test case for creating zerodb *
 
@@ -34,7 +35,7 @@ class ZDBTestCases(BaseTest):
         self.log('Create zerodb (zdb) with basic params, should succeed')
         admin_passwd = self.random_string()
         zdb = self.controller.zdb_manager
-        zdb.install(wait=True, path=self.mount_paths[0], admin=admin_passwd)
+        zdb.install(wait=True, path=self.mount_paths[0], admin=admin_passwd, mode=mode)
 
         self.log('Check that the params has been reflected correctly.')
         container_name = 'zerodb_' + zdb.zdb_service_name
@@ -80,7 +81,8 @@ class ZDBTestCases(BaseTest):
         self.assertEqual(namespaces.result[0]['name'], ns_name)
         self.zdbs.append(zdb)
 
-    def test003_set_namespace_properities(self):
+    @parameterized.expand(['password', 'public', 'size'])
+    def test003_set_namespace_properities(self, prop):
         """ ZRT-ZOS-011
         *Test case for setting namespace properities*
 
@@ -102,18 +104,25 @@ class ZDBTestCases(BaseTest):
         time.sleep(2)
         self.assertEqual(namespace.state, 'ok')
 
+        if prop == 'password':
+            value = self.random_string()
+            check_value = 'yes'
+        elif prop == 'public':
+            value = False
+            check_value = 'no'
+        else:
+            value = random.randint(1, 9)
+
         self.log('set the namespace (NS) settings')
-        size = random.randint(1, 9)
-        zdb.namespace_set(data={'name': ns_name, 'value': self.random_string(), 'prop': 'password'})
-        zdb.namespace_set(data={'name': ns_name, 'value': False, 'prop': 'public'})
-        zdb.namespace_set(data={'name': ns_name, 'value': size, 'prop': 'size'})
+        zdb.namespace_set(data={'name': ns_name, 'value': value, 'prop': prop})
 
         self.log('Check that NS setting has been changed')
-        ns_info = zdb.namespace_info(ns_name).wait()
-        self.assertEqual(ns_info.result['public'], 'no')
-        self.assertEqual(ns_info.result['password'], 'yes')
-        namespaces = zdb.namespace_list()
-        self.assertEqual(namespaces.result[0]['size'], size)
+        if prop in ['public', 'password']:
+            ns_info = zdb.namespace_info(ns_name).wait()
+            self.assertEqual(ns_info.result[prop], check_value)
+        else:
+            namespaces = zdb.namespace_list()
+            self.assertEqual(namespaces.result[0][prop], value)
         self.zdbs.append(zdb)
 
     def test004_start_stop_zerodb(self):
