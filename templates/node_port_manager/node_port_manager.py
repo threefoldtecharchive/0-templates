@@ -8,7 +8,7 @@ NODE_CLIENT = 'local'
 class NodePortManager(TemplateBase):
 
     version = '0.0.1'
-    template_name = 'node_capacity'
+    template_name = 'node_port_manager'
 
     def __init__(self, name, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
@@ -28,7 +28,7 @@ class NodePortManager(TemplateBase):
         services_guids = self.api.services.guids.keys()
         for item in list(self.data['ports']):
             if item['serviceGuid'] not in services_guids:
-                self.logger.info("release port %s that was reseved by %s", item['port'], item['serviceGuid'])
+                self.logger.info("release port %s that was reserved by %s", item['port'], item['serviceGuid'])
                 self.data['ports'].remove(item)
 
     def reserve(self, service_guid, n=1):
