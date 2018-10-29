@@ -41,31 +41,26 @@ class WebGateway(TemplateBase):
             if not self.data[key]:
                 raise ValueError('Invalid value for {}'.format(key))
             
-        # capacity = j.clients.threefold_directory.get(interactive=False)
+        capacity = j.clients.threefold_directory.get(interactive=False)
 
-        # try:
-        #     node, _ = capacity.api.GetCapacity(self.data['traefikNode'])
-        #     self._traefik_api = self.api.robots.get(self.data['traefikNode'], node.robot_address)
-        #     self._traefik_url = node.robot_address
-        # except HTTPError as err:
-        #     if err.response.status_code == 404:
-        #         raise ValueError('Traefik node {} does not exist'.format(self.data['traefikNode']))
-        #     raise err
+        try:
+            node, _ = capacity.api.GetCapacity(self.data['traefikNode'])
+            self._traefik_api = self.api.robots.get(self.data['traefikNode'], node.robot_address)
+            self._traefik_url = node.robot_address
+        except HTTPError as err:
+            if err.response.status_code == 404:
+                raise ValueError('Traefik node {} does not exist'.format(self.data['traefikNode']))
+            raise err
     
-        # try:
-        #     node, _ = capacity.api.GetCapacity(self.data['corednsNode'])
-        #     self._coredns_api = self.api.robots.get(self.data['corednsNode'], node.robot_address)
-        #     self._coredns_url = node.robot_address
-        # except HTTPError as err:
-        #     if err.response.status_code == 404:
-        #         raise ValueError('Coredns node {} does not exist'.format(self.data['corednsNode']))
-        #     raise err
-        
-        # @todo remove testing hack
-        self._traefik_api = self.api.robots.get('local', 'http://localhost:6600')
-        self._traefik_url = 'http://localhost:6600'
-        self._coredns_api = self.api.robots.get('local', 'http://localhost:6600')
-        self._coredns_url = 'http://localhost:6600'
+        try:
+            node, _ = capacity.api.GetCapacity(self.data['corednsNode'])
+            self._coredns_api = self.api.robots.get(self.data['corednsNode'], node.robot_address)
+            self._coredns_url = node.robot_address
+        except HTTPError as err:
+            if err.response.status_code == 404:
+                raise ValueError('Coredns node {} does not exist'.format(self.data['corednsNode']))
+            raise err
+
 
         self.data['etcdPassword'] = self.data['etcdPassword'] if self.data['etcdPassword'] else j.data.idgenerator.generateXCharID(16)
 
@@ -92,9 +87,9 @@ class WebGateway(TemplateBase):
         }
         etcd_cluster = self.api.services.find_or_create(ETCD_CLUSTER_TEMPLATE_UID, self.guid, cluster_data)
         etcd_cluster.schedule_action('install').wait(die=True)
-        cluster_connection = etcd_cluster.schedule_action('connection_info').wait(die=True)
+        cluster_connection = etcd_cluster.schedule_action('connection_info').wait(die=True).result
 
-        traefik_endpoint = ','.join(['{}:{}'.format(connection['ip'], connection['port']) for connection in cluster_connection['etcds']])
+        traefik_endpoint = ','.join(['{}:{}'.format(connection['ip'], connection['client_port']) for connection in cluster_connection['etcds']])
         coredns_endpoint = ' '.join([connection['client_url'] for connection in cluster_connection['etcds']])
         self._install_traefik(traefik_endpoint)
         self._install_coredns(coredns_endpoint)
@@ -133,6 +128,7 @@ class WebGateway(TemplateBase):
         }
         traefik = self._traefik_api.services.find_or_create(TRAEFIK_TEMPLATE_UID, self.guid, data)
         traefik.schedule_action('install').wait(die=True)
+        traefik.schedule_action('start').wait(die=True)
 
     def _install_coredns(self, coredns_endpoint):
         self.logger.info('Installing coredns')
@@ -144,6 +140,7 @@ class WebGateway(TemplateBase):
         }
         coredns = self._coredns_api.services.find_or_create(COREDNS_TEMPLATE_UID, self.guid, data)
         coredns.schedule_action('install').wait(die=True)
+        coredns.schedule_action('start').wait(die=True)
     
     def start(self):
         self.state.check('actions', 'install', 'ok')
@@ -170,7 +167,7 @@ class WebGateway(TemplateBase):
             pass
 
     def _uninstall_coredns(self):
-        self._remove_zt_clients(self.data['nics'], self._coredns)
+        self._remove_zt_clients(self.data['nics'], self._coredns_url)
         try:
             self._coredns.schedule_action('uninstall').wait(die=True)
             self._coredns.delete()

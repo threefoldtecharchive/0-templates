@@ -43,8 +43,6 @@ class EtcdCluster(TemplateBase):
         return j.sal_zos.farm(self.data['farmerIyoOrg'])
 
     def _nodes(self):
-        # # @todo remove testing hack when done
-        return [{'node_id': 'local', 'robot_address': 'http://localhost:6600'}]
         nodes = self._farm.filter_online_nodes() 
         if not nodes:
             raise ValueError('There are no online nodes in this farm')
