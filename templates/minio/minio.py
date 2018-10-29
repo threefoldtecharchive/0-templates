@@ -60,7 +60,7 @@ class Minio(TemplateBase):
             'master_namespace': self.data.get('master').get('namespace'),
             'master_address': self.data.get('master').get('address'),
             'block_size': self.data['blockSize'],
-            'public_port': self.data['nodePort'],
+            'node_port': self.data['nodePort'],
         }
         return j.sal_zos.minio.get(**kwargs)
 
