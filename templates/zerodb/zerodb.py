@@ -4,6 +4,7 @@ from zerorobot.template.state import StateCheckError
 
 
 NODE_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node/0.0.1'
+PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
 NODE_CLIENT = 'local'
 
 
@@ -14,15 +15,12 @@ class Zerodb(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
+        # hardcoded local instance, this service is only intended to be install by the node robot
+        self._node_sal = j.clients.zos.get(NODE_CLIENT)
         self.recurring_action('_monitor', 10)  # every 10 seconds
 
     def validate(self):
         self.state.delete('status', 'running')
-
-    @property
-    def _node_sal(self):
-        # hardcoded local instance, this service is only intended to be install by the node robot
-        return j.clients.zos.get(NODE_CLIENT)
 
     @property
     def _zerodb_sal(self):
@@ -72,6 +70,7 @@ class Zerodb(TemplateBase):
             if not self.data['path']:
                 raise RuntimeError('Failed to find a suitable disk for the zerodb')
 
+        self._reserve_port()
         self._deploy()
         self.state.set('actions', 'install', 'ok')
         self.state.set('actions', 'start', 'ok')
@@ -214,7 +213,7 @@ class Zerodb(TemplateBase):
         return {
             'ip': zdb_sal.node.public_addr,
             'storage_ip': zdb_sal.node.storage_addr,
-            'port': zdb_sal.node_port,
+            'port': self.data['nodePort'],
         }
 
     def _namespace_exists_update_delete(self, name, prop=None, value=None, delete=False):
@@ -241,3 +240,8 @@ class Zerodb(TemplateBase):
                     self.data['namespaces'].remove(namespace)
                 return ns
         return False
+
+    def _reserve_port(self):
+        port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
+        ports = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': 1}).wait(die=True).result
+        self.data['nodePort'] = ports[0]
