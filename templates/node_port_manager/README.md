@@ -30,6 +30,7 @@ def install(self):
 
 def uninstall(self):
     # here we release the reserved port that we got in the install method
+    port_mgr = self.api.services.get(PORT_MANAGER_TEMPLATE_UID, '_port_manager')
     ports = [x['source'] for x in self.data['ports']]
     port_mgr.schedule_action("release", {"service_guid": self.guid, 'ports': ports})
 ```
