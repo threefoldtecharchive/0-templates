@@ -3,14 +3,7 @@ from nose_parameterized import parameterized
 import unittest
 import time, random
 
-class ZDBTestCases(BaseTest):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        self = cls()
-        cls.mount_paths = self.node.zerodbs.prepare()
-        cls.zdbs = []
-
+class ZDBTestCases(BaseTest):  
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()

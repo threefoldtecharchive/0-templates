@@ -22,7 +22,11 @@ class BaseTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        pass
+        cls.vms = []
+        cls.zdbs = []
+        cls.vdisks = []
+        self = cls()
+        cls.mount_paths = self.node.zerodbs.prepare()
 
     @classmethod
     def tearDownClass(cls):
@@ -98,4 +102,15 @@ class BaseTest(TestCase):
         return ssh
 
     def random_string(self):
-        return str(uuid4()).replace('-', '')[10:]
+        return str(uuid4()).replace('-', '')[:10]
+
+    def get_zt_ip(self, obj):
+        for _ in range(100):
+            try:
+                ip = obj.info().result['nics'][0]['ip']
+                break
+            except Exception:
+                time.sleep(1)
+        else:
+            raise RuntimeError("Can't get zerotier ip")
+        return ip

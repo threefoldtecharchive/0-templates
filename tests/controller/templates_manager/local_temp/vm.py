@@ -52,7 +52,7 @@ class VMManager:
         self.service.schedule_action('uninstall').wait(die=wait)
 
     def info(self):
-        return self.service.schedule_action('info')
+        return self.service.schedule_action('info').wait()
 
     def shutdown(self, force=True):
         return self.service.schedule_action('shutdown')
@@ -79,4 +79,10 @@ class VMManager:
         return self.service.schedule_action('enable_vnc')    
 
     def disable_vnc(self):
-        return self.service.schedule_action('disable_vnc')    
+        return self.service.schedule_action('disable_vnc')
+    
+    def add_portforward(self, name, source, target):
+        return self.service.schedule_action('add_portforward', args={'name': name, 'source': source, 'target': target})
+
+    def remove_portforward(self, name):
+        return self.service.schedule_action('remove_portforward', args={'name': name})
