@@ -10,27 +10,17 @@ Once the service that reserved a port is uninstall, it needs to relase the port 
 
 
 Next is an simple example of how a service should use the port manager to reserve a port
-```capnp
-struct Schema {
-    ports @0:List(Port);
 
-    struct Port {
-        source @0: Int32;
-        target @1: Int32;
-    }
-}
-```
 
 ```python
 # beginning of the code omitted for brevity
 def install(self):
     port_mgr = self.api.services.get(PORT_MANAGER_TEMPLATE_UID, '_port_manager')
-    free_ports = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': count}).wait(die=True).result
+    self.data['ports'] = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': 1}).wait(die=True).result
     # use the value in free_ports
 
 def uninstall(self):
     # here we release the reserved port that we got in the install method
     port_mgr = self.api.services.get(PORT_MANAGER_TEMPLATE_UID, '_port_manager')
-    ports = [x['source'] for x in self.data['ports']]
-    port_mgr.schedule_action("release", {"service_guid": self.guid, 'ports': ports})
+    port_mgr.schedule_action("release", {"service_guid": self.guid, 'ports': self.data['ports']})
 ```
