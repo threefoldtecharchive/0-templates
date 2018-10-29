@@ -1,7 +1,10 @@
-from jumpscale import j
-from zerorobot.template.base import TemplateBase
-from zerorobot.template.state import StateCheckError
 import copy
+
+from jumpscale import j
+from zerorobot.service_collection import ServiceNotFoundError
+from zerorobot.template.base import TemplateBase
+from zerorobot.template.decorator import retry
+from zerorobot.template.state import StateCheckError
 
 NODE_CLIENT = 'local'
 VDISK_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vdisk/0.0.1'
@@ -111,9 +114,7 @@ class Vm(TemplateBase):
         self.logger.info('Uninstalling vm %s' % self.name)
         self._vm_sal.destroy()
 
-        port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
-        ports = [x['source'] for x in self.data['ports']]
-        port_mgr.schedule_action("release", {"service_guid": self.guid, 'ports': ports})
+        self._release_ports()
 
         self.state.delete('actions', 'install')
         self.state.delete('actions', 'start')
@@ -233,8 +234,6 @@ class Vm(TemplateBase):
                 return
 
     def _populate_port_forwards(self, ports):
-        port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
-
         # count how many port we need to find
         count = 0
         for pf in ports:
@@ -243,10 +242,24 @@ class Vm(TemplateBase):
 
         if count > 0:
             # ask the port manager 'count' number of free port
-            free_ports = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': count}).wait(die=True).result
+            free_ports = self._reserve_ports(count)
             # assigned the free port to the forward where source is missing
             for i, pf in enumerate(ports):
                 if not pf.get('source'):
                     ports[i]['source'] = free_ports.pop()
 
         return ports
+
+    @retry(exceptions=ServiceNotFoundError, tries=3, delay=3, backoff=2)
+    def _reserve_ports(self, count):
+        port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
+        free_ports = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': count}).wait(die=True).result
+        return free_ports
+
+    @retry(exceptions=ServiceNotFoundError, tries=3, delay=3, backoff=2)
+    def _release_port(self):
+        port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
+        ports = [x['source'] for x in self.data['ports']]
+        if not ports:
+            return
+        port_mgr.schedule_action("release", {"service_guid": self.guid, 'ports': ports})

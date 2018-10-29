@@ -1,7 +1,8 @@
 from jumpscale import j
+from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
+from zerorobot.template.decorator import retry
 from zerorobot.template.state import StateCheckError
-
 
 NODE_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node/0.0.1'
 PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
@@ -241,7 +242,7 @@ class Zerodb(TemplateBase):
                 return ns
         return False
 
+    @retry(exceptions=ServiceNotFoundError, tries=3, delay=3, backoff=2)
     def _reserve_port(self):
         port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
-        ports = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': 1}).wait(die=True).result
-        self.data['nodePort'] = ports[0]
+        self.data['nodePort'] = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': 1}).wait(die=True).result[0]

@@ -1,9 +1,10 @@
 import os
 
 from jumpscale import j
-from zerorobot.template.base import TemplateBase
-from zerorobot.template.state import StateCheckError
 from zerorobot.service_collection import ServiceNotFoundError
+from zerorobot.template.base import TemplateBase
+from zerorobot.template.decorator import retry
+from zerorobot.template.state import StateCheckError
 
 FLIST_ZROBOT_DEFAULT = 'https://hub.grid.tf/gig-official-apps/zero-os-0-robot-latest.flist'
 CONTAINER_TEMPLATE = 'github.com/threefoldtech/0-templates/container/0.0.1'
@@ -37,7 +38,6 @@ class Zrobot(TemplateBase):
         return "container-%s" % self.guid
 
     def _get_container(self):
-        port_mgr = self.api.services.get(PORT_MANAGER_TEMPLATE_UID, '_port_manager')
         ports = None
         nics = self.data.get('nics')
         if not nics:
@@ -45,10 +45,7 @@ class Zrobot(TemplateBase):
 
             port = self.data.get('port')
             if not port:
-                freeports = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': 1}).wait(die=True).result
-                if not freeports:
-                    raise RuntimeError("can't find a free port to expose the robot")
-                self.data['port'] = freeports[0]
+                self.data['port'] = self._reserve_port()
 
             ports = ['%s:6600' % self.data['port']]
 
@@ -216,3 +213,16 @@ class Zrobot(TemplateBase):
 
         # try to start
         self.start()
+
+    @retry(exceptions=ServiceNotFoundError, tries=3, delay=3, backoff=2)
+    def _reserve_port(self):
+        port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
+        port = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': 1}).wait(die=True).result[0]
+        return port
+
+    @retry(exceptions=ServiceNotFoundError, tries=3, delay=3, backoff=2)
+    def _release_port(self):
+        if not self.data['port']:
+            return
+        port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
+        port_mgr.schedule_action("release", {"service_guid": self.guid, 'ports': [self.data['port']]})

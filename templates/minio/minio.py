@@ -2,6 +2,8 @@ from jumpscale import j
 
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
+from zerorobot.template.decorator import retry
+from zerorobot.service_collection import ServiceNotFoundError
 
 PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
 
@@ -133,10 +135,14 @@ class Minio(TemplateBase):
             minio_sal.create_config()
             minio_sal.reload()
 
+    @retry(exceptions=ServiceNotFoundError, tries=3, delay=3, backoff=2)
     def _reserve_port(self):
         port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
         self.data['nodePort'] = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': 1}).wait(die=True).result[0]
 
+    @retry(exceptions=ServiceNotFoundError, tries=3, delay=3, backoff=2)
     def _release_port(self):
+        if not self.data['nodePort']:
+            return
         port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
         port_mgr.schedule_action("release", {"service_guid": self.guid, 'ports': [self.data['nodePort']]})
