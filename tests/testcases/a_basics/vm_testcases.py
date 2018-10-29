@@ -152,8 +152,9 @@ class TESTVM(BaseTest):
         with self.assertRaises(Exception):
             requests.get('http://{}:{}/.ssh/authorized_keys'.format(self.node_ip, host_port))
 
-    @parameterized.expand(['ext4', 'ext3', 'ext2', 'btrfs'])
-    def test005_add_vdisk_from_vm(self, filesystem):
+    @parameterized.expand([('ext4', 'hdd'), ('ext4', 'ssd'), ('ext3', 'hdd'), ('ext3', 'ssd'),
+                            ('ext2', 'hdd'), ('ext2', 'ssd'), ('btrfs', 'hdd'), ('btrfs', 'ssd')])
+    def test005_add_vdisk_from_vm(self, filesystem, disk_type):
         """ ZRT-ZOS-015
         * Test case for adding vdisk to the vm.
         **Test Scenario:**
@@ -173,7 +174,7 @@ class TESTVM(BaseTest):
         self.log('Create vdisk [D] using namespace on [zdb], should succeed.')
         disk_name = self.random_string()
         vdisk = self.controller.vdisk
-        vdisk.install(zerodb=zdb_name, nsName=disk_name, filesystem=filesystem)
+        vdisk.install(zerodb=zdb_name, nsName=disk_name, filesystem=filesystem, diskType=disk_type)
         self.vdisks.append(vdisk)
 
         self.log('Create vm [VM] with disk [D], should succeed.')
