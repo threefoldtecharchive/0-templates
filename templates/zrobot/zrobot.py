@@ -7,6 +7,7 @@ from zerorobot.service_collection import ServiceNotFoundError
 
 FLIST_ZROBOT_DEFAULT = 'https://hub.grid.tf/gig-official-apps/zero-os-0-robot-latest.flist'
 CONTAINER_TEMPLATE = 'github.com/threefoldtech/0-templates/container/0.0.1'
+PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
 NODE_CLIENT = 'local'
 
 
@@ -36,6 +37,7 @@ class Zrobot(TemplateBase):
         return "container-%s" % self.guid
 
     def _get_container(self):
+        port_mgr = self.api.services.get(PORT_MANAGER_TEMPLATE_UID, '_port_manager')
         ports = None
         nics = self.data.get('nics')
         if not nics:
@@ -43,7 +45,7 @@ class Zrobot(TemplateBase):
 
             port = self.data.get('port')
             if not port:
-                freeports = self.node_sal.freeports(nrports=1)
+                freeports = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': 1}).wait(die=True).result
                 if not freeports:
                     raise RuntimeError("can't find a free port to expose the robot")
                 self.data['port'] = freeports[0]

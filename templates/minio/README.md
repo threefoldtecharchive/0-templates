@@ -15,6 +15,7 @@ This template is responsible for managing [minio](https://minio.io/) server inst
 - `blockSize`:  block size of the data on minio. Defaults to 1048576 bytes.
 - `tlog`: entry of type Tlog. Used to fill the tlog config of the [Transaction Log](https://github.com/threefoldtech/minio/tree/zerostor/cmd/gateway/zerostor#transaction-log).
 - `master`: entry of type Tlog. Used to fill the master config of the [Transaction Log](https://github.com/threefoldtech/minio/tree/zerostor/cmd/gateway/zerostor#transaction-log).
+- `nodePort`: public port on the node that is forwarded to the minio inside the container. This field is filled by the template
 
 
 Tlog:

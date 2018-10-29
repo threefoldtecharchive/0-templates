@@ -4,6 +4,7 @@ from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry, timeout
 from zerorobot.template.state import StateCheckError
 import netaddr
+import time
 
 CONTAINER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/container/0.0.1'
 VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vm/0.0.1'
@@ -11,6 +12,7 @@ BOOTSTRAP_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zeroos_bootstrap/
 ZDB_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerodb/0.0.1'
 CAPACITY_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_capacity/0.0.1'
 NETWORK_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/network/0.0.1'
+PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
 BRIDGE_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/bridge/0.0.1'
 NODE_CLIENT = 'local'
 
@@ -28,9 +30,11 @@ class Node(TemplateBase):
 
     def __init__(self, name, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
+        self._node_sal = j.clients.zos.get(NODE_CLIENT)
         self.recurring_action('_monitor', 30)  # every 30 seconds
         self.recurring_action('_network_monitor', 30)  # every 30 seconds
-        self.recurring_action('_register', 10 * 60)  # every 10 minutes
+        self.gl_mgr.add("_register", self._register)
+        self.gl_mgr.add("_port_manager", self._port_manager)
 
     def validate(self):
         self.state.delete('disks', 'mounted')
@@ -38,13 +42,6 @@ class Node(TemplateBase):
         network = self.data.get('network')
         if network:
             _validate_network(network)
-
-    @property
-    def _node_sal(self):
-        """
-        connection to the node
-        """
-        return j.clients.zos.get(NODE_CLIENT)
 
     def _monitor(self):
         self.logger.info('Monitoring node %s' % self.name)
@@ -93,13 +90,30 @@ class Node(TemplateBase):
         """
         make sure the node_capacity service is installed
         """
-        self.state.check('actions', 'install', 'ok')
-        services = self.api.services.find(template_uid=CAPACITY_TEMPLATE_UID)
-        if not services:
-            self.api.services.create(template_uid=CAPACITY_TEMPLATE_UID,
-                                     service_name='_node_capacity',
-                                     data={},
-                                     public=True)
+        while True:
+            try:
+                self.state.check('actions', 'install', 'ok')
+                self.api.services.find_or_create(template_uid=CAPACITY_TEMPLATE_UID,
+                                                 service_name='_node_capacity',
+                                                 data={},
+                                                 public=True)
+                return
+            except StateCheckError:
+                time.sleep(5)
+
+    def _port_manager(self):
+        """
+        make sure the node_port_manager service is installed
+        """
+        while True:
+            try:
+                self.state.check('actions', 'install', 'ok')
+                self.api.services.find_or_create(template_uid=PORT_MANAGER_TEMPLATE_UID,
+                                                 service_name='_port_manager',
+                                                 data={})
+                return
+            except StateCheckError:
+                time.sleep(5)
 
     @retry(Exception, tries=2, delay=2)
     def install(self):

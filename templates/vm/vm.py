@@ -5,6 +5,7 @@ import copy
 
 NODE_CLIENT = 'local'
 VDISK_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vdisk/0.0.1'
+PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
 
 
 class Vm(TemplateBase):
@@ -29,7 +30,7 @@ class Vm(TemplateBase):
     @property
     def _vm_sal(self):
         node_sal = self._node_sal
-        self.data['ports'] = populate_port_forwards(self.data['ports'], node_sal)
+        self.data['ports'] = self._populate_port_forwards(self.data['ports'])
 
         data = self.data.copy()
         data['name'] = self.name
@@ -78,7 +79,7 @@ class Vm(TemplateBase):
 
     def update_ipxeurl(self, url):
         self.data['ipxeUrl'] = url
-    
+
     def update_kernelargs(self, kernel_args):
         self.data['kernelArgs'] = kernel_args
 
@@ -109,6 +110,11 @@ class Vm(TemplateBase):
     def uninstall(self):
         self.logger.info('Uninstalling vm %s' % self.name)
         self._vm_sal.destroy()
+
+        port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
+        ports = [x['source'] for x in self.data['ports']]
+        port_mgr.schedule_action("release", {"service_guid": self.guid, 'ports': ports})
+
         self.state.delete('actions', 'install')
         self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
@@ -213,7 +219,7 @@ class Vm(TemplateBase):
             'target': target,
             'source': source,
         }
-        forward = populate_port_forwards([forward], node_sal)[0]
+        forward = self._populate_port_forwards([forward])[0]
         self.data['ports'].append(forward)
 
         node_sal.client.kvm.add_portfoward(self._vm_sal.uuid, forward['source'], forward['target'])
@@ -226,20 +232,21 @@ class Vm(TemplateBase):
                 self.data['ports'].remove(forward)
                 return
 
+    def _populate_port_forwards(self, ports):
+        port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
 
-def populate_port_forwards(ports, node_sal):
-    # count how many port we need to find
-    count = 0
-    for pf in ports:
-        if not pf.get('source'):
-            count += 1
-
-    if count > 0:
-        # ask zero-os 'count' number of free port
-        free_ports = node_sal.freeports(count)
-        # assigned the free port to the forward where source is missing
-        for i, pf in enumerate(ports):
+        # count how many port we need to find
+        count = 0
+        for pf in ports:
             if not pf.get('source'):
-                ports[i]['source'] = free_ports.pop()
+                count += 1
 
-    return ports
+        if count > 0:
+            # ask the port manager 'count' number of free port
+            free_ports = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': count}).wait(die=True).result
+            # assigned the free port to the forward where source is missing
+            for i, pf in enumerate(ports):
+                if not pf.get('source'):
+                    ports[i]['source'] = free_ports.pop()
+
+        return ports
