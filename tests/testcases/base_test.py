@@ -5,6 +5,7 @@ from uuid import uuid4
 from jumpscale import j
 from subprocess import Popen, PIPE, run
 import time, os, hashlib
+import itertools
 
 logger = j.logger.get('testsuite.log')
 
@@ -25,8 +26,8 @@ class BaseTest(TestCase):
         cls.vms = []
         cls.zdbs = []
         cls.vdisks = []
-        self = cls()
-        cls.mount_paths = self.node.zerodbs.prepare()
+        # self = cls()
+        cls.mount_paths = ''
 
     @classmethod
     def tearDownClass(cls):
@@ -114,3 +115,6 @@ class BaseTest(TestCase):
         else:
             raise RuntimeError("Can't get zerotier ip")
         return ip
+
+    def generate_combinations(self, data):
+        return list(itertools.product(*data))

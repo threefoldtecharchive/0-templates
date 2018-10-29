@@ -28,7 +28,7 @@ class Controller:
         self.zdb_manager = zerodb.ZDBManager(parent=self, service_name=None)
         self.container_manager = container.ContManager(parent=self, service_name=None)
         self.vdisk = vdisk.VdiskManager(parent=self, service_name=None)
-        self.zt_client = zt_client.ZT_Client(parent=self)
+        # self.zt_client = zt_client.ZT_Client(parent=self)
 
     def _generate_random_string(self):
         return str(uuid4()).replace('-', '')[10:]
