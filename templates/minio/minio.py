@@ -198,9 +198,9 @@ class Healer:
 
 
 def _health_monitoring(state, level, msg, flag):
-    if level in [LOG_LVL_MESSAGE_INTERNAL, LOG_LVL_OPS_ERROR, LOG_LVL_CRITICAL_ERROR]:
+    if level in [LOG_LVL_MESSAGE_INTERNAL]:
         msg = j.data.serializer.json.loads(msg)
-        if 'data_shard' in msg:
-            state.set('data_shards', msg['data_shard'], SERVICE_STATE_ERROR)
-        if 'tlog_shard' in msg:
-            state.set('tlog_shards', msg['tlog_shard'], SERVICE_STATE_ERROR)
+        if 'shard' in msg:
+            state.set('data_shards', msg['shard'], SERVICE_STATE_ERROR)
+        if 'tlog' in msg and not msg.get('master', False): # we check only the minio owns tlog server, not it's master
+            state.set('tlog_shards', msg['tlog'], SERVICE_STATE_ERROR)
