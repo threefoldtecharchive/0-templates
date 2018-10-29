@@ -37,8 +37,7 @@ class ZerotierClient(TemplateBase):
 
     def _get_remote_robot(self, url):
         robotname = urlparse(url).netloc
-        j.clients.zrobot.get(robotname, {'url': url}, interactive=False)
-        return j.clients.zrobot.robots[robotname]
+        return self.api.robots.get(robotname, url)
 
     def add_to_robot(self, url, serviceguid):
         robotapi = self._get_remote_robot(url)

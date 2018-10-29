@@ -37,8 +37,7 @@ class DmVm(TemplateBase):
                 raise ValueError('Node {} does not exist'.format(self.data['nodeId']))
             raise err
 
-        j.clients.zrobot.get(self.data['nodeId'], data={'url': node.robot_address})
-        self._node_api = j.clients.zrobot.robots[self.data['nodeId']]
+        self._node_api = self.api.robots.get(self.data['nodeId'], node.robot_address)
         self._node_robot_url = node.robot_address
 
         if self.data['image'].partition(':')[0] not in ['zero-os', 'ubuntu']:
@@ -128,7 +127,7 @@ class DmVm(TemplateBase):
             kernel_keys = [arg['key'] for arg in self.data['kernelArgs']]
             if 'zerotier' not in kernel_keys:
                 self.data['kernelArgs'].append({
-                    'name':'zerotier',
+                    'name': 'zerotier',
                     'key': 'zerotier',
                     'value': self.data['mgmtNic']['id']
                 })
@@ -139,7 +138,7 @@ class DmVm(TemplateBase):
                     'value': self.data['ztIdentity']
                 })
             vm.schedule_action('update_kernelargs', args={'kernel_args': self.data['kernelArgs']}).wait(die=True)
-    
+
         vm.schedule_action('install').wait(die=True)
 
         self.state.set('actions', 'install', 'ok')
@@ -178,7 +177,6 @@ class DmVm(TemplateBase):
         except:
             self.logger.warning('Error occured while removing zt client {}'.format(self.guid))
             # @todo Add vdisk service to robot deletables
-
 
         self.state.delete('actions', 'install')
         self.state.delete('status', 'running')

@@ -93,6 +93,10 @@ class Network(TemplateBase):
         if not self.data.get('bonded', False):
             # the check is only for bonded interfaces
             return
+        mode = self.data.get('mode', 'ovs')
+        if mode and mode != 'ovs':
+            # only monitor in case of ovs
+            return
 
         if not self._can_ping():
             ips = ','.join(self.data.get('testIps', []))
@@ -113,15 +117,12 @@ class Network(TemplateBase):
             vlan_tag=self.data['vlan'],
             ovs_container_name='ovs',
             bonded=self.data.get('bonded', False),
+            mtu=self.data.get('mtu', 9000) or 9000,
+            mode=self.data.get('mode', 'ovs'),
         )
 
         self.state.set('actions', 'install', 'ok')
 
     def uninstall(self):
-        try:
-            container = self._node_sal.containers.get('ovs')
-            container.stop()
-        except LookupError:
-            pass
-
+        self._node_sal.network.unconfigure('ovs', self.data.get('mode', 'ovs'))
         self.state.delete('actions', 'install')

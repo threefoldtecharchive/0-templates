@@ -7,9 +7,9 @@ from zerorobot.template.state import StateCheckError
 S3_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/s3/0.0.1'
 
 
-class S3Manager(TemplateBase):
+class S3Redundant(TemplateBase):
     version = '0.0.1'
-    template_name = "s3_manager"
+    template_name = "s3_redundant"
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
@@ -23,8 +23,9 @@ class S3Manager(TemplateBase):
         if len(self.data['minioPassword']) < 8:
             raise ValueError('minio password need to be at least 8 characters')
 
-        if not self.data['minioLogin']:
-            raise ValueError('Invalid minio login')
+        for key in ['minioLogin', 'storageSize']:
+            if not self.data[key]:
+                raise ValueError('Invalid value for {}'.format(key))
 
         if not self.data['nsPassword']:
             self.data['nsPassword'] = j.data.idgenerator.generateXCharID(32)
@@ -41,11 +42,11 @@ class S3Manager(TemplateBase):
         active_s3 = self.api.services.find_or_create(S3_TEMPLATE_UID, self._active_name, data=active_data)
         active_s3.schedule_action('install').wait(die=True)
         active_tlog = active_s3.schedule_action('tlog').wait(die=True).result
-        nodes = active_s3.schedule_action('namespaces_nodes').wait(die=True).result
+        namespaces = active_s3.schedule_action('namespaces').wait(die=True).result
 
         passive_data = dict(active_data)
         passive_data['master'] = active_tlog
-        passive_data['masterNodes'] = nodes
+        passive_data['namespaces'] = namespaces
         passive_s3 = self.api.services.find_or_create(S3_TEMPLATE_UID, self._passive_name, data=passive_data)
         passive_s3.schedule_action('install').wait(die=True)
         self.state.set('actions', 'install', 'ok')
