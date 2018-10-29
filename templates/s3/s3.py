@@ -549,6 +549,75 @@ class S3(TemplateBase):
         except Exception as err:
             raise NamespaceDeployError(str(err), node)
 
+    def handle_active_minio_failure(self):
+
+        # The reverse proxy stops serving requests to the broken minio VM
+        # Update configuration of the passive minio to become the active one
+        # The reverse proxy starts forwarding requests to the passive minio VM which as becomes the active minio
+        # Deploy a new minio VM and configure it to be the passive one, replicting metadata from the newly active
+
+        pass
+
+    def handle_passive_minio_failure(self):
+        # Redeploy a new VM and configure it to be the passive one replicating from the active
+
+        pass
+
+    def handle_active_minio_tlog_failure(self):
+        # minio template needs to watch the logs from minio process and in the cases where it see minio cannot access or some IO error happens on the tlog zdb namespace.
+
+        # Example flow:
+
+        # Minio output some logs showing it cannot reach the tlog shard
+        # minio template see these logs
+        # minio template update it's state to be marked as unhealthy
+        # s3 template detect minio state is unhealthy
+        # we need to find a way for minio and s3 template to exchange the information about which shards is unreachable (TODO)
+        # s3 template checks the zdb namespace states
+        # if it can just restart it -> restart it
+        # if disk is really dead
+        # The reverse proxy stops serving requests to the broken minio VM and starts forwarding requests to the passive minio VM which then becomes the active minio
+        # reserve a new namespace on a new disk
+        # update minio configration with new tlog shard and making this minio the passive one
+        # minio service send signal to minio process to ask to reload its config
+        # minio process will then start replicating new metadata from the active minio
+        pass
+
+    def handle_passive_minio_tlog_failure(self):
+        # minio template needs to watch the logs from minio process and in the cases where it see minio cannot access or some IO error happens on the tlog zdb namespace.
+
+        # Example flow:
+
+        # Minio output some logs showing it cannot reach the tlog shard
+        # minio template see these logs
+        # minio template update it's state to be marked as unhealthy
+        # s3 template detect minio state is unhealthy
+        # we need to find a way for minio and s3 template to exchange the information about which shards is unreachable (TODO)
+        # s3 template checks the zdb namespace states
+        # if it can just restart it -> restart it
+        # if disk is really dead
+        # reserve a new namespace on a new disk
+        # update minio configration with new tlog shard
+        # minio service send signal to minio process to ask to reload its config
+        # minio process will then start replicating new metadata from the active minio on the new tlog shard
+        pass
+    
+    def handle_minio_data_disk_failure(self):
+
+        # minio template needs to watch the logs from minio process and in the cases where it see minio cannot access some shards or some IO error happens, the robot needs to take actions.
+
+        # Example flow:
+
+        # Minio output some logs showing it cannot reach some shards (threefoldtech/minio#16)
+        # minio template see these logs
+        # minio template update it's state to be marked as unhealthy
+        # s3 template detect minio state is unhealthy
+        # we need to find a way for minio and s3 template to exchange the information about which shards is unreachable (TODO)
+        # s3 template checks the zdb namespace states
+        # if it can just restart it -> restart it
+        # if disk is really dead, reserve a new namespace on a new disk -> update minio configration with new shards -> minio service send signal to minio process to ask to reload its config -> ask minio to start healing proces to write missing data on the new shards
+        pass
+
 
 def list_farm_nodes(farm_organization):
     """
