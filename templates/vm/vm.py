@@ -111,7 +111,7 @@ class Vm(TemplateBase):
         self.logger.info('Uninstalling vm %s' % self.name)
         self._vm_sal.destroy()
 
-        port_mgr = self.api.services.get(PORT_MANAGER_TEMPLATE_UID, '_port_manager')
+        port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
         ports = [x['source'] for x in self.data['ports']]
         port_mgr.schedule_action("release", {"service_guid": self.guid, 'ports': ports})
 
@@ -233,7 +233,7 @@ class Vm(TemplateBase):
                 return
 
     def _populate_port_forwards(self, ports):
-        port_mgr = self.api.services.get(PORT_MANAGER_TEMPLATE_UID, '_port_manager')
+        port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
 
         # count how many port we need to find
         count = 0
