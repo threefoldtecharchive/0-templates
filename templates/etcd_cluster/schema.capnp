@@ -8,7 +8,7 @@ struct Schema {
     nics @3 :List(Nic); # Configuration of the attached nics to the etcd instances
     token @4 :Text; # cluster token
     password @5 :Text; # etcd password
-    clusterConnections @6 :List(Text);
+    clusterConnections @6 :Text;
 
     struct Etcd {
       name @0: Text; # etcd service name

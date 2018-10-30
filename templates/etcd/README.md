@@ -11,12 +11,6 @@ This is a node template responsible for managing [etcd](https://coreos.com/etcd/
 - `cluster`: a string of the cluster connection info, used in the etcd conf `initial-cluster` value ex: `one=http://172.12.53.12:2380,two=172.12.53.13:2380`
 - `password`: password to be used to create root user. If not supplied, the template will generate one.
 
-
-Member:
-- `name`: name of the etcd used in the config, this is the guid of the service.
-- `address`: peer address of the etcd
-
-
 Nic:
 - `id`: vxlan or vlan id or zerotier network id
 - `type`: NicType enum specifying the nic type

@@ -168,7 +168,6 @@ class EtcdCluster(TemplateBase):
 
     def _install_etcd(self, node):
         robot = self.api.robots.get(node['node_id'], node['robot_address'])
-        robot = self.api.robots.get('local')
         try:
             nics = self._create_zt_clients(self.data['nics'], node['robot_address'])
             data = {

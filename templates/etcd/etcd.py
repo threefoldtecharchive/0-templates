@@ -101,7 +101,7 @@ class Etcd(TemplateBase):
         self.state.delete('status', 'running')
 
     def connection_info(self):
-        self.state.check('actions', 'install', 'ok')
+        self.state.check('status', 'running', 'ok')
         return self._etcd_sal.connection_info()
     
     def update_cluster(self, cluster):
