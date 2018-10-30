@@ -16,7 +16,6 @@ class S3Redundant(TemplateBase):
         self._active_name = '{}_active'.format(self.guid)
         self._passive_name = '{}_passive'.format(self.guid)
 
-
     def validate(self):
         if self.data['parityShards'] > self.data['dataShards']:
             raise ValueError('parityShards must be equal to or less than dataShards')
@@ -30,13 +29,13 @@ class S3Redundant(TemplateBase):
 
         if not self.data['nsPassword']:
             self.data['nsPassword'] = j.data.idgenerator.generateXCharID(32)
-    
+
     def _active_s3(self):
         return self.api.services.get(template_uid=S3_TEMPLATE_UID, name=self._active_name)
 
     def _passive_s3(self):
         return self.api.services.get(template_uid=S3_TEMPLATE_UID, name=self._passive_name)
-        
+
     def install(self):
         active_data = dict(self.data)
         active_data['nsName'] = self.guid
@@ -88,9 +87,9 @@ class S3Redundant(TemplateBase):
 
         for service in services:
             service.delete()
-        
+
         self.state.delete('actions', 'install')
-        
+
     def urls(self):
         self.state.check('actions', 'install', 'ok')
         active_urls = self._active_s3().schedule_action('url').wait(die=True).result
@@ -99,17 +98,17 @@ class S3Redundant(TemplateBase):
             'active_urls': active_urls,
             'passive_urls': passive_urls,
         }
-    
+
     def start_active(self):
         self.state.check('actions', 'install', 'ok')
         active_s3 = self._active_s3()
         active_s3.schedule_action('start').wait(die=True)
-        
+
     def stop_active(self):
         self.state.check('actions', 'install', 'ok')
         active_s3 = self._active_s3()
         active_s3.schedule_action('stop').wait(die=True)
-    
+
     def upgrade_active(self):
         self.stop_active()
         self.start_active()
@@ -118,7 +117,7 @@ class S3Redundant(TemplateBase):
         self.state.check('actions', 'install', 'ok')
         passive_s3 = self._passive_s3()
         passive_s3.schedule_action('start').wait(die=True)
-        
+
     def stop_passive(self):
         self.state.check('actions', 'install', 'ok')
         passive_s3 = self._passive_s3()

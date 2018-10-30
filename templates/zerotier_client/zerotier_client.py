@@ -39,11 +39,11 @@ class ZerotierClient(TemplateBase):
         robotname = urlparse(url).netloc
         return self.api.robots.get(robotname, url)
 
-    def add_to_robot(self, url, serviceguid):
+    def add_to_robot(self, url, name):
         robotapi = self._get_remote_robot(url)
-        robotapi.services.find_or_create(ZT_TEMPLATE_UID, service_name=serviceguid, data={'token': self.data['token']})
+        robotapi.services.find_or_create(ZT_TEMPLATE_UID, service_name=name, data={'token': self.data['token']})
 
-    def remove_from_robot(self, url, serviceguid):
+    def remove_from_robot(self, url, name):
         robotapi = self._get_remote_robot(url)
-        for service in robotapi.services.find(template_uid=ZT_TEMPLATE_UID, name=serviceguid):
+        for service in robotapi.services.find(template_uid=ZT_TEMPLATE_UID, name=name):
             service.delete()

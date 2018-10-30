@@ -4,7 +4,8 @@
 This is a node template responsible for managing [coredns](https://coredns.io/) server instance.
 
 ### Schema:
-- `etcd`: instance name of the etcd service used for configuration
+- `etcdEndpoint`: etcd endpoint configuration ex: http://172.22.218.122:2379 http://172.22.150.162:2379
+- `etcdPassword`: etcd root user password
 - `nics`: list of nics to create for the coredns container. Must contain at least one zerotier nic.
 - `ztIdentity`: zerotier identity of the coredns container. This is set by the template.
 - `backplane` : the network interface name that will answer dns queries only  teh default value (backplane)

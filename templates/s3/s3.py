@@ -27,6 +27,8 @@ class S3(TemplateBase):
         self.recurring_action('_ensure_namespaces_connections', 300)
         self.recurring_action('_update_url', 300)
 
+        self._farm = j.sal_zos.farm(self.data['farmerIyoOrg'])
+
         self._robots = {}
 
     def validate(self):
@@ -49,10 +51,9 @@ class S3(TemplateBase):
 
     @property
     def _nodes(self):
-        # keep a cache for a few minutes
-        nodes = list_farm_nodes(self.data['farmerIyoOrg'])
+        nodes = self._farm.filter_online_nodes() 
         if not nodes:
-            raise ValueError('There are no nodes in this farm')
+            raise ValueError('There are no online nodes in this farm')
         return nodes
 
     @timeout(60)
@@ -435,7 +436,7 @@ class S3(TemplateBase):
         self.logger.info("create the zero-os vm on which we will create the minio container")
         nodes = self._nodes.copy()
 
-        nodes = sort_by_less_used(filter_node_online(nodes), 'sru')
+        nodes = sort_by_less_used(nodes, 'sru')
         mgmt_nic = {
             'id': self.data['mgmtNic']['id'],
             'ztClient': self.data['mgmtNic']['ztClient'],
@@ -496,7 +497,6 @@ class S3(TemplateBase):
 
         required_nr_namespaces = nr_namepaces
         deployed_nr_namespaces = 0
-        nodes = filter_node_online(nodes.copy())
         while deployed_nr_namespaces < required_nr_namespaces:
             # sort nodes by the amount of storage available
             nodes = sort_by_less_used(nodes, storage_key)
@@ -623,18 +623,6 @@ def sort_by_less_used(nodes, storage_key):
     return sorted(nodes, key=key, reverse=True)
 
 
-def filter_node_online(nodes):
-    def url_ping(node):
-        try:
-            j.sal.nettools.checkUrlReachable(node['robot_address'], timeout=5)
-            return (node, True)
-        except:
-            return (node, False)
-
-    group = gevent.pool.Group()
-    for node, ok in group.imap_unordered(url_ping, nodes):
-        if ok:
-            yield node
 
 
 class NamespaceDeployError(RuntimeError):
