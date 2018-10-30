@@ -12,6 +12,7 @@ This template is responsible for managing 0-db.
 - `namespaces`: list of Namespace to be deployed on this zerodb. **optional**
 - `nics`: list of nics to create for the zerodb container. **optional**
 - `ztIdentity`: zerotier identity of the zerodb container. This is set by the template.
+- `nodePort`: public listening port, set by the template
 
 Nic:
 - `id`: vxlan or vlan id
