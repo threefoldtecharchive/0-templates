@@ -1,4 +1,4 @@
-@0xb198f305ed84eb26; 
+@0xb198f305ed84eb26;
 
 
 struct Schema {
@@ -11,6 +11,7 @@ struct Schema {
     ztIdentity @6: Text; # ztidentity of the container running 0-db
     size @7: Int32; # disk size of the 0-db. Only applicable for
     diskType @8 :DiskType; # type of disk to use for this zerodb
+    nodePort @9 :Int32; # public listening port
 
     enum DiskType{
         hdd @0;
