@@ -25,7 +25,9 @@ class Etcd(TemplateBase):
         else:
             raise ValueError('Service must contain at least one zerotier nic')
 
-        self.data['password'] = self.data['password'] if self.data['password'] else j.data.idgenerator.generateXCharID(10)
+        self.data['password'] = self.data['password'] if self.data['password'] else j.data.idgenerator.generateXCharID(16)
+        self.data['token'] = self.data['token'] if self.data['token'] else self.guid
+
 
     def _deploy(self):
         etcd_sal = self._etcd_sal
@@ -110,3 +112,9 @@ class Etcd(TemplateBase):
             self._etcd_sal.start()
         except StateCheckError:
             pass
+
+    def _enable_auth(self):
+        self._etcd_sal.enable_auth()
+    
+    def _prepare_traefik(self):
+        self._etcd_sal.prepare_traefik()

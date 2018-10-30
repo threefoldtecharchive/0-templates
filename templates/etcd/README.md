@@ -7,15 +7,9 @@ This is a node template responsible for managing [etcd](https://coreos.com/etcd/
 
 - `nics`: list of nics to create for the etcd container. Must contain at least one zerotier nic.
 - `ztIdentity`: zerotier identity of the etcd container. This is set by the template.
-- `token`: the token for the cluster
-- `cluster`: a list of type Member. This is the list of the cluster members, it should contain the service itself too. If not supplied, it will default to just one member, the service itself.
+- `token`: the token for the cluster. If not supplied, the template will generate one.
+- `cluster`: a string of the cluster connection info, used in the etcd conf `initial-cluster` value ex: `one=http://172.12.53.12:2380,two=172.12.53.13:2380`
 - `password`: password to be used to create root user. If not supplied, the template will generate one.
-
-
-Member:
-- `name`: name of the etcd used in the config, this is the guid of the service.
-- `address`: peer address of the etcd
-
 
 Nic:
 - `id`: vxlan or vlan id or zerotier network id

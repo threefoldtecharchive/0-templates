@@ -83,7 +83,7 @@ class DmVm(TemplateBase):
         }
         zt_name = self.data['mgmtNic']['ztClient']
         zt_client = self.api.services.get(name=zt_name, template_uid=ZT_TEMPLATE_UID)
-        data = {'url': self._node_robot_url, 'serviceguid': self.guid}
+        data = {'url': self._node_robot_url, 'name': self.guid}
         zt_client.schedule_action('add_to_robot', args=data).wait(die=True)
         nic['ztClient'] = self.guid
         nics = [nic, {'type': 'default', 'name': 'nat0'}]
@@ -170,7 +170,7 @@ class DmVm(TemplateBase):
         try:
             zt_name = self.data['mgmtNic']['ztClient']
             zt_client = self.api.services.get(name=zt_name, template_uid=ZT_TEMPLATE_UID)
-            data = {'url': self._node_robot_url, 'serviceguid': self.guid}
+            data = {'url': self._node_robot_url, 'name': self.guid}
             zt_client.schedule_action('remove_from_robot', args=data).wait(die=True)
         except ServiceNotFoundError:
             pass
