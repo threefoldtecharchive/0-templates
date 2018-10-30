@@ -35,7 +35,6 @@ class Minio(TemplateBase):
         except StateCheckError:
             return
 
-        self._healer.start()
         if not self._minio_sal.is_running():
             self.state.delete('status', 'running')
             self.start()
@@ -43,6 +42,8 @@ class Minio(TemplateBase):
                 self.state.set('status', 'running', 'ok')
         else:
             self.state.set('status', 'running', 'ok')
+
+        self._healer.start()
 
     @property
     def _node_sal(self):

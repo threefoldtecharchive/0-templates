@@ -178,7 +178,7 @@ class TestMinioHealthMonitor(TestCase):
 
     def test_hdd_failure(self):
         state = ServiceState()
-        logs = [(LOG_LVL_CRITICAL_ERROR, self.encoder.dumps({'error': 'IO error', 'data_shard': '192.168.0.1:9000'}), None)]
+        logs = [(LOG_LVL_MESSAGE_INTERNAL, self.encoder.dumps({'error': 'IO error', 'shard': '192.168.0.1:9000'}), None)]
         for level, msg, flag in logs:
             health_monitoring(state, level, msg, flag)
 
@@ -187,7 +187,7 @@ class TestMinioHealthMonitor(TestCase):
 
     def test_tlog_failure(self):
         state = ServiceState()
-        logs = [(LOG_LVL_CRITICAL_ERROR, self.encoder.dumps({'error': 'IO error', 'tlog_shard': '192.168.0.1:9000'}), None)]
+        logs = [(LOG_LVL_MESSAGE_INTERNAL, self.encoder.dumps({'error': 'IO error', 'tlog': '192.168.0.1:9000'}), None)]
         for level, msg, flag in logs:
             health_monitoring(state, level, msg, flag)
 
