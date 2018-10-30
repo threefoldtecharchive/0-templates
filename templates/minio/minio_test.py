@@ -12,7 +12,7 @@ from minio import (LOG_LVL_CRITICAL_ERROR, LOG_LVL_JOB, LOG_LVL_LOG_STRUCTURED,
                    LOG_LVL_RESULT_HRD, LOG_LVL_RESULT_JSON,
                    LOG_LVL_RESULT_TOML, LOG_LVL_RESULT_YAML,
                    LOG_LVL_STATISTICS, LOG_LVL_STDERR, LOG_LVL_STDOUT,
-                   LOG_LVL_WARNING, NODE_CLIENT, Minio, health_monitoring)
+                   LOG_LVL_WARNING, NODE_CLIENT, Minio, _health_monitoring)
 from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
                                       SERVICE_STATE_SKIPPED,
                                       SERVICE_STATE_WARNING, ServiceState,
@@ -180,7 +180,7 @@ class TestMinioHealthMonitor(TestCase):
         state = ServiceState()
         logs = [(LOG_LVL_MESSAGE_INTERNAL, self.encoder.dumps({'error': 'IO error', 'shard': '192.168.0.1:9000'}), None)]
         for level, msg, flag in logs:
-            health_monitoring(state, level, msg, flag)
+            _health_monitoring(state, level, msg, flag)
 
         assert 'data_shards' in state.categories
         assert state.categories['data_shards']['192.168.0.1:9000'] == SERVICE_STATE_ERROR
@@ -189,7 +189,7 @@ class TestMinioHealthMonitor(TestCase):
         state = ServiceState()
         logs = [(LOG_LVL_MESSAGE_INTERNAL, self.encoder.dumps({'error': 'IO error', 'tlog': '192.168.0.1:9000'}), None)]
         for level, msg, flag in logs:
-            health_monitoring(state, level, msg, flag)
+            _health_monitoring(state, level, msg, flag)
 
         assert 'tlog_shards' in state.categories
         assert state.categories['tlog_shards']['192.168.0.1:9000'] == SERVICE_STATE_ERROR
