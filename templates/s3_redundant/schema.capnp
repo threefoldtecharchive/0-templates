@@ -12,6 +12,8 @@ struct Schema {
     minioPassword @7: Text; # minio password
     minioBlockSize @8 :UInt32=1048576; # minio data block size in bytes
     nsPassword @9: Text; # Namespace password
+    activeS3 @10 :Text; # name of the active s3 service
+    passiveS3 @11 :Text; # name of passive s3 service
 
     enum StorageType {
      hdd @0;

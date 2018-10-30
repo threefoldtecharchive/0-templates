@@ -13,8 +13,6 @@ class S3Redundant(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        self._active_name = '{}_active'.format(self.guid)
-        self._passive_name = '{}_passive'.format(self.guid)
 
     def validate(self):
         if self.data['parityShards'] > self.data['dataShards']:
@@ -31,41 +29,30 @@ class S3Redundant(TemplateBase):
             self.data['nsPassword'] = j.data.idgenerator.generateXCharID(32)
 
     def _active_s3(self):
-        return self.api.services.get(template_uid=S3_TEMPLATE_UID, name=self._active_name)
+        return self.api.services.get(template_uid=S3_TEMPLATE_UID, name=self.data['activeS3'])
 
     def _passive_s3(self):
-        return self.api.services.get(template_uid=S3_TEMPLATE_UID, name=self._passive_name)
+        return self.api.services.get(template_uid=S3_TEMPLATE_UID, name=self.data['passiveS3'])
 
     def install(self):
         active_data = dict(self.data)
         active_data['nsName'] = self.guid
-        active_s3 = self.api.services.find_or_create(S3_TEMPLATE_UID, self._active_name, data=active_data)
+        if self.data['activeS3']:
+            active_s3 = self._active_s3()
+        else:
+            active_s3 = self.api.services.create(S3_TEMPLATE_UID, data=active_data)
+            self.data['activeS3'] = active_s3.name
         active_s3.schedule_action('install').wait(die=True)
-        active_tlog = active_s3.schedule_action('tlog').wait(die=True).result
-        namespaces = active_s3.schedule_action('namespaces').wait(die=True).result
 
-        passive_data = dict(active_data)
-        passive_data['master'] = active_tlog
-        passive_data['namespaces'] = namespaces
-        passive_s3 = self.api.services.find_or_create(S3_TEMPLATE_UID, self._passive_name, data=passive_data)
-        passive_s3.schedule_action('install').wait(die=True)
-        self.state.set('actions', 'install', 'ok')
-
-    def deploy(data=None):
-        active_data = dict(self.data)
-        if data:
-            active_data = data
-
-        active_data['nsName'] = self.guid
-        active_s3 = self.api.services.find_or_create(S3_TEMPLATE_UID, self._active_name, data=active_data)
-        active_s3.schedule_action('install').wait(die=True)
-        active_tlog = active_s3.schedule_action('tlog').wait(die=True).result
-        namespaces = active_s3.schedule_action('namespaces').wait(die=True).result
-
-        passive_data = dict(active_data)
-        passive_data['master'] = active_tlog
-        passive_data['namespaces'] = namespaces
-        passive_s3 = self.api.services.find_or_create(S3_TEMPLATE_UID, self._passive_name, data=passive_data)
+        if self.data['passiveS3']:
+            passive_s3 = self._passive_s3()
+        else:
+            active_tlog = active_s3.schedule_action('tlog').wait(die=True).result
+            namespaces = active_s3.schedule_action('namespaces').wait(die=True).result
+            passive_data = dict(active_data)
+            passive_data['master'] = active_tlog
+            passive_data['namespaces'] = namespaces
+            passive_s3 = self.api.services.create(S3_TEMPLATE_UID, data=passive_data)
         passive_s3.schedule_action('install').wait(die=True)
         self.state.set('actions', 'install', 'ok')
 
@@ -127,60 +114,58 @@ class S3Redundant(TemplateBase):
         self.stop_passive()
         self.start_passive()
 
-    def promote_passive(self):
-        active_data = self._passive_s3().data
-        self.deploy(active_data)
-        self.upgrade_passive()
+    def _promote_passive(self):
+        self._passive_s3().schedule_action('promote_passive').wait(die=True)
 
     def get_etcd_client(self):
         pass
 
-    def get_active_ip():
+    def get_active_ip(self):
         return self._active_s3().data['mgmtNic']['ip']
-    
-    def get_passive_ip():
+
+    def get_passive_ip(self):
         return self._passive_s3().data['mgmtNic']['ip']
 
-    def handle_active_minio_failure(self):
-        active_ip = self.get_active_ip()
-        passive_ip = self.get_passive_ip()
+    # def handle_active_minio_failure(self):
+    #     active_ip = self.get_active_ip()
+    #     passive_ip = self.get_passive_ip()
 
-        def get_backend_for(ip):
-            # TODO: move to traefik sal.
-            pass
+    #     def get_backend_for(ip):
+    #         # TODO: move to traefik sal.
+    #         pass
 
-        def update_backend_ip(backendname, ip):
-            # update in backend servers...
-            cl = self.get_etcd_client()            
-            proxy = cl.proxy_create([], [backend])
-            # write the configuration into etcd
-            proxy.deploy()
-            proxy.delete()
-            pass
-
-
-        etcd_client = self.get_etcd_client()
-        j.sal.traefik.get("instance_name", data={'etcd_instance':etcd_client.instance})        
-        backend = get_backend_for(active_ip)
-
-        update_backend_ip(backend.name, passive_ip)
-        self.promote_passive()
+    #     def update_backend_ip(backendname, ip):
+    #         # update in backend servers...
+    #         cl = self.get_etcd_client()
+    #         proxy = cl.proxy_create([], [backend])
+    #         # write the configuration into etcd
+    #         proxy.deploy()
+    #         proxy.delete()
+    #         pass
 
 
+    #     etcd_client = self.get_etcd_client()
+    #     j.sal.traefik.get("instance_name", data={'etcd_instance':etcd_client.instance})
+    #     backend = get_backend_for(active_ip)
+
+    #     update_backend_ip(backend.name, passive_ip)
+    #     self.promote_passive()
 
 
-        # The reverse proxy stops serving requests to the broken minio VM
-        # Update configuration of the passive minio to become the active one
-        # The reverse proxy starts forwarding requests to the passive minio VM which as becomes the active minio
-        # Deploy a new minio VM and configure it to be the passive one, replicting metadata from the newly active
 
-        pass
+
+    #     # The reverse proxy stops serving requests to the broken minio VM
+    #     # Update configuration of the passive minio to become the active one
+    #     # The reverse proxy starts forwarding requests to the passive minio VM which as becomes the active minio
+    #     # Deploy a new minio VM and configure it to be the passive one, replicting metadata from the newly active
+
+    #     pass
 
     def handle_passive_minio_failure(self):
         # Redeploy a new VM and configure it to be the passive one replicating from the active
         def deploy_passive_minio_for(master_ip):
             pass
-        
+
         pass
 
     def handle_active_minio_tlog_failure(self, minio_active):
@@ -221,7 +206,7 @@ class S3Redundant(TemplateBase):
         # minio service send signal to minio process to ask to reload its config
         # minio process will then start replicating new metadata from the active minio on the new tlog shard
         pass
-    
+
     def handle_minio_data_disk_failure(self):
 
         # minio template needs to watch the logs from minio process and in the cases where it see minio cannot access some shards or some IO error happens, the robot needs to take actions.
