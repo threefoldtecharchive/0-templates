@@ -22,6 +22,7 @@ class EtcdCluster(TemplateBase):
         self.recurring_action('_monitor', 30)  # every 30 seconds
         self.recurring_action('_ensure_etcds_connections', 300)
 
+        self._farm = j.sal_zos.farm(self.data['farmerIyoOrg'])
         self._robots = {}
 
     def validate(self):
@@ -37,10 +38,6 @@ class EtcdCluster(TemplateBase):
 
         self.data['password'] = self.data['password'] if self.data['password'] else j.data.idgenerator.generateXCharID(16)
         self.data['token'] = self.data['token'] if self.data['token'] else self.guid
-
-    @property
-    def _farm(self):
-        return j.sal_zos.farm(self.data['farmerIyoOrg'])
 
     def _nodes(self):
         nodes = self._farm.filter_online_nodes() 

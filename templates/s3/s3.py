@@ -27,6 +27,8 @@ class S3(TemplateBase):
         self.recurring_action('_ensure_namespaces_connections', 300)
         self.recurring_action('_update_url', 300)
 
+        self._farm = j.sal_zos.farm(self.data['farmerIyoOrg'])
+
         self._robots = {}
 
     def validate(self):
@@ -46,10 +48,6 @@ class S3(TemplateBase):
     @property
     def _tlog_namespace(self):
         return '{}_tlog'.format(self.data['nsName'])
-
-    @property
-    def _farm(self):
-        return j.sal_zos.farm(self.data['farmerIyoOrg'])
 
     @property
     def _nodes(self):
