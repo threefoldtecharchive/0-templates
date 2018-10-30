@@ -35,6 +35,7 @@ class Minio(TemplateBase):
         except StateCheckError:
             return
 
+        self._healer.start()
         if not self._minio_sal.is_running():
             self.state.delete('status', 'running')
             self.start()
@@ -167,6 +168,7 @@ LOG_LVL_JOB = 30
 
 
 class Healer:
+    MinioStreamKey = "minio.logs"
 
     def __init__(self, minio):
         self.service = minio
@@ -174,13 +176,16 @@ class Healer:
 
     def start(self):
         self.logger.info("start minio logs processing")
-        self.service.gl_mgr.add("minio_process", self._process_logs)
+        if self.service.gl_mgr.gls.get(Healer.MinioStreamKey, None) is None:
+            self.service.gl_mgr.add(Healer.MinioStreamKey, self._process_logs)
 
     def stop(self):
         self.logger.info("stop minio logs processing")
-        self.service.gl_mgr.stop("minio_process", wait=True, timeout=5)
+        self.service.gl_mgr.stop(Healer.MinioStreamKey, wait=True, timeout=5)
 
     def _process_logs(self):
+        self.logger.info("processing logs for minio '%s'" % self.service)
+
         def callback(level, msg, flag):
             _health_monitoring(self.service.state, level, msg, flag)
 
@@ -194,6 +199,7 @@ class Healer:
 
             # once the process is started, start monitoring the logs
             # this will block until the process stops streaming (usually that means the process has stopped)
+            self.logger.info("calling minio stream method")
             self.service._minio_sal.stream(callback)
 
 
@@ -202,5 +208,5 @@ def _health_monitoring(state, level, msg, flag):
         msg = j.data.serializer.json.loads(msg)
         if 'shard' in msg:
             state.set('data_shards', msg['shard'], SERVICE_STATE_ERROR)
-        if 'tlog' in msg and not msg.get('master', False): # we check only the minio owns tlog server, not it's master
+        if 'tlog' in msg and not msg.get('master', False):  # we check only the minio owns tlog server, not it's master
             state.set('tlog_shards', msg['tlog'], SERVICE_STATE_ERROR)
