@@ -8,11 +8,6 @@ import requests
 
 class TESTVM(BaseTest):
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        self = cls()
-        cls.compinations = self.generate_combinations([['ext4', 'ext3', 'ext2', 'btrfs'],['hdd', 'ssd']])
-    @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
         for vm in cls.vms:
@@ -78,7 +73,7 @@ class TESTVM(BaseTest):
         with self.assertRaises(Exception) as e:
             vm.install(wait=True, name=vm_name, flist='')
         self.assertIn( "invalid input. Vm requires flist or ipxeUrl to be specifed.", e.exception.args[0])
-    @unittest.skip('msh sh3ala')
+
     def test003_create_vm_with_zt_network(self):
         """ZRT-ZOS-013
         * Test case for creating a vm with zerotier netwotk.
@@ -107,6 +102,7 @@ class TESTVM(BaseTest):
         self.log('Check that vm can be accessed by zertier network, should succeed.')
         result = self.ssh_vm_execute_command(vm_ip=vm_zt_ip, cmd='pwd')
         self.assertEqual(result, '/root')
+        
         self.log('Remove zerotier service')
         zt_client.delete()
         
@@ -156,9 +152,8 @@ class TESTVM(BaseTest):
         with self.assertRaises(Exception):
             requests.get('http://{}:{}/.ssh/authorized_keys'.format(self.node_ip, host_port))
 
-    @parameterized.expand([('ext4', 'hdd'), ('ext4', 'ssd'), ('ext3', 'hdd'), ('ext3', 'ssd'),
-                            ('ext2', 'hdd'), ('ext2', 'ssd'), ('btrfs', 'hdd'), ('btrfs', 'ssd')])
-    def test005_add_vdisk_from_vm(self, filesystem, disk_type):
+    @parameterized.expand(['ext4', 'ext3', 'ext2', 'btrfs'])
+    def test005_add_vdisk_from_vm(self, filesystem):
         """ ZRT-ZOS-015
         * Test case for adding vdisk to the vm.
         **Test Scenario:**
@@ -178,7 +173,7 @@ class TESTVM(BaseTest):
         self.log('Create vdisk [D] using namespace on [zdb], should succeed.')
         disk_name = self.random_string()
         vdisk = self.controller.vdisk
-        vdisk.install(zerodb=zdb_name, nsName=disk_name, filesystem=filesystem, diskType=disk_type)
+        vdisk.install(zerodb=zdb_name, nsName=disk_name, filesystem=filesystem, diskType=self.disk_type)
         self.vdisks.append(vdisk)
 
         self.log('Create vm [VM] with disk [D], should succeed.')
