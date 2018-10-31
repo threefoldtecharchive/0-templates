@@ -78,9 +78,9 @@ class S3Redundant(TemplateBase):
         except StateCheckError:
             passive = False
 
-        # both vms are down, just redeploy both vms
+        # both vms are down, just redeploy both vms but preserve the active tlog
         if not passive and not active:
-            active_s3.schedule_action('redeploy').wait(die=True)
+            active_s3.schedule_action('redeploy', args={'reset_tlog': False}).wait(die=True)
             passive_s3.schedule_action('redeploy').wait(die=True)
             return
 

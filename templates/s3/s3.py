@@ -356,14 +356,15 @@ class S3(TemplateBase):
         self.data['master'] = dict()
         self._minio().schedule_action('update_master', args={'namespace': '', 'address': ''})
 
-    def redeploy(self):
+    def redeploy(self, reset_tlog=True):
         """
         Redeploys the minio vm, the tlog and minio
         """
         self.state.check('actions', 'install', 'ok')
         self._vm().delete()
-        self._delete_namespace(self.data['tlog'])
-        self.data['tlog'] = None
+        if reset_tlog:
+            self._delete_namespace(self.data['tlog'])
+            self.data['tlog'] = None
         self.install()
 
     def _vm(self):
