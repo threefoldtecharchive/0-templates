@@ -23,7 +23,6 @@ class WebGateway(TemplateBase):
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self.add_delete_callback(self.uninstall)
-        self.recurring_action('_monitor', 30)  # every 30 seconds
         self._traefik_api = None
         self._traefik_url = None
         self._coredns_api = None
@@ -40,7 +39,7 @@ class WebGateway(TemplateBase):
         for key in ['farmerIyoOrg', 'nrEtcds', 'traefikNode', 'corednsNode']:
             if not self.data[key]:
                 raise ValueError('Invalid value for {}'.format(key))
-            
+
         capacity = j.clients.threefold_directory.get(interactive=False)
 
         try:
@@ -51,7 +50,7 @@ class WebGateway(TemplateBase):
             if err.response.status_code == 404:
                 raise ValueError('Traefik node {} does not exist'.format(self.data['traefikNode']))
             raise err
-    
+
         try:
             node, _ = capacity.api.GetCapacity(self.data['corednsNode'])
             self._coredns_api = self.api.robots.get(self.data['corednsNode'], node.robot_address)
@@ -71,7 +70,7 @@ class WebGateway(TemplateBase):
     @property
     def _traefik(self):
         return self._traefik_api.services.get(template_uid=TRAEFIK_TEMPLATE_UID, name=self.guid)
-    
+
     @property
     def _coredns(self):
         return self._coredns_api.services.get(template_uid=COREDNS_TEMPLATE_UID, name=self.guid)
@@ -97,7 +96,7 @@ class WebGateway(TemplateBase):
         self.state.set('actions', 'install', 'ok')
         self.state.set('actions', 'start', 'ok')
         self.state.set('status', 'running', 'ok')
-    
+
     def _create_zt_clients(self, nics, node_url):
         result = deepcopy(nics)
         for nic in result:
@@ -141,7 +140,7 @@ class WebGateway(TemplateBase):
         coredns = self._coredns_api.services.find_or_create(COREDNS_TEMPLATE_UID, self.guid, data)
         coredns.schedule_action('install').wait(die=True)
         coredns.schedule_action('start').wait(die=True)
-    
+
     def start(self):
         self.state.check('actions', 'install', 'ok')
         self._etcd_cluster.schedule_action('start').wait(die=True)
@@ -157,7 +156,7 @@ class WebGateway(TemplateBase):
         self._coredns.schedule_action('stop').wait(die=True)
         self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
-        
+
     def _uninstall_traefik(self):
         self._remove_zt_clients(self.data['nics'], self._traefik_url)
         try:
@@ -180,6 +179,6 @@ class WebGateway(TemplateBase):
             self._etcd_cluster.delete()
         except ServiceNotFoundError:
             pass
-        
+
         self._uninstall_traefik()
         self._uninstall_coredns()
