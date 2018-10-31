@@ -111,7 +111,7 @@ class EtcdCluster(TemplateBase):
         return deployed_etcds
 
     def _deploy_etcds(self, required_etcds):
-        nodes = self._nodes().copy()
+        nodes = list(self._nodes())
         nr_deployed_etcds = 0
         etcds = []
         while nr_deployed_etcds < required_etcds:
