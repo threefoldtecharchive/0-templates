@@ -257,7 +257,7 @@ class Vm(TemplateBase):
         return free_ports
 
     @retry(exceptions=ServiceNotFoundError, tries=3, delay=3, backoff=2)
-    def _release_port(self):
+    def _release_ports(self):
         port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
         ports = [x['source'] for x in self.data['ports']]
         if not ports:
