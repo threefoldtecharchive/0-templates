@@ -33,7 +33,7 @@ class Etcd(TemplateBase):
         etcd_sal = self._etcd_sal
         etcd_sal.deploy()
         self.data['ztIdentity'] = etcd_sal.zt_identity
-        
+
 
     def _monitor(self):
         self.logger.info('Monitor etcd %s' % self.name)
@@ -101,9 +101,12 @@ class Etcd(TemplateBase):
         self.state.delete('status', 'running')
 
     def connection_info(self):
-        self.state.check('status', 'running', 'ok')
+        # connection info depends on the container running but not on the process
+        # @todo: if someone stops the service, that would kill the container and this will crash.
+        # may be we should add a state just for the connection
+        self.state.check('actions', 'install', 'ok')
         return self._etcd_sal.connection_info()
-    
+
     def update_cluster(self, cluster):
         self.data['cluster'] = cluster
         try:
@@ -115,6 +118,6 @@ class Etcd(TemplateBase):
 
     def _enable_auth(self):
         self._etcd_sal.enable_auth()
-    
+
     def _prepare_traefik(self):
         self._etcd_sal.prepare_traefik()

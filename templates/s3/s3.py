@@ -30,7 +30,7 @@ class S3(TemplateBase):
         self.recurring_action('_ensure_namespaces_connections', 300)
         self.recurring_action('_update_url', 300)
 
-        self._farm = j.sal_zos.farm(self.data['farmerIyoOrg'])
+        self._farm = j.sal_zos.farm.get(self.data['farmerIyoOrg'])
 
         self._robots = {}
 
@@ -54,7 +54,7 @@ class S3(TemplateBase):
 
     @property
     def _nodes(self):
-        nodes = self._farm.filter_online_nodes() 
+        nodes = self._farm.filter_online_nodes()
         if not nodes:
             raise ValueError('There are no online nodes in this farm')
         return nodes
@@ -114,8 +114,7 @@ class S3(TemplateBase):
         if not self.data.get('current_namespaces_connections'):
             self.data['current_namespaces_connections'] = sorted(namespaces_connection)
 
-        vm_robot, _ = self._vm_robot_and_ip()
-        minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
+        minio = self._minio()
 
         if namespaces_connection == sorted(self.data['current_namespaces_connections']):
             self.logger.info("namespace connection in service data are in sync with reality")
@@ -193,6 +192,21 @@ class S3(TemplateBase):
         except:
             self.state.delete('status', 'running')
 
+    def _minio(self):
+        vm_robot, _ = self._vm_robot_and_ip()
+        return vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
+
+    def _get_master_info(self):
+        robot = self.api.robots.get(self.data['master']['node'], self.data['master']['url'])
+        namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['master']['name'])
+        master_connection = namespace_connection_info(namespace)
+        self.data['master']['address'] = master_connection
+
+        return {
+            'address': master_connection,
+            'namespace': self._tlog_namespace,
+        }
+
     def install(self):
         def deploy_data_namespaces():
             namespaces = self._deploy_minio_backend_namespaces()
@@ -208,18 +222,6 @@ class S3(TemplateBase):
         def deploy_vm():
             self._deploy_minio_vm()
             self.logger.info("minio vm deployed")
-            return self._vm_robot_and_ip()
-
-        def get_master_info():
-            robot = self.api.robots.get(self.data['master']['node'], self.data['master']['url'])
-            namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['master']['name'])
-            master_connection = namespace_connection_info(namespace)
-            self.data['master']['address'] = master_connection
-
-            return {
-                'address': master_connection,
-                'namespace': self._tlog_namespace,
-            }
 
         # deploy all namespaces and vm concurrently
         ns_data_gl = gevent.spawn(deploy_data_namespaces)
@@ -229,7 +231,7 @@ class S3(TemplateBase):
 
         master = {'namespace': '', 'address': ''}
         if self.data['master']['name']:
-            master_gl = gevent.spawn(get_master_info)
+            master_gl = gevent.spawn(self._get_master_info)
             tasks.append(master_gl)
 
         self.logger.info("wait for all namespaces and vm to be installed")
@@ -247,54 +249,13 @@ class S3(TemplateBase):
 
         if vm_gl.exception:
             raise vm_gl.exception
-        vm_robot, ip = vm_gl.value
 
         if self.data['master']['name']:
             if master_gl.exception:
                 raise master_gl.exception
             master = master_gl.value
 
-        self.logger.info("create the minio service on the vm")
-        minio_data = {
-            'zerodbs': namespaces_connections,
-            'namespace': self.data['nsName'],
-            'nsSecret': self.data['nsPassword'],
-            'login': self.data['minioLogin'],
-            'password': self.data['minioPassword'],
-            'dataShard': self.data['dataShards'],
-            'parityShard': self.data['parityShards'],
-            'tlog': {
-                'namespace': self._tlog_namespace,
-                'address': tlog_connection,
-            },
-            'master': master,
-            'blockSize': self.data['minioBlockSize'],
-        }
-
-        self.logger.info("wait up to 20 mins for zerorobot until it downloads the repos and starts accepting requests")
-        now = time.time()
-        minio = None
-        while time.time() < now + 2400:
-            try:
-                minio = vm_robot.services.find_or_create(MINIO_TEMPLATE_UID, self.guid, minio_data)
-                break
-            except requests.ConnectionError:
-                self.logger.info("vm not up yet...waiting some more")
-                time.sleep(10)
-
-        if not minio:
-            raise RuntimeError('Failed to create minio service')
-
-        self.logger.info("install minio")
-        minio.schedule_action('install').wait(die=True)
-        minio.schedule_action('start').wait(die=True)
-        self.logger.info("minio installed")
-
-        port = minio.schedule_action('node_port').wait(die=True).result
-
-        self.logger.info("open port %s on minio vm", port)
-        self._vm().schedule_action('add_portforward', args={'name': 'minio_%s' % self.guid, 'target': port, 'source': None}).wait(die=True)
-
+        self._deploy_minio(namespaces_connections, tlog_connection, master)
         self.state.set('actions', 'install', 'ok')
 
     def uninstall(self):
@@ -341,17 +302,14 @@ class S3(TemplateBase):
 
     def start(self):
         self.state.check('actions', 'install', 'ok')
-        vm_robot, _ = self._vm_robot_and_ip()
-        minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
-        minio.schedule_action('start').wait(die=True)
+        self._minio().schedule_action('start').wait(die=True)
 
     def stop(self):
         self.state.check('actions', 'install', 'ok')
-        vm_robot, _ = self._vm_robot_and_ip()
-        minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
-        minio.schedule_action('stop').wait(die=True)
+        self._minio().schedule_action('stop').wait(die=True)
 
     def upgrade(self):
+        self.state.check('actions', 'install', 'ok')
         self.stop()
         self.start()
 
@@ -360,6 +318,23 @@ class S3(TemplateBase):
 
     def namespaces(self):
         return self.data['namespaces']
+
+    def promote_passive(self):
+        """
+        Promote passive s3 by clearing its master section and reloading minio
+        """
+        self.data['master'] = dict()
+        self._minio().schedule_action('update_master', args={'namespace': '', 'address': ''})
+
+    def redeploy_vm(self):
+        self.state.check('actions', 'install', 'ok')
+        self._vm().schedule_action('uninstall').wait(die=True)
+        self._vm().schedule_action('install').wait(die=True)
+
+        master = {'namespace': '', 'address': ''}
+        if self.data['master']['name']:
+            master = self._get_master_info()
+        self._deploy_minio(self.data['current_namespaces_connections'], self.data['tlog']['address'], master)
 
     def _vm(self):
         return self.api.services.get(template_uid=VM_TEMPLATE_UID, name=self.guid)
@@ -466,9 +441,7 @@ class S3(TemplateBase):
 
     def _deploy_minio_vm(self):
         self.logger.info("create the zero-os vm on which we will create the minio container")
-        nodes = self._nodes.copy()
-
-        nodes = sort_by_less_used(nodes, 'sru')
+        nodes = sort_by_less_used(self._nodes, 'sru')
         mgmt_nic = {
             'id': self.data['mgmtNic']['id'],
             'ztClient': self.data['mgmtNic']['ztClient'],
@@ -597,27 +570,48 @@ class S3(TemplateBase):
             if s == 'error':
                 self.state.set('tlog_shards', connection_info, SERVICE_STATE_ERROR)
 
+    def _deploy_minio(self, namespaces_connections, tlog_connection, master):
+        vm_robot, _ = self._vm_robot_and_ip()
+        self.logger.info("create the minio service on the vm")
+        minio_data = {
+            'zerodbs': namespaces_connections,
+            'namespace': self.data['nsName'],
+            'nsSecret': self.data['nsPassword'],
+            'login': self.data['minioLogin'],
+            'password': self.data['minioPassword'],
+            'dataShard': self.data['dataShards'],
+            'parityShard': self.data['parityShards'],
+            'tlog': {
+                'namespace': self._tlog_namespace,
+                'address': tlog_connection,
+            },
+            'master': master,
+            'blockSize': self.data['minioBlockSize'],
+        }
 
-def list_farm_nodes(farm_organization):
-    """
-    return all the nodes detail from a farm
+        self.logger.info("wait up to 20 mins for zerorobot until it downloads the repos and starts accepting requests")
+        now = time.time()
+        minio = None
+        while time.time() < now + 2400:
+            try:
+                minio = vm_robot.services.find_or_create(MINIO_TEMPLATE_UID, self.guid, minio_data)
+                break
+            except requests.ConnectionError:
+                self.logger.info("vm not up yet...waiting some more")
+                time.sleep(10)
 
-    :param farm_organization: IYO organization of the farm
-    :type farm_organization: str
-    :return: array container the detail of the nodes
-    :rtype: array
-    """
-    capacity = j.clients.threefold_directory.get(interactive=False)
-    resp = capacity.api.ListCapacity(query_params={'farmer': farm_organization})[1]
-    resp.raise_for_status()
-    nodes = resp.json()
+        if not minio:
+            raise RuntimeError('Failed to create minio service')
 
-    def f(node):
-        for key in ['total_resources', 'used_resources', 'robot_address']:
-            if key not in node:
-                return False
-        return True
-    return list(filter(f, nodes))
+        self.logger.info("install minio")
+        minio.schedule_action('install').wait(die=True)
+        minio.schedule_action('start').wait(die=True)
+        self.logger.info("minio installed")
+
+        port = minio.schedule_action('node_port').wait(die=True).result
+
+        self.logger.info("open port %s on minio vm", port)
+        self._vm().schedule_action('add_portforward', args={'name': 'minio_%s' % self.guid, 'target': port, 'source': None}).wait(die=True)
 
 
 def compute_minimum_namespaces(total_size, data, parity):
