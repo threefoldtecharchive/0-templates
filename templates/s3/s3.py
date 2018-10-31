@@ -428,7 +428,7 @@ class S3(TemplateBase):
                     self.data['namespaces'][i] = namespace_info
                     break
 
-        self.state.set('data_shards', address, SERVICE_STATE_OK)
+        self.state.delete('data_shards', address)
         self._ensure_namespaces_connections()
 
     def _deploy_minio_tlog_namespace(self):
