@@ -298,6 +298,17 @@ class S3(TemplateBase):
         if namespace in self.data['namespaces']:
             self.data['namespaces'].remove(namespace)
 
+    def _update_namespaces(self, namespaces):
+        # delete all namespaces
+        for namespace in self.namespaces():
+            self._delete_namespace(namespace)
+
+        # set the namespaces with the passed namespaces
+        self.data['namespaces'] = namespaces
+
+        # call install again to ensure that now we have the updated namespaces
+        self.install()
+
     def uninstall(self):
         # uninstall and delete all the created namespaces
         group = gevent.pool.Group()
@@ -421,7 +432,9 @@ class S3(TemplateBase):
 
     def _test_namespace_ok(self, namespace):
         retries = 3
-        while retries:
+        up_again = False
+        # First we will Try to wait and see if the zdb will be self healed or not
+        for _ in range(retries):
             try:
                 namespace_connection_info(namespace)
                 return True
@@ -463,32 +476,10 @@ class S3(TemplateBase):
         if self._test_namespace_ok(namespace):
             return
 
-        # create a new namespace
-        namespace, node = list(self._deploy_namespaces(nr_namepaces=1, name=namespace.data['nsName'],
-                                                       size=namespace.data['size'],
-                                                       storage_type=namespace['storage_type'],
-                                                       password=namespace.data['password'],
-                                                       nodes=namespace.data['node']))[0]
-
-        ns = {
-            'name': namespace.name,
-            'url': node['robot_address'],
-            'node': node['node_id'],
-            'address': namespace_connection_info(namespace)
-        }
-
-        return ns
-
-    def _update_namespace(self, address, namespace_info):
-
-        if namespace_info:
-            for i, ns in enumerate(self.data['namespaces']):
-                if ns['address'] == address:
-                    self.data['namespaces'][i] = namespace_info
-                    break
-
-        self.state.delete('data_shards', address)
-        self._ensure_namespaces_connections()
+        # if the namespace still unreachable we will delete it and call install again
+        # to ensure all the required namespaces
+        self._delete_namespace(namespace)
+        self.install()
 
     def _deploy_minio_tlog_namespace(self):
         self.logger.info("create namespaces to be used as a tlog for minio")
