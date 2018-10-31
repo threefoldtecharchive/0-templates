@@ -23,7 +23,8 @@ class S3(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        self.recurring_action('_monitor', 60)  # every 30 seconds
+        self.recurring_action('_monitor_vm', 30)
+        self.recurring_action('_monitor', 60)  # every 60 seconds
         self.recurring_action('_ensure_namespaces_connections', 300)
         self.recurring_action('_update_url', 300)
 
@@ -144,6 +145,21 @@ class S3(TemplateBase):
                 self.data['master']['address'] = connection_info
             else:
                 self.logger.info("master namespace connection in service data is in sync with reality")
+
+    def _monitor_vm(self):
+        try:
+            self.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            return
+
+        self.logger.info('Monitor minio vm')
+        state = self._vm().state
+        try:
+            state.check('status', 'running', 'ok')
+            self.state.set('vm', 'running', 'ok')
+            return
+        except StateCheckError:
+            self.state.delete('vm', 'running')
 
     def _monitor(self):
         try:
@@ -308,9 +324,9 @@ class S3(TemplateBase):
     def namespaces(self):
         return self.data['namespaces']
 
-    def promote_passive(self):
+    def promote(self):
         """
-        Promote passive s3 by clearing its master section and reloading minio
+        Promote s3 by clearing its master section and reloading minio
         """
         self.data['master'] = dict()
         self._minio().schedule_action('update_master', args={'namespace': '', 'address': ''})
