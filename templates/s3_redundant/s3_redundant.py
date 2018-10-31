@@ -80,20 +80,23 @@ class S3Redundant(TemplateBase):
 
         # both vms are down, just redeploy both vms
         if not passive and not active:
-            active_s3.schedule_action('redeploy_vm').wait(die=True)
-            passive_s3.schedule_action('redeploy_vm').wait(die=True)
+            active_s3.schedule_action('redeploy').wait(die=True)
+            passive_s3.schedule_action('redeploy').wait(die=True)
             return
 
         # only passive is down, redeploy its vm
         if not passive:
-            passive_s3.schedule_action('redeploy_vm').wait(die=True)
+            passive_s3.schedule_action('redeploy').wait(die=True)
 
         # active is down, promote the passive and redeploy a vm for the old active
         if not active:
             old_active = self.data['activeS3']
             old_passive = self.data['passiveS3']
             passive_s3.schedule_action('promote').wait(die=True)
-            active_s3.schedule_action('redeploy_vm').wait(die=True)
+            master_tlog = passive_s3.schedule_action('tlog').wait(die=True).result
+            active_s3.schedule_action('update_master', args={'master': master_tlog}).wait(die=True)
+            active_s3.schedule_action('redeploy').wait(die=True)
+
             self.data['passiveS3'] = old_active
             self.data['activeS3'] = old_passive
 
