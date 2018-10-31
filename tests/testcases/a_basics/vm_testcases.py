@@ -190,8 +190,10 @@ class TESTVM(BaseTest):
         self.log('Check that disk [D1] added successfully to vm.')
         self.assertTrue(vm.info().result['disks']) 
         ssh_port = int(vm.info().result['ports'].popitem()[0])
-        result = self.ssh_vm_execute_command(vm_ip=self.node_ip, port=ssh_port, cmd='ls /mnt')
-        self.assertEqual(result, disk_name)
+        cmd = 'df -Th | grep {} '.format(disk[0]['mountPoint'])
+        result = self.ssh_vm_execute_command(vm_ip=self.node_ip, port=ssh_port, cmd=cmd)
+        disk_filesystem = result.split()[1]
+        self.assertEqual(disk_filesystem, filesystem)
 
 class VM_actions(BaseTest):
 
