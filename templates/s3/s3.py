@@ -24,6 +24,7 @@ class S3(TemplateBase):
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self.recurring_action('_monitor', 60)  # every 30 seconds
+        self.recurring_action('_monitor_minio', 60)  # every 30 seconds
         self.recurring_action('_ensure_namespaces_connections', 300)
         self.recurring_action('_update_url', 300)
 
@@ -403,8 +404,7 @@ class S3(TemplateBase):
         return deployed_namespaces
 
 
-    def _handle_namespace_failure(self, namespace, is_tlog=False):
-
+    def _handle_data_shard_failure(self, connection_info):
         def get_namespace_info(namespace):
             pass
 
@@ -565,6 +565,19 @@ class S3(TemplateBase):
 
         except Exception as err:
             raise NamespaceDeployError(str(err), node)
+
+    def _monitor_minio(self):
+        vm_robot, _ = self._vm_robot_and_ip()
+        minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
+        state = minio.state
+
+        for connection_info, state in state.get('data_shards', {}).items():
+            if state == 'error':
+                self._handle_data_shard_failure(connection_info)
+        
+        for connection_info, state in state.get('tlog_shards', {}).items():
+            if state == 'error':
+                self._handle_tlog_shard_failure(connection_info)
 
 
 def list_farm_nodes(farm_organization):
