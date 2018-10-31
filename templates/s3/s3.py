@@ -626,6 +626,10 @@ class S3(TemplateBase):
         """
         Checks state of namespaces from minio service and bubble it up
         """
+        try:
+            self.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            return
         vm_robot, _ = self._vm_robot_and_ip()
         minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
         state = minio.state
