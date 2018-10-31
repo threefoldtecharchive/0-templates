@@ -14,6 +14,7 @@ class S3Redundant(TemplateBase):
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self.recurring_action('_monitor', 60)  # every 60 seconds
+        self.recurring_action('_monitor_vm', 30)
 
     def validate(self):
         if self.data['parityShards'] > self.data['dataShards']:
@@ -71,6 +72,47 @@ class S3Redundant(TemplateBase):
                 continue
 
             # TODO: destroy passive setup and recreate
+
+    def _monitor_vm(self):
+        try:
+            self.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            return
+        self.logger.info('Monitor s3 redundant vms %s' % self.name)
+        active_s3 = self._active_s3()
+        passive_s3 = self._passive_s3()
+        try:
+            active_s3.state.check('vm', 'running', 'ok')
+            active = True
+        except StateCheckError:
+            active = False
+        try:
+            passive_s3.state.check('vm', 'running', 'ok')
+            passive = True
+        except StateCheckError:
+            passive = False
+
+        # both vms are down, just redeploy both vms
+        if not passive and not active:
+            active_s3.schedule_action('redeploy').wait(die=True)
+            passive_s3.schedule_action('redeploy').wait(die=True)
+            return
+
+        # only passive is down, redeploy its vm
+        if not passive:
+            passive_s3.schedule_action('redeploy').wait(die=True)
+
+        # active is down, promote the passive and redeploy a vm for the old active
+        if not active:
+            old_active = self.data['activeS3']
+            old_passive = self.data['passiveS3']
+            passive_s3.schedule_action('promote').wait(die=True)
+            master_tlog = passive_s3.schedule_action('tlog').wait(die=True).result
+            active_s3.schedule_action('update_master', args={'master': master_tlog}).wait(die=True)
+            active_s3.schedule_action('redeploy').wait(die=True)
+
+            self.data['passiveS3'] = old_active
+            self.data['activeS3'] = old_passive
 
     def install(self):
         active_data = dict(self.data)
@@ -152,9 +194,6 @@ class S3Redundant(TemplateBase):
         self.stop_passive()
         self.start_passive()
 
-    def _promote_passive(self):
-        self._passive_s3().schedule_action('promote_passive').wait(die=True)
-
     def get_etcd_client(self):
         pass
 
@@ -163,48 +202,6 @@ class S3Redundant(TemplateBase):
 
     def get_passive_ip(self):
         return self._passive_s3().data['mgmtNic']['ip']
-
-    # def handle_active_minio_failure(self):
-    #     active_ip = self.get_active_ip()
-    #     passive_ip = self.get_passive_ip()
-
-    #     def get_backend_for(ip):
-    #         # TODO: move to traefik sal.
-    #         pass
-
-    #     def update_backend_ip(backendname, ip):
-    #         # update in backend servers...
-    #         cl = self.get_etcd_client()
-    #         proxy = cl.proxy_create([], [backend])
-    #         # write the configuration into etcd
-    #         proxy.deploy()
-    #         proxy.delete()
-    #         pass
-
-
-    #     etcd_client = self.get_etcd_client()
-    #     j.sal.traefik.get("instance_name", data={'etcd_instance':etcd_client.instance})
-    #     backend = get_backend_for(active_ip)
-
-    #     update_backend_ip(backend.name, passive_ip)
-    #     self.promote_passive()
-
-
-
-
-    #     # The reverse proxy stops serving requests to the broken minio VM
-    #     # Update configuration of the passive minio to become the active one
-    #     # The reverse proxy starts forwarding requests to the passive minio VM which as becomes the active minio
-    #     # Deploy a new minio VM and configure it to be the passive one, replicting metadata from the newly active
-
-    #     pass
-
-    def handle_passive_minio_failure(self):
-        # Redeploy a new VM and configure it to be the passive one replicating from the active
-        def deploy_passive_minio_for(master_ip):
-            pass
-
-        pass
 
     def handle_active_minio_tlog_failure(self, minio_active):
         # minio template needs to watch the logs from minio process and in the cases where it see minio cannot access or some IO error happens on the tlog zdb namespace.

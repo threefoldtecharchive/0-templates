@@ -25,6 +25,7 @@ class S3(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
+        self.recurring_action('_monitor_vm', 30)
         self.recurring_action('_monitor', 60)  # every 30 seconds
         self.recurring_action('_monitor_minio', 60)  # every 30 seconds
         self.recurring_action('_ensure_namespaces_connections', 300)
@@ -156,6 +157,21 @@ class S3(TemplateBase):
             else:
                 self.logger.info("master namespace connection in service data is in sync with reality")
 
+    def _monitor_vm(self):
+        try:
+            self.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            return
+
+        self.logger.info('Monitor minio vm')
+        state = self._vm().state
+        try:
+            state.check('status', 'running', 'ok')
+            self.state.set('vm', 'running', 'ok')
+            return
+        except StateCheckError:
+            self.state.delete('vm', 'running')
+
     def _monitor(self):
         try:
             self.state.check('actions', 'install', 'ok')
@@ -208,6 +224,17 @@ class S3(TemplateBase):
         }
 
     def install(self):
+        def _get_master_info():
+            robot = self.api.robots.get(self.data['master']['node'], self.data['master']['url'])
+            namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['master']['name'])
+            master_connection = namespace_connection_info(namespace)
+            self.data['master']['address'] = master_connection
+
+            return {
+                'address': master_connection,
+                'namespace': self._tlog_namespace,
+            }
+
         def deploy_data_namespaces():
             namespaces = self._deploy_minio_backend_namespaces()
             self.logger.info("data backend namespaces deployed")
@@ -231,7 +258,7 @@ class S3(TemplateBase):
 
         master = {'namespace': '', 'address': ''}
         if self.data['master']['name']:
-            master_gl = gevent.spawn(self._get_master_info)
+            master_gl = gevent.spawn(_get_master_info)
             tasks.append(master_gl)
 
         self.logger.info("wait for all namespaces and vm to be installed")
@@ -258,26 +285,26 @@ class S3(TemplateBase):
         self._deploy_minio(namespaces_connections, tlog_connection, master)
         self.state.set('actions', 'install', 'ok')
 
+    def _delete_namespace(self, namespace):
+        self.logger.info("deleting namespace %s on node %s", namespace['node'], namespace['url'])
+        robot = self.api.robots.get(namespace['node'], namespace['url'])
+        try:
+            ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
+            ns.schedule_action('uninstall').wait(die=True)
+            ns.delete()
+        except ServiceNotFoundError:
+            pass
+
+        if namespace in self.data['namespaces']:
+            self.data['namespaces'].remove(namespace)
+
     def uninstall(self):
         # uninstall and delete all the created namespaces
-        def delete_namespace(namespace):
-            self.logger.info("deleting namespace %s on node %s", namespace['node'], namespace['url'])
-            robot = self.api.robots.get(namespace['node'], namespace['url'])
-            try:
-                ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
-                ns.schedule_action('uninstall').wait(die=True)
-                ns.delete()
-            except ServiceNotFoundError:
-                pass
-
-            if namespace in self.data['namespaces']:
-                self.data['namespaces'].remove(namespace)
-
         group = gevent.pool.Group()
         namespaces = list(self.data['namespaces'])
         if self.data['tlog']:
             namespaces.append(self.data['tlog'])
-        group.imap_unordered(delete_namespace, namespaces)
+        group.imap_unordered(self._delete_namespace, namespaces)
         group.join()
         self.data['tlog'] = None
         self.data['current_namespaces_connections'] = None
@@ -316,25 +343,28 @@ class S3(TemplateBase):
     def tlog(self):
         return self.data['tlog']
 
+    def update_master(self, master):
+        self.data['master'] = master
+
     def namespaces(self):
         return self.data['namespaces']
 
-    def promote_passive(self):
+    def promote(self):
         """
-        Promote passive s3 by clearing its master section and reloading minio
+        Promote s3 by clearing its master section and reloading minio
         """
         self.data['master'] = dict()
         self._minio().schedule_action('update_master', args={'namespace': '', 'address': ''})
 
-    def redeploy_vm(self):
+    def redeploy(self):
+        """
+        Redeploys the minio vm, the tlog and minio
+        """
         self.state.check('actions', 'install', 'ok')
-        self._vm().schedule_action('uninstall').wait(die=True)
-        self._vm().schedule_action('install').wait(die=True)
-
-        master = {'namespace': '', 'address': ''}
-        if self.data['master']['name']:
-            master = self._get_master_info()
-        self._deploy_minio(self.data['current_namespaces_connections'], self.data['tlog']['address'], master)
+        self._vm().delete()
+        self._delete_namespace(self.data['tlog'])
+        self.data['tlog'] = None
+        self.install()
 
     def _vm(self):
         return self.api.services.get(template_uid=VM_TEMPLATE_UID, name=self.guid)
@@ -456,7 +486,7 @@ class S3(TemplateBase):
                     self.data['namespaces'][i] = namespace_info
                     break
 
-        self.state.set('data_shards', address, SERVICE_STATE_OK)
+        self.state.delete('data_shards', address)
         self._ensure_namespaces_connections()
 
     def _deploy_minio_tlog_namespace(self):
