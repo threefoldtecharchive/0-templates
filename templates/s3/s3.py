@@ -299,14 +299,10 @@ class S3(TemplateBase):
             self.data['namespaces'].remove(namespace)
 
     def _update_namespaces(self, namespaces):
-        # delete all namespaces
-        for namespace in self.namespaces():
-            self._delete_namespace(namespace)
-
-        # set the namespaces with the passed namespaces
+        """
+        updates the namespaces then call install to make sure that the namespace is deployed
+        """
         self.data['namespaces'] = namespaces
-
-        # call install again to ensure that now we have the updated namespaces
         self.install()
 
     def uninstall(self):
@@ -666,7 +662,12 @@ class S3(TemplateBase):
         minio = None
         while time.time() < now + 2400:
             try:
-                minio = vm_robot.services.find_or_create(MINIO_TEMPLATE_UID, self.guid, minio_data)
+                minios = vm_robot.services.find(MINIO_TEMPLATE_UID, self.guid)
+                if minios:
+                    minio = minios[0]
+                    minio.schedule_action('update_zerodbs', args={'zerodbs': namespaces_connections}).wait(die=True)
+                else:
+                    minio = vm_robot.services.create(MINIO_TEMPLATE_UID, self.guid, minio_data)
                 break
             except requests.ConnectionError:
                 self.logger.info("vm not up yet...waiting some more")
