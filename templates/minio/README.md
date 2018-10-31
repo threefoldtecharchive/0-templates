@@ -58,7 +58,7 @@ args = {
     'namespace': 'namespace',
     'privateKey': 'ab345678901234567890123456789012s',
 }
-minio = api.services.create('github.com/threefoldtech/0-templates/minio/0.0.1', 'minio', args)
+minio = robot.services.create('github.com/threefoldtech/0-templates/minio/0.0.1', 'minio', args)
 minio.schedule_action('install')
 minio.schedule_action('start')
 minio.schedule_action('stop')
