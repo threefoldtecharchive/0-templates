@@ -419,24 +419,51 @@ class S3(TemplateBase):
 
         return deployed_namespaces
 
-    def _handle_data_shard_failure(self, connection_info):
-        namespace = self._get_namespace_by_address(connection_info['address'])
+    def _test_namespace_ok(self, namespace):
         retries = 3
-        up_again = False
-        while True:
-            if not retries:
-                break
+        while retries:
             try:
                 namespace_connection_info(namespace)
-                up_again = True
-                break
+                return True
             except:
-                retries -= 1
                 gevent.sleep(10)
+            retries -= 1
+        return False
 
-        if up_again:
+    # def _handle_tlog_shard_failure(self, address):
+    #     """
+    #     Called by the s3_redundant service to recreate a tlog server
+    #     """
+    #     robot = self.api.robots.get(self.data['tlog']['node'], self.data['tlog']['url'])
+    #     namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['tlog']['name'])
+    #     connection_info = namespace_connection_info(namespace)
+    #     if connection_info != address:
+    #         raise Exception('expecting tlog address to be "%s" but found "%s"' % (address, connection_info))
+
+    #     if self._test_namespace_ok(namespace):
+    #         return
+
+    #     for namespace, node in self._deploy_namespaces(
+    #         nr_namepaces=1,
+    #         name=self._tlog_namespace,
+    #         size=10,  # TODO: compute how much is needed
+    #         storage_type='ssd',
+    #         password=self.data['nsPassword'],
+    #         nodes=self._nodes):
+
+    #         return {
+    #             'name': namespace.name,
+    #             'url': node['robot_address'],
+    #             'node': node['node_id'],
+    #             'address': namespace_connection_info(namespace)
+    #         }
+
+    def _handle_data_shard_failure(self, connection_info):
+        namespace = self._get_namespace_by_address(connection_info['address'])
+        if self._test_namespace_ok(namespace):
             return
 
+        # create a new namespace
         namespace, node = list(self._deploy_namespaces(nr_namepaces=1, name=namespace.data['nsName'],
                                                        size=namespace.data['size'],
                                                        storage_type=namespace['storage_type'],
@@ -449,6 +476,7 @@ class S3(TemplateBase):
             'node': node['node_id'],
             'address': namespace_connection_info(namespace)
         }
+
         return ns
 
     def _update_namespace(self, address, namespace_info):

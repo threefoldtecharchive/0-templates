@@ -36,28 +36,42 @@ class S3Redundant(TemplateBase):
     def _passive_s3(self):
         return self.api.services.get(template_uid=S3_TEMPLATE_UID, name=self.data['passiveS3'])
 
+    def _handle_data_shard_failure(self, active, passive, address):
+        job = active.schedule_action('_handle_data_shard_failure', {'connection_info': address})
+        namespace_info = job.wait(die=True).result
+
+        # we set this new shard on both active and passive
+        active.schedule_action('_update_namespace', {
+            'address': address,
+            'namespace': namespace_info,
+        })
+        passive.schedule_action('_update_namespace', {
+            'address': address,
+            'namespace': namespace_info,
+        })
+
     def _monitor(self):
         # for data zdb, we only watch the active s3
         active = self._active_s3()
         passive = self._passive_s3()
 
-        state = active.state
-        for address, state in state.get('data_shards', {}):
+        for address, state in active.state.get('data_shards', {}).items():
             if state == 'ok':
                 continue
 
-            job = active.schedule_action('_handle_data_shard_failure', {'connection_info': address})
-            namespace_info = job.wait(die=True).result
+            self._handle_data_shard_failure(active, passive, address)
 
-            # we set this new shard on both active and passive
-            active.schedule_action('_update_namespace', {
-                'address': address,
-                'namespace': namespace_info,
-            })
-            passive.schedule_action('_update_namespace', {
-                'address': address,
-                'namespace': namespace_info,
-            })
+        for address, state in active.state.get('tlog_shards', {}).items():
+            if state == 'ok':
+                continue
+
+            # TODO: kick start the promote logic, and destroy current active setup
+
+        for address, state in passive.state.get('tlog_shards', {}).items():
+            if state == 'ok':
+                continue
+
+            # TODO: destroy passive setup and recreate
 
     def _monitor_vm(self):
         try:
