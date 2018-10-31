@@ -94,7 +94,7 @@ class S3(TemplateBase):
                 robot = self.api.robots.get(namespace['node'], namespace['url'])
                 return robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
         else:
-            self.logger.error("Can't find a namespace with address {}".format(address))
+            raise ValueError("Can't find a namespace with address: {}".format(address))
 
     def _ensure_namespaces_connections(self):
         try:
@@ -388,26 +388,48 @@ class S3(TemplateBase):
 
         return deployed_namespaces
 
-
     def _handle_data_shard_failure(self, connection_info):
         namespace = self._get_namespace_by_address(connection_info['address'])
-
-        from time import sleep
         retries = 3
         up_again = False
         while True:
             if not retries:
                 break
-            connection = namespace_connection_info(namespace)
-            if connection:
+            try:
+                namespace_connection_info(namespace)
                 up_again = True
                 break
-            retries -= 1
-            sleep(10)
+            except:
+                retries -= 1
+                gevent.sleep(10)
 
-        if not up_again:
-            self._deploy_namespaces(1, namespace.data['nsName'], namespace.data['size'],
-                                    namespace['storage_type'], namespace.data['password'], namespace.data['node'])
+        if up_again:
+            return
+
+        namespace, node = list(self._deploy_namespaces(nr_namepaces=1, name=namespace.data['nsName'],
+                                                       size=namespace.data['size'],
+                                                       storage_type=namespace['storage_type'],
+                                                       password=namespace.data['password'],
+                                                       nodes=namespace.data['node']))[0]
+
+        ns = {
+            'name': namespace.name,
+            'url': node['robot_address'],
+            'node': node['node_id'],
+            'address': namespace_connection_info(namespace)
+        }
+        return ns
+
+    def _update_namespace(self, address, namespace_info):
+
+        if namespace_info:
+            for i, ns in enumerate(self.data['namespaces']):
+                if ns['address'] == address:
+                    self.data['namespaces'][i] = namespace_info
+                    break
+
+        self.state.set('data_shards', address, SERVICE_STATE_OK)
+        self._ensure_namespaces_connections()
 
     def _deploy_minio_tlog_namespace(self):
         self.logger.info("create namespaces to be used as a tlog for minio")
