@@ -434,9 +434,7 @@ class S3(TemplateBase):
 
     def _deploy_minio_vm(self):
         self.logger.info("create the zero-os vm on which we will create the minio container")
-        nodes = self._nodes.copy()
-
-        nodes = sort_by_less_used(nodes, 'sru')
+        nodes = sort_by_less_used(self._nodes, 'sru')
         mgmt_nic = {
             'id': self.data['mgmtNic']['id'],
             'ztClient': self.data['mgmtNic']['ztClient'],
