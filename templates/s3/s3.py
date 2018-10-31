@@ -402,6 +402,23 @@ class S3(TemplateBase):
 
         return deployed_namespaces
 
+
+    def _handle_namespace_failure(self, namespace, is_tlog=False):
+
+        def get_namespace_info(namespace):
+            pass
+
+        from time import sleep
+        retries = 3
+        while not get_namespace_info(namespace) and retries:
+            retries -= 1
+            sleep(10)
+        else:
+            if not retries:
+                namespace = self.namespaces[namespace]
+                self._deploy_namespaces(1, namespace.name, namespace.size,
+                                        namespace.storage_type, namespace.password, namespace.nodes)
+
     def _deploy_minio_tlog_namespace(self):
         self.logger.info("create namespaces to be used as a tlog for minio")
 
