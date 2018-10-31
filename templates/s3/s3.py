@@ -86,6 +86,14 @@ class S3(TemplateBase):
 
         return self.data['minioUrls']
 
+    def _get_namespace_by_address(self, address):
+        for namespace in self.data['namespaces']:
+            if namespace['address'] == address:
+                robot = self.api.robots.get(namespace['node'], namespace['url'])
+                return robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
+        else:
+            self.logger.error("Can't find a namespace with address {}".format(address))
+
     def _ensure_namespaces_connections(self):
         try:
             self.state.check('actions', 'install', 'ok')
