@@ -27,7 +27,7 @@ class S3(TemplateBase):
         self.recurring_action('_ensure_namespaces_connections', 300)
         self.recurring_action('_update_url', 300)
 
-        self._farm = j.sal_zos.farm(self.data['farmerIyoOrg'])
+        self._farm = j.sal_zos.farm.get(self.data['farmerIyoOrg'])
 
         self._robots = {}
 
@@ -51,7 +51,7 @@ class S3(TemplateBase):
 
     @property
     def _nodes(self):
-        nodes = self._farm.filter_online_nodes() 
+        nodes = self._farm.filter_online_nodes()
         if not nodes:
             raise ValueError('There are no online nodes in this farm')
         return nodes
