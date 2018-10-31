@@ -562,12 +562,12 @@ class S3(TemplateBase):
         minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
         state = minio.state
 
-        for connection_info, s in state.get('data_shards', {}).items():
-            if s == 'error':
+        for connection_info, shard_state in state.get('data_shards', {}).items():
+            if shard_state == 'error':
                 self.state.set('data_shards', connection_info, SERVICE_STATE_ERROR)
-        
-        for connection_info, s in state.get('tlog_shards', {}).items():
-            if s == 'error':
+
+        for connection_info, shard_state in state.get('tlog_shards', {}).items():
+            if shard_state == 'error':
                 self.state.set('tlog_shards', connection_info, SERVICE_STATE_ERROR)
 
     def _deploy_minio(self, namespaces_connections, tlog_connection, master):
