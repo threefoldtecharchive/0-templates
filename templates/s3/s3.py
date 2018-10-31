@@ -9,7 +9,9 @@ from jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import timeout
-from zerorobot.template.state import StateCheckError
+from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
+                                      SERVICE_STATE_SKIPPED,
+                                      SERVICE_STATE_WARNING, StateCheckError)
 
 VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/dm_vm/0.0.1'
 GATEWAY_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/gateway/0.0.1'
@@ -24,6 +26,7 @@ class S3(TemplateBase):
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self.recurring_action('_monitor', 60)  # every 30 seconds
+        self.recurring_action('_monitor_minio', 60)  # every 30 seconds
         self.recurring_action('_ensure_namespaces_connections', 300)
         self.recurring_action('_update_url', 300)
 
@@ -84,6 +87,14 @@ class S3(TemplateBase):
             self.data['minioUrls']['storage'] = 'http://{}:{}'.format(storage_ip, storage_port)
 
         return self.data['minioUrls']
+
+    def _get_namespace_by_address(self, address):
+        for namespace in self.data['namespaces']:
+            if namespace['address'] == address:
+                robot = self.api.robots.get(namespace['node'], namespace['url'])
+                return robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
+        else:
+            self.logger.error("Can't find a namespace with address {}".format(address))
 
     def _ensure_namespaces_connections(self):
         try:
@@ -377,6 +388,27 @@ class S3(TemplateBase):
 
         return deployed_namespaces
 
+
+    def _handle_data_shard_failure(self, connection_info):
+        namespace = self._get_namespace_by_address(connection_info['address'])
+
+        from time import sleep
+        retries = 3
+        up_again = False
+        while True:
+            if not retries:
+                break
+            connection = namespace_connection_info(namespace)
+            if connection:
+                up_again = True
+                break
+            retries -= 1
+            sleep(10)
+
+        if not up_again:
+            self._deploy_namespaces(1, namespace.data['nsName'], namespace.data['size'],
+                                    namespace['storage_type'], namespace.data['password'], namespace.data['node'])
+
     def _deploy_minio_tlog_namespace(self):
         self.logger.info("create namespaces to be used as a tlog for minio")
 
@@ -521,6 +553,22 @@ class S3(TemplateBase):
 
         except Exception as err:
             raise NamespaceDeployError(str(err), node)
+
+    def _monitor_minio(self):
+        """
+        Checks state of namespaces from minio service and bubble it up
+        """
+        vm_robot, _ = self._vm_robot_and_ip()
+        minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
+        state = minio.state
+
+        for connection_info, s in state.get('data_shards', {}).items():
+            if s == 'error':
+                self.state.set('data_shards', connection_info, SERVICE_STATE_ERROR)
+        
+        for connection_info, s in state.get('tlog_shards', {}).items():
+            if s == 'error':
+                self.state.set('tlog_shards', connection_info, SERVICE_STATE_ERROR)
 
     def _deploy_minio(self, namespaces_connections, tlog_connection, master):
         vm_robot, _ = self._vm_robot_and_ip()
