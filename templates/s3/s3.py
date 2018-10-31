@@ -27,7 +27,7 @@ class S3(TemplateBase):
         self.recurring_action('_ensure_namespaces_connections', 300)
         self.recurring_action('_update_url', 300)
 
-        self._farm = j.sal_zos.farm(self.data['farmerIyoOrg'])
+        self._farm = j.sal_zos.farm.get(self.data['farmerIyoOrg'])
 
         self._robots = {}
 

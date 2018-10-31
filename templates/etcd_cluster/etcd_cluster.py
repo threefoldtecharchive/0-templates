@@ -22,7 +22,7 @@ class EtcdCluster(TemplateBase):
         self.recurring_action('_monitor', 30)  # every 30 seconds
         self.recurring_action('_ensure_etcds_connections', 300)
 
-        self._farm = j.sal_zos.farm(self.data['farmerIyoOrg'])
+        self._farm = j.sal_zos.farm.get(self.data['farmerIyoOrg'])
         self._robots = {}
 
     def validate(self):
@@ -40,7 +40,7 @@ class EtcdCluster(TemplateBase):
         self.data['token'] = self.data['token'] if self.data['token'] else self.guid
 
     def _nodes(self):
-        nodes = self._farm.filter_online_nodes() 
+        nodes = self._farm.filter_online_nodes()
         if not nodes:
             raise ValueError('There are no online nodes in this farm')
         return nodes
@@ -50,7 +50,7 @@ class EtcdCluster(TemplateBase):
             self.state.check('actions', 'start', 'ok')
         except StateCheckError:
             return
-        
+
         for etcd in self.data['etcds']:
             robot = self.api.robots.get(etcd['node'], etcd['url'])
             service = robot.services.get(template_uid=ETCD_TEMPLATE_UID, name=etcd['name'])
@@ -78,7 +78,7 @@ class EtcdCluster(TemplateBase):
         connection = cluster_connection(etcds)
         if not self.data.get('clusterConnections'):
             self.data['clusterConnections'] = connection
-        
+
         if connection != self.data['clusterConnections']:
             for etcd in etcds:
                 etcd.schedule_action('update_cluster', args={'cluster': connection}).wait(die=True)
@@ -93,7 +93,7 @@ class EtcdCluster(TemplateBase):
                 robot = self.api.robots.get(etcd['node'], etcd['url'])
                 service = robot.services.get(template_uid=ETCD_TEMPLATE_UID, name=etcd['name'])
                 deployed_etcds.append(service)
-        
+
         self.logger.info('etcds required: {}'.format(self.data['nrEtcds']))
         self.logger.info('etcds already deployed {}'.format(len(self.data['etcds'])))
         required_nr_etcds = self.data['nrEtcds'] - len(deployed_etcds)
@@ -107,9 +107,9 @@ class EtcdCluster(TemplateBase):
             self.save()
         if len(deployed_etcds) < self.data['nrEtcds']:
             raise RuntimeError('Could not deploy enough etcds for cluster')
-        
+
         return deployed_etcds
-        
+
     def _deploy_etcds(self, required_etcds):
         nodes = self._nodes().copy()
         nr_deployed_etcds = 0
@@ -127,7 +127,7 @@ class EtcdCluster(TemplateBase):
                 except:
                     nodes.remove(node)
         return etcds
-            
+
             # gls = set()
             # for i in range(required_etcds - nr_deployed_etcds):
             #     node = nodes[i % len(nodes)]
@@ -192,7 +192,7 @@ class EtcdCluster(TemplateBase):
             etcd.schedule_action('start').wait(die=True)
         etcd.schedule_action('_enable_auth').wait(die=True)
         etcd.schedule_action('_prepare_traefik').wait(die=True)
-    
+
         # tasks = list()
         # for etcd in etcds:
         #     tasks.append(etcd.schedule_action('update_cluster', args={'cluster': cluster_connection}))
