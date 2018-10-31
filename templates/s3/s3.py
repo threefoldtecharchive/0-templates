@@ -413,19 +413,24 @@ class S3(TemplateBase):
 
 
     def _handle_data_shard_failure(self, connection_info):
-        def get_namespace_info(namespace):
-            pass
+        namespace = self._get_namespace_by_address(connection_info['address'])
 
         from time import sleep
         retries = 3
-        while not get_namespace_info(namespace) and retries:
+        up_again = False
+        while True:
+            if not retries:
+                break
+            connection = namespace_connection_info(namespace)
+            if connection:
+                up_again = True
+                break
             retries -= 1
             sleep(10)
-        else:
-            if not retries:
-                namespace = self.namespaces[namespace]
-                self._deploy_namespaces(1, namespace.name, namespace.size,
-                                        namespace.storage_type, namespace.password, namespace.nodes)
+
+        if not up_again:
+            self._deploy_namespaces(1, namespace.data['nsName'], namespace.data['size'],
+                                    namespace['storage_type'], namespace.data['password'], namespace.data['node'])
 
     def _deploy_minio_tlog_namespace(self):
         self.logger.info("create namespaces to be used as a tlog for minio")
