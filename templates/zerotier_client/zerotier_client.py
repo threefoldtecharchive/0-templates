@@ -18,6 +18,7 @@ class ZerotierClient(TemplateBase):
         if self.name in j.clients.zerotier.list():
             return
 
+    def validate(self):
         # create the client instance
         token = self.data.get('token')
         if not token:
