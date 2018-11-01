@@ -9,8 +9,7 @@ This template responsible for creating and managing a web gateway consisting of 
 - `nrEtcds`: number of etcd instances in the etcd cluster
 - `etcdPassword`: etcd cluster root user password. If not supplied, the template will generate it.
 - `nics`: list of nics used for the traefik, coredns and etcd containers
-- `traefikNode`: the id of the node to deploy traefik on
-- `corednsNode`: the id of the node to deploy coredns on
+- `publicNode`: the id of the node to deploy traefik and coredns on 
 
 Nic:
 - `id`: vxlan or vlan id or zerotier network id
