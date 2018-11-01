@@ -91,9 +91,12 @@ class S3(TemplateBase):
 
     def _get_namespace_by_address(self, address):
         for namespace in self.data['namespaces']:
-            if namespace['address'] == address:
-                robot = self.api.robots.get(namespace['node'], namespace['url'])
-                return robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
+            robot = self.api.robots.get(namespace['node'], namespace['url'])
+            ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
+            connection_info = namespace_connection_info(ns)
+
+            if connection_info == address:
+                return ns
         else:
             raise ValueError("Can't find a namespace with address: {}".format(address))
 
@@ -441,7 +444,7 @@ class S3(TemplateBase):
         return False
 
     def _handle_data_shard_failure(self, connection_info):
-        namespace = self._get_namespace_by_address(connection_info['address'])
+        namespace = self._get_namespace_by_address(connection_info)
         if self._test_namespace_ok(namespace):
             return
 
@@ -606,11 +609,11 @@ class S3(TemplateBase):
         minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
         state = minio.state
 
-        for connection_info, shard_state in state.get('data_shards', {}).items():
+        for connection_info, shard_state in state.get('data_shards').items():
             if shard_state == 'error':
                 self.state.set('data_shards', connection_info, SERVICE_STATE_ERROR)
 
-        for connection_info, shard_state in state.get('tlog_shards', {}).items():
+        for connection_info, shard_state in state.get('tlog_shards').items():
             if shard_state == 'error':
                 self.state.set('tlog_shards', connection_info, SERVICE_STATE_ERROR)
 

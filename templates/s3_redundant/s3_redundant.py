@@ -2,7 +2,7 @@ from jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import timeout
-from zerorobot.template.state import StateCheckError
+from zerorobot.template.state import StateCheckError, StateCategoryNotExistsError
 
 S3_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/s3/0.0.1'
 
@@ -38,6 +38,7 @@ class S3Redundant(TemplateBase):
 
     def _handle_data_shard_failure(self, active, passive, address):
         # handle data failure in the active node then update the namespaces in the passive node
+        self.logger.info("Handling data shard failure")
         active.schedule_action('_handle_data_shard_failure', {'connection_info': address}).wait(die=True)
         namespaces = active.schedule_action('namespaces').wait(die=True).result
         passive.schedule_action('_update_namespaces', {'namespaces': namespaces}).wait(die=True)
@@ -73,24 +74,35 @@ class S3Redundant(TemplateBase):
         # for data zdb, we only watch the active s3
         active = self._active_s3()
         passive = self._passive_s3()
+        try:
+            data = active.state.get('data_shards')
+            for address, state in data.items():
+                if state == 'ok':
+                    continue
 
-        for address, state in active.state.get('data_shards', {}).items():
-            if state == 'ok':
-                continue
+                self._handle_data_shard_failure(active, passive, address)
+        except StateCategoryNotExistsError:
+            pass
 
-            self._handle_data_shard_failure(active, passive, address)
+        try:
+            tlog = active.state.get('tlog_shards')
+            for address, state in tlog.items():
+                if state == 'ok':
+                    continue
 
-        for address, state in active.state.get('tlog_shards', {}).items():
-            if state == 'ok':
-                continue
+                self._handle_active_tlog_failure(address)
+        except StateCategoryNotExistsError:
+            pass
 
-            self._handle_active_tlog_failure(address)
+        try:
+            tlog = passive.state.get('tlog_shards')
+            for address, state in tlog.items():
+                if state == 'ok':
+                    continue
 
-        for address, state in passive.state.get('tlog_shards', {}).items():
-            if state == 'ok':
-                continue
-
-            self._handle_passive_tlog_failure(address)
+                self._handle_passive_tlog_failure(address)
+        except StateCategoryNotExistsError:
+            pass
 
     def _monitor_vm(self):
         try:
@@ -230,58 +242,3 @@ class S3Redundant(TemplateBase):
 
     def get_passive_ip(self):
         return self._passive_s3().data['mgmtNic']['ip']
-
-    def handle_active_minio_tlog_failure(self, minio_active):
-        # minio template needs to watch the logs from minio process and in the cases where it see minio cannot access or some IO error happens on the tlog zdb namespace.
-
-        # Example flow:
-
-        # Minio output some logs showing it cannot reach the tlog shard
-        # minio template see these logs
-        # minio template update it's state to be marked as unhealthy
-        # s3 template detect minio state is unhealthy
-        # we need to find a way for minio and s3 template to exchange the information about which shards is unreachable (TODO)
-        # s3 template checks the zdb namespace states
-        # if it can just restart it -> restart it
-        # if disk is really dead
-        # The reverse proxy stops serving requests to the broken minio VM and starts forwarding requests to the passive minio VM which then becomes the active minio
-        # reserve a new namespace on a new disk
-        # update minio configration with new tlog shard and making this minio the passive one
-        # minio service send signal to minio process to ask to reload its config
-        # minio process will then start replicating new metadata from the active minio
-        pass
-
-    def handle_passive_minio_tlog_failure(self, minio_passive):
-        # minio template needs to watch the logs from minio process and in the cases where it see minio cannot access or some IO error happens on the tlog zdb namespace.
-
-        # Example flow:
-
-        # Minio output some logs showing it cannot reach the tlog shard
-        # minio template see these logs
-        # minio template update it's state to be marked as unhealthy
-        # s3 template detect minio state is unhealthy
-        # we need to find a way for minio and s3 template to exchange the information about which shards is unreachable (TODO)
-        # s3 template checks the zdb namespace states
-        # if it can just restart it -> restart it
-        # if disk is really dead
-        # reserve a new namespace on a new disk
-        # update minio configration with new tlog shard
-        # minio service send signal to minio process to ask to reload its config
-        # minio process will then start replicating new metadata from the active minio on the new tlog shard
-        pass
-
-    def handle_minio_data_disk_failure(self):
-
-        # minio template needs to watch the logs from minio process and in the cases where it see minio cannot access some shards or some IO error happens, the robot needs to take actions.
-
-        # Example flow:
-
-        # Minio output some logs showing it cannot reach some shards (threefoldtech/minio#16)
-        # minio template see these logs
-        # minio template update it's state to be marked as unhealthy
-        # s3 template detect minio state is unhealthy
-        # we need to find a way for minio and s3 template to exchange the information about which shards is unreachable (TODO)
-        # s3 template checks the zdb namespace states
-        # if it can just restart it -> restart it
-        # if disk is really dead, reserve a new namespace on a new disk -> update minio configration with new shards -> minio service send signal to minio process to ask to reload its config -> ask minio to start healing proces to write missing data on the new shards
-        pass
