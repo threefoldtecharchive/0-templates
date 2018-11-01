@@ -5,9 +5,7 @@ struct Schema {
     nrEtcds @1 :Int32; # number of etcd instance in the cluster
     etcdPassword @2 :Text; # etcd root user password
     farmerIyoOrg @3 :Text; # farmer for nodes to create etcd instances on
-    traefikNode @4 :Text; # node to deploy traefik on
-    corednsNode @5 :Text; # node to deploy coredns on
-    etcdWatch @6 :Bool=true; # watch changes in Traefik web 
+    publicNode @4 :Text; # node to deploy traefik and coredns on
 
     struct Nic {
         type @0 :NicType;
