@@ -615,6 +615,12 @@ class S3(TemplateBase):
         state = minio.state
 
         for connection_info, shard_state in state.get('data_shards').items():
+            try:
+                self._get_namespace_by_address(connection_info)
+            except ValueError:
+                # this is probably an old shard that is not cleaned from data
+                continue
+
             if shard_state == 'error':
                 self.state.set('data_shards', connection_info, SERVICE_STATE_ERROR)
 

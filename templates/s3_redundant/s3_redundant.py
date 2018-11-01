@@ -75,7 +75,7 @@ class S3Redundant(TemplateBase):
         active = self._active_s3()
         passive = self._passive_s3()
         try:
-            data = active.state.get('data_shards')
+            data = active.state.get('data_shards').copy()
             for address, state in data.items():
                 if state == 'ok':
                     continue
@@ -85,7 +85,7 @@ class S3Redundant(TemplateBase):
             pass
 
         try:
-            tlog = active.state.get('tlog_shards')
+            tlog = active.state.get('tlog_shards').copy()
             for address, state in tlog.items():
                 if state == 'ok':
                     continue
@@ -95,7 +95,7 @@ class S3Redundant(TemplateBase):
             pass
 
         try:
-            tlog = passive.state.get('tlog_shards')
+            tlog = passive.state.get('tlog_shards').copy()
             for address, state in tlog.items():
                 if state == 'ok':
                     continue
