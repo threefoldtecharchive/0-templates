@@ -47,7 +47,7 @@ args = {
     'nics': [{'name': 'ten', 'type': 'zerotier', 'ztClient':'zt', 'id': '1d719394044ed153'}],
     'token': 'token-one',
     'farmerIyoOrg': 'farmer',
-    'nrEtcds: 3,
+    'nrEtcds': 3,
     }  
     
 etcd = robot.services.create('github.com/threefoldtech/0-templates/etcd_cluster/0.0.1', 'etcd1', data=args)
