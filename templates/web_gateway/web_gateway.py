@@ -23,71 +23,60 @@ class WebGateway(TemplateBase):
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self.add_delete_callback(self.uninstall)
-        self._traefik_api = None
-        self._traefik_url = None
-        self._coredns_api = None
-        self._coredns_url = None
+        self._public_api = None
+        self._public_url = None
+        self._etcds_name = 'etcds_%s' % self.guid
+        self._coredns_name = "coredns_%s" % self.guid
+        self._traefik_name = "traefik_%s" % self.guid
 
     def validate(self):
-        self.state.delete('status', 'running')
         for nic in self.data['nics']:
             if nic['type'] == 'zerotier':
                 break
         else:
             raise ValueError('Service must contain at least one zerotier nic')
 
-        for key in ['farmerIyoOrg', 'nrEtcds', 'traefikNode', 'corednsNode']:
+        for key in ['farmerIyoOrg', 'nrEtcds', 'publicNode']:
             if not self.data[key]:
                 raise ValueError('Invalid value for {}'.format(key))
+
+        self.data['etcdPassword'] = self.data['etcdPassword'] if self.data['etcdPassword'] else j.data.idgenerator.generateXCharID(16)
+
+        try:
+            self.state.check('actions', 'install', 'ok')
+            self._public_api = self.api.robots.get(self.data['publicNode'])
+            self._public_url = self._public_api._client.config.data['url']
+            return
+        except:
+            pass
+            # the rest of the logic is only when the node is not yet installed
 
         capacity = j.clients.threefold_directory.get(interactive=False)
 
         try:
-            node, _ = capacity.api.GetCapacity(self.data['traefikNode'])
-            self._traefik_api = self.api.robots.get(self.data['traefikNode'], node.robot_address)
-            self._traefik_url = node.robot_address
+            node, _ = capacity.api.GetCapacity(self.data['publicNode'])
+            self._public_api = self.api.robots.get(self.data['publicNode'], node.robot_address)
+            self._public_url = node.robot_address
         except HTTPError as err:
             if err.response.status_code == 404:
-                raise ValueError('Traefik node {} does not exist'.format(self.data['traefikNode']))
+                raise ValueError('Node {} does not exist'.format(self.data['publicNode']))
             raise err
-
-        try:
-            node, _ = capacity.api.GetCapacity(self.data['corednsNode'])
-            self._coredns_api = self.api.robots.get(self.data['corednsNode'], node.robot_address)
-            self._coredns_url = node.robot_address
-        except HTTPError as err:
-            if err.response.status_code == 404:
-                raise ValueError('Coredns node {} does not exist'.format(self.data['corednsNode']))
-            raise err
-
-
-        self.data['etcdPassword'] = self.data['etcdPassword'] if self.data['etcdPassword'] else j.data.idgenerator.generateXCharID(16)
 
     @property
     def _etcd_cluster(self):
-        return self.api.services.get(template_uid=ETCD_CLUSTER_TEMPLATE_UID, name=self.guid)
+        return self.api.services.get(template_uid=ETCD_CLUSTER_TEMPLATE_UID, name=self._etcds_name)
 
     @property
     def _traefik(self):
-        return self._traefik_api.services.get(template_uid=TRAEFIK_TEMPLATE_UID, name=self.guid)
+        return self._public_api.services.get(template_uid=TRAEFIK_TEMPLATE_UID, name=self._traefik_name)
 
     @property
     def _coredns(self):
-        return self._coredns_api.services.get(template_uid=COREDNS_TEMPLATE_UID, name=self.guid)
+        return self._public_api.services.get(template_uid=COREDNS_TEMPLATE_UID, name=self._coredns_name)
 
     def install(self):
         self.logger.info('Installing web gateway {}'.format(self.name))
-        self.logger.info('Installing etcd cluster')
-        cluster_data = {
-            'nrEtcds': self.data['nrEtcds'],
-            'password': self.data['etcdPassword'],
-            'farmerIyoOrg': self.data['farmerIyoOrg'],
-            'nics': self.data['nics'],
-        }
-        etcd_cluster = self.api.services.find_or_create(ETCD_CLUSTER_TEMPLATE_UID, self.guid, cluster_data)
-        etcd_cluster.schedule_action('install').wait(die=True)
-        cluster_connection = etcd_cluster.schedule_action('connection_info').wait(die=True).result
-
+        cluster_connection = self._install_etcd_cluster()
         traefik_endpoint = ','.join(['{}:{}'.format(connection['ip'], connection['client_port']) for connection in cluster_connection['etcds']])
         coredns_endpoint = ' '.join([connection['client_url'] for connection in cluster_connection['etcds']])
         self._install_traefik(traefik_endpoint)
@@ -108,6 +97,7 @@ class WebGateway(TemplateBase):
             nic['ztClient'] = node_zt_name
 
         return result
+
     def _remove_zt_clients(self, nics, node_url):
         for nic in nics:
             zt_name = nic['ztClient']
@@ -116,28 +106,41 @@ class WebGateway(TemplateBase):
             data = {'url': node_url, 'name': node_zt_name}
             zt_client.schedule_action('remove_from_robot', args=data).wait(die=True)
 
+    def _install_etcd_cluster(self):
+        self.logger.info('Installing etcd cluster')
+        cluster_data = {
+            'nrEtcds': self.data['nrEtcds'],
+            'password': self.data['etcdPassword'],
+            'farmerIyoOrg': self.data['farmerIyoOrg'],
+            'nics': self.data['nics'],
+        }
+        etcd_cluster = self.api.services.find_or_create(ETCD_CLUSTER_TEMPLATE_UID, self._etcds_name, cluster_data)
+        etcd_cluster.schedule_action('install').wait(die=True)
+        cluster_connection = etcd_cluster.schedule_action('connection_info').wait(die=True).result
+        return cluster_connection
+
     def _install_traefik(self, traefik_endpoint):
         self.logger.info('Installing traefik')
-        nics = self._create_zt_clients(self.data['nics'], self._traefik_url)
+        nics = self._create_zt_clients(self.data['nics'], self._public_url)
         data = {
             'etcdEndpoint': traefik_endpoint,
             'etcdPassword': self.data['etcdPassword'],
-            'etcdWatch': self.data['etcdWatch'],
+            'etcdWatch': True,
             'nics': nics,
         }
-        traefik = self._traefik_api.services.find_or_create(TRAEFIK_TEMPLATE_UID, self.guid, data)
+        traefik = self._public_api.services.find_or_create(TRAEFIK_TEMPLATE_UID, self._traefik_name, data)
         traefik.schedule_action('install').wait(die=True)
         traefik.schedule_action('start').wait(die=True)
 
     def _install_coredns(self, coredns_endpoint):
         self.logger.info('Installing coredns')
-        nics = self._create_zt_clients(self.data['nics'], self._coredns_url)
+        nics = self._create_zt_clients(self.data['nics'], self._public_url)
         data = {
             'etcdEndpoint': coredns_endpoint,
             'etcdPassword': self.data['etcdPassword'],
             'nics': nics,
         }
-        coredns = self._coredns_api.services.find_or_create(COREDNS_TEMPLATE_UID, self.guid, data)
+        coredns = self._public_api.services.find_or_create(COREDNS_TEMPLATE_UID, self._coredns_name, data)
         coredns.schedule_action('install').wait(die=True)
         coredns.schedule_action('start').wait(die=True)
 
@@ -157,8 +160,15 @@ class WebGateway(TemplateBase):
         self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
 
+    def _uninstall_etcd_cluster(self):
+        try:
+            self._etcd_cluster.schedule_action('uninstall').wait(die=True)
+            self._etcd_cluster.delete()
+        except ServiceNotFoundError:
+            pass
+
     def _uninstall_traefik(self):
-        self._remove_zt_clients(self.data['nics'], self._traefik_url)
+        self._remove_zt_clients(self.data['nics'], self._public_url)
         try:
             self._traefik.schedule_action('uninstall').wait(die=True)
             self._traefik.delete()
@@ -166,7 +176,7 @@ class WebGateway(TemplateBase):
             pass
 
     def _uninstall_coredns(self):
-        self._remove_zt_clients(self.data['nics'], self._coredns_url)
+        self._remove_zt_clients(self.data['nics'], self._public_url)
         try:
             self._coredns.schedule_action('uninstall').wait(die=True)
             self._coredns.delete()
@@ -174,11 +184,10 @@ class WebGateway(TemplateBase):
             pass
 
     def uninstall(self):
-        try:
-            self._etcd_cluster.schedule_action('uninstall').wait(die=True)
-            self._etcd_cluster.delete()
-        except ServiceNotFoundError:
-            pass
-
+        self._uninstall_etcd_cluster()
         self._uninstall_traefik()
         self._uninstall_coredns()
+
+    def connection_info(self):
+        self.state.check('status', 'running', 'ok')
+        return self._etcd_cluster.schedule_action('connection_info').wait(die=True).result

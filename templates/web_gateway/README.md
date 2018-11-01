@@ -11,7 +11,6 @@ This template responsible for creating and managing a web gateway consisting of 
 - `nics`: list of nics used for the traefik, coredns and etcd containers
 - `traefikNode`: the id of the node to deploy traefik on
 - `corednsNode`: the id of the node to deploy coredns on
-- `etcdWatch`: traefik configuration to watch changes in Traefik web. Defaults to True.
 
 Nic:
 - `id`: vxlan or vlan id or zerotier network id
@@ -41,8 +40,7 @@ args = {
     'nics': [{'name': 'ten', 'type': 'zerotier', 'ztClient':'zt', 'id': '1d719394044ed153'}],
     'farmerIyoOrg': 'farmer',
     'nrEtcds: 3,
-    'traefikNode': '124121421',
-    'corednsNode': '453435234'
+    'publicNode': '124121421',
     }  
     
 wg = robot.services.create('github.com/threefoldtech/0-templates/web_gateway/0.0.1', 'wg', data=args)
@@ -66,8 +64,7 @@ services:
             - type: 'zerotier'
           farmerIyoIrg: 'farmer'
           nrEtcds: 3
-          traefikNode: 124121421
-          corednsNode: 453435234
+          publicNode: 124121421
           
 actions:
     - template: 'github.com/threefoldtech/0-templates/web_gateway/0.0.1'
