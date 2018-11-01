@@ -440,34 +440,6 @@ class S3(TemplateBase):
             retries -= 1
         return False
 
-    # def _handle_tlog_shard_failure(self, address):
-    #     """
-    #     Called by the s3_redundant service to recreate a tlog server
-    #     """
-    #     robot = self.api.robots.get(self.data['tlog']['node'], self.data['tlog']['url'])
-    #     namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['tlog']['name'])
-    #     connection_info = namespace_connection_info(namespace)
-    #     if connection_info != address:
-    #         raise Exception('expecting tlog address to be "%s" but found "%s"' % (address, connection_info))
-
-    #     if self._test_namespace_ok(namespace):
-    #         return
-
-    #     for namespace, node in self._deploy_namespaces(
-    #         nr_namepaces=1,
-    #         name=self._tlog_namespace,
-    #         size=10,  # TODO: compute how much is needed
-    #         storage_type='ssd',
-    #         password=self.data['nsPassword'],
-    #         nodes=self._nodes):
-
-    #         return {
-    #             'name': namespace.name,
-    #             'url': node['robot_address'],
-    #             'node': node['node_id'],
-    #             'address': namespace_connection_info(namespace)
-    #         }
-
     def _handle_data_shard_failure(self, connection_info):
         namespace = self._get_namespace_by_address(connection_info['address'])
         if self._test_namespace_ok(namespace):
@@ -529,8 +501,7 @@ class S3(TemplateBase):
             'kernelArgs': [{
                 'name': 'development',
                 'key': 'development'
-            },
-                {
+            }, {
                 'name': 'zerotier',
                 'key': 'zerotier',
                 'value': self.data['mgmtNic']['id']

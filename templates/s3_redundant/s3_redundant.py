@@ -42,6 +42,28 @@ class S3Redundant(TemplateBase):
         namespaces = active.schedule_action('namespaces').wait(die=True).result
         passive.schedule_action('_update_namespaces', {'namespaces': namespaces}).wait(die=True)
 
+    def _handle_active_tlog_failure(self, address):
+        """
+        If master tlog failed we need to promote the passive and redeploy
+        a new passive
+
+        Note: there is only one tlog server associated with a node
+        so address is not really useful
+        """
+        # TODO: we need to test the tlog namespace before taking an action
+        self.promote()
+
+    def _handle_passive_tlog_failure(self, address):
+        """
+        If passive tlog failed we need to redeploy a new passive node
+
+        Note: there is only one tlog server associated with a node
+        so address is not really useful
+        """
+        # TODO: we need to test the tlog namespace before taking an action
+        passive = self._passive_s3()
+        passive.schedule_action('redeploy').wait(die=True)
+
     def _monitor(self):
         try:
             self.state.check('actions', 'install', 'ok')
@@ -62,13 +84,13 @@ class S3Redundant(TemplateBase):
             if state == 'ok':
                 continue
 
-            # TODO: kick start the promote logic, and destroy current active setup
+            self._handle_active_tlog_failure(address)
 
         for address, state in passive.state.get('tlog_shards', {}).items():
             if state == 'ok':
                 continue
 
-            # TODO: destroy passive setup and recreate
+            self._handle_passive_tlog_failure(address)
 
     def _monitor_vm(self):
         try:
@@ -101,15 +123,20 @@ class S3Redundant(TemplateBase):
 
         # active is down, promote the passive and redeploy a vm for the old active
         if not active:
-            old_active = self.data['activeS3']
-            old_passive = self.data['passiveS3']
-            passive_s3.schedule_action('promote').wait(die=True)
-            master_tlog = passive_s3.schedule_action('tlog').wait(die=True).result
-            active_s3.schedule_action('update_master', args={'master': master_tlog}).wait(die=True)
-            active_s3.schedule_action('redeploy').wait(die=True)
+            self.promote()
 
-            self.data['passiveS3'] = old_active
-            self.data['activeS3'] = old_passive
+    def promote(self):
+        active_s3 = self._active_s3()
+        passive_s3 = self._passive_s3()
+        old_active = self.data['activeS3']
+        old_passive = self.data['passiveS3']
+        passive_s3.schedule_action('promote').wait(die=True)
+        master_tlog = passive_s3.schedule_action('tlog').wait(die=True).result
+        active_s3.schedule_action('update_master', args={'master': master_tlog}).wait(die=True)
+        active_s3.schedule_action('redeploy').wait(die=True)
+
+        self.data['passiveS3'] = old_active
+        self.data['activeS3'] = old_passive
 
     def install(self):
         active_data = dict(self.data)
