@@ -29,23 +29,28 @@ class DmVm(TemplateBase):
         if not self.data['nodeId']:
             raise ValueError('Invalid input, Vm requires nodeId')
 
-        capacity = j.clients.threefold_directory.get(interactive=False)
-        try:
-            node, _ = capacity.api.GetCapacity(self.data['nodeId'])
-        except HTTPError as err:
-            if err.response.status_code == 404:
-                raise ValueError('Node {} does not exist'.format(self.data['nodeId']))
-            raise err
-
-        self._node_api = self.api.robots.get(self.data['nodeId'], node.robot_address)
-        self._node_robot_url = node.robot_address
-
         if self.data['image'].partition(':')[0] not in ['zero-os', 'ubuntu']:
             raise ValueError('Invalid image')
 
         for key in ['id', 'type', 'ztClient']:
             if not self.data['mgmtNic'].get(key):
                 raise ValueError('Invalid input, nic requires {}'.format(key))
+
+        try:
+            self.state.check('actions', 'install', 'ok')
+            self._node_api = self.api.robots.get(self.data['nodeId'])
+            self._node_robot_url = self._node_api._client.config.data['url']
+        except:
+            capacity = j.clients.threefold_directory.get(interactive=False)
+            try:
+                node, _ = capacity.api.GetCapacity(self.data['nodeId'])
+            except HTTPError as err:
+                if err.response.status_code == 404:
+                    raise ValueError('Node {} does not exist'.format(self.data['nodeId']))
+                raise err
+
+            self._node_api = self.api.robots.get(self.data['nodeId'], node.robot_address)
+            self._node_robot_url = node.robot_address
 
     @property
     def _node_vm(self):
