@@ -96,7 +96,7 @@ class S3(TemplateBase):
             connection_info = namespace_connection_info(ns)
 
             if connection_info == address:
-                return ns
+                return namespace
         else:
             raise ValueError("Can't find a namespace with address: {}".format(address))
 
@@ -291,17 +291,20 @@ class S3(TemplateBase):
     def _delete_namespace(self, namespace):
         self.logger.info("deleting namespace %s on node %s", namespace['node'], namespace['url'])
         robot = self.api.robots.get(namespace['node'], namespace['url'])
+        address = None
         try:
             ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
+            address = namespace_connection_info(ns)
             ns.schedule_action('uninstall').wait(die=True)
             ns.delete()
-        except ServiceNotFoundError:
+        except:
             pass
 
         if namespace in self.data['namespaces']:
             self.data['namespaces'].remove(namespace)
 
-        self.state.delete('data_shards', namespace['address'])
+        if address:
+            self.state.delete('data_shards', address)
 
     def _update_namespaces(self, namespaces):
         """
@@ -432,6 +435,8 @@ class S3(TemplateBase):
         return deployed_namespaces
 
     def _test_namespace_ok(self, namespace):
+        return False
+
         retries = 3
         # First we will Try to wait and see if the zdb will be self healed or not
         while retries:
