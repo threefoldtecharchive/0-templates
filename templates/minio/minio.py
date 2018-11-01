@@ -160,6 +160,8 @@ class Minio(TemplateBase):
 
     @retry(exceptions=ServiceNotFoundError, tries=3, delay=3, backoff=2)
     def _reserve_port(self):
+        if self.data['nodePort']:
+            return
         port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
         self.data['nodePort'] = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': 1}).wait(die=True).result[0]
 
