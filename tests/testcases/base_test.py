@@ -17,6 +17,8 @@ class BaseTest(TestCase):
         self.ssh_key = self.load_ssh_key()
         self.node_ip = self.config['robot']['remote_server'][7:-5]
         self.node = self.controller.node
+        self.container_flist ="https://hub.grid.tf/tf-bootable/ubuntu:16.04.flist"
+        self.container_storage ="zdb://hub.grid.tf:9900"
 
     @classmethod
     def setUpClass(cls):
@@ -94,6 +96,25 @@ class BaseTest(TestCase):
             run(cmd, shell=True, stdout=PIPE, stderr=PIPE)
             ssh = self.load_ssh_key()
         return ssh
+
+    
+    def get_container_default_data(self, **kwargs):
+        default_data = {
+                        'nics': [{'type': 'default', 'name': 'defaultnic'}],
+                        'flist': self.container_flist,
+                        'storage': self.container_storage,
+                        'mounts':[],
+                        'initProcesses':[],
+                        'hostNetwprking': False,
+                        'hostname':self.random_string(),
+                        'ports': [],
+                        'zerotierNetwork':'',
+                        'privileged':False,
+                        'env':[]
+                        }
+        if kwargs:
+            default_data.update(kwargs)
+        return default_data
 
     def random_string(self):
         return str(uuid4()).replace('-', '')[10:]

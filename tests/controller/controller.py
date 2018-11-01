@@ -26,6 +26,7 @@ class Controller:
         # get instance from all templates_manager
         self.vm_manager = vm.VMManager(parent=self, service_name=None)
         self.zdb_manager = zerodb.ZDBManager(parent=self, service_name=None)
-
+        self.container_manager = container.ContManager(parent=self, service_name=None)
+        
     def _generate_random_string(self):
         return str(uuid4()).replace('-', '')[10:]
