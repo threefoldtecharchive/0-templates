@@ -133,6 +133,7 @@ class S3Redundant(TemplateBase):
             passive_data['master'] = active_tlog
             passive_data['namespaces'] = namespaces
             passive_s3 = self.api.services.create(S3_TEMPLATE_UID, data=passive_data)
+            self.data['passiveS3'] = passive_s3.name
         passive_s3.schedule_action('install').wait(die=True)
         self.state.set('actions', 'install', 'ok')
 
@@ -154,6 +155,9 @@ class S3Redundant(TemplateBase):
 
         for service in services:
             service.delete()
+
+        self.data['passiveS3'] = ''
+        self.data['activeS3'] = ''
 
         self.state.delete('actions', 'install')
 
