@@ -37,13 +37,17 @@ class S3Redundant(TemplateBase):
         return self.api.services.get(template_uid=S3_TEMPLATE_UID, name=self.data['passiveS3'])
 
     def _handle_data_shard_failure(self, active, passive, address):
-
         # handle data failure in the active node then update the namespaces in the passive node
         active.schedule_action('_handle_data_shard_failure', {'connection_info': address}).wait(die=True)
         namespaces = active.schedule_action('namespaces').wait(die=True).result
         passive.schedule_action('_update_namespaces', {'namespaces': namespaces}).wait(die=True)
 
     def _monitor(self):
+        try:
+            self.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            return
+
         # for data zdb, we only watch the active s3
         active = self._active_s3()
         passive = self._passive_s3()

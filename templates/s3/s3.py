@@ -298,6 +298,8 @@ class S3(TemplateBase):
         if namespace in self.data['namespaces']:
             self.data['namespaces'].remove(namespace)
 
+        self.state.delete('data_shards', namespace['address'])
+
     def _update_namespaces(self, namespaces):
         """
         updates the namespaces then call install to make sure that the namespace is deployed
@@ -428,9 +430,8 @@ class S3(TemplateBase):
 
     def _test_namespace_ok(self, namespace):
         retries = 3
-        up_again = False
         # First we will Try to wait and see if the zdb will be self healed or not
-        for _ in range(retries):
+        while retries:
             try:
                 namespace_connection_info(namespace)
                 return True
