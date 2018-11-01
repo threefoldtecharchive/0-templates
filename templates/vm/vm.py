@@ -263,3 +263,5 @@ class Vm(TemplateBase):
         if not ports:
             return
         port_mgr.schedule_action("release", {"service_guid": self.guid, 'ports': ports})
+        for port in self.data['ports']:
+            port['source'] = None

@@ -260,7 +260,7 @@ class S3(TemplateBase):
         tasks = [ns_data_gl, ns_tlog_gl, vm_gl]
 
         master = {'namespace': '', 'address': ''}
-        if self.data['master']['name']:
+        if self.data['master'].get('name'):
             master_gl = gevent.spawn(_get_master_info)
             tasks.append(master_gl)
 
@@ -280,7 +280,7 @@ class S3(TemplateBase):
         if vm_gl.exception:
             raise vm_gl.exception
 
-        if self.data['master']['name']:
+        if self.data['master'].get('name'):
             if master_gl.exception:
                 raise master_gl.exception
             master = master_gl.value
@@ -314,12 +314,13 @@ class S3(TemplateBase):
         self.install()
 
     def uninstall(self):
-        # uninstall and delete all the created namespaces
+        # delete all the created namespaces and vm
+        self.logger.info("Uninstall s3 {}".format(self.name))
         group = gevent.pool.Group()
         namespaces = list(self.data['namespaces'])
         if self.data['tlog']:
             namespaces.append(self.data['tlog'])
-        group.imap_unordered(self._delete_namespace, namespaces)
+        group.map(self._delete_namespace, namespaces)
         group.join()
         self.data['tlog'] = None
         self.data['current_namespaces_connections'] = None
@@ -376,11 +377,16 @@ class S3(TemplateBase):
         Redeploys the minio vm, the tlog and minio
         """
         self.state.check('actions', 'install', 'ok')
-        self._vm().delete()
+        try:
+            self._vm().schedule_action('uninstall').wait(die=True)
+        except ServiceNotFoundError:
+            pass
+
         if reset_tlog:
             self._delete_namespace(self.data['tlog'])
             self.data['tlog'] = None
         self.install()
+        self._update_url()
 
     def _vm(self):
         return self.api.services.get(template_uid=VM_TEMPLATE_UID, name=self.guid)

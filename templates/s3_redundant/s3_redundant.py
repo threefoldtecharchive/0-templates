@@ -31,10 +31,18 @@ class S3Redundant(TemplateBase):
             self.data['nsPassword'] = j.data.idgenerator.generateXCharID(32)
 
     def _active_s3(self):
-        return self.api.services.get(template_uid=S3_TEMPLATE_UID, name=self.data['activeS3'])
+        try:
+            return self.api.services.get(template_uid=S3_TEMPLATE_UID, name=self.data['activeS3'])
+        except ServiceNotFoundError:
+            self.data['activeS3'] = ''
+            raise
 
     def _passive_s3(self):
-        return self.api.services.get(template_uid=S3_TEMPLATE_UID, name=self.data['passiveS3'])
+        try:
+            return self.api.services.get(template_uid=S3_TEMPLATE_UID, name=self.data['passiveS3'])
+        except ServiceNotFoundError:
+            self.data['passiveS3'] = ''
+            raise
 
     def _handle_data_shard_failure(self, active, passive, address):
         # handle data failure in the active node then update the namespaces in the passive node
@@ -151,6 +159,7 @@ class S3Redundant(TemplateBase):
         self.data['activeS3'] = old_passive
 
     def install(self):
+        self.logger.info('Installing s3_redundant {}'.format(self.name))
         active_data = dict(self.data)
         active_data['nsName'] = self.guid
         if self.data['activeS3']:
@@ -159,6 +168,7 @@ class S3Redundant(TemplateBase):
             active_s3 = self.api.services.create(S3_TEMPLATE_UID, data=active_data)
             self.data['activeS3'] = active_s3.name
         active_s3.schedule_action('install').wait(die=True)
+        self.logger.info('Installed s3 {}'.format(active_s3.name))
 
         if self.data['passiveS3']:
             passive_s3 = self._passive_s3()
@@ -171,6 +181,8 @@ class S3Redundant(TemplateBase):
             passive_s3 = self.api.services.create(S3_TEMPLATE_UID, data=passive_data)
             self.data['passiveS3'] = passive_s3.name
         passive_s3.schedule_action('install').wait(die=True)
+        self.logger.info('Installed s3 {}'.format(passive_s3.name))
+
         self.state.set('actions', 'install', 'ok')
 
     def uninstall(self):
