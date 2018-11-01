@@ -298,6 +298,15 @@ class S3(TemplateBase):
         if namespace in self.data['namespaces']:
             self.data['namespaces'].remove(namespace)
 
+        self.state.delete('data_shards', namespace['address'])
+
+    def _update_namespaces(self, namespaces):
+        """
+        updates the namespaces then call install to make sure that the namespace is deployed
+        """
+        self.data['namespaces'] = namespaces
+        self.install()
+
     def uninstall(self):
         # uninstall and delete all the created namespaces
         group = gevent.pool.Group()
@@ -421,6 +430,7 @@ class S3(TemplateBase):
 
     def _test_namespace_ok(self, namespace):
         retries = 3
+        # First we will Try to wait and see if the zdb will be self healed or not
         while retries:
             try:
                 namespace_connection_info(namespace)
@@ -430,65 +440,15 @@ class S3(TemplateBase):
             retries -= 1
         return False
 
-    # def _handle_tlog_shard_failure(self, address):
-    #     """
-    #     Called by the s3_redundant service to recreate a tlog server
-    #     """
-    #     robot = self.api.robots.get(self.data['tlog']['node'], self.data['tlog']['url'])
-    #     namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['tlog']['name'])
-    #     connection_info = namespace_connection_info(namespace)
-    #     if connection_info != address:
-    #         raise Exception('expecting tlog address to be "%s" but found "%s"' % (address, connection_info))
-
-    #     if self._test_namespace_ok(namespace):
-    #         return
-
-    #     for namespace, node in self._deploy_namespaces(
-    #         nr_namepaces=1,
-    #         name=self._tlog_namespace,
-    #         size=10,  # TODO: compute how much is needed
-    #         storage_type='ssd',
-    #         password=self.data['nsPassword'],
-    #         nodes=self._nodes):
-
-    #         return {
-    #             'name': namespace.name,
-    #             'url': node['robot_address'],
-    #             'node': node['node_id'],
-    #             'address': namespace_connection_info(namespace)
-    #         }
-
     def _handle_data_shard_failure(self, connection_info):
         namespace = self._get_namespace_by_address(connection_info['address'])
         if self._test_namespace_ok(namespace):
             return
 
-        # create a new namespace
-        namespace, node = list(self._deploy_namespaces(nr_namepaces=1, name=namespace.data['nsName'],
-                                                       size=namespace.data['size'],
-                                                       storage_type=namespace['storage_type'],
-                                                       password=namespace.data['password'],
-                                                       nodes=namespace.data['node']))[0]
-
-        ns = {
-            'name': namespace.name,
-            'url': node['robot_address'],
-            'node': node['node_id'],
-            'address': namespace_connection_info(namespace)
-        }
-
-        return ns
-
-    def _update_namespace(self, address, namespace_info):
-
-        if namespace_info:
-            for i, ns in enumerate(self.data['namespaces']):
-                if ns['address'] == address:
-                    self.data['namespaces'][i] = namespace_info
-                    break
-
-        self.state.delete('data_shards', address)
-        self._ensure_namespaces_connections()
+        # if the namespace still unreachable we will delete it and call install again
+        # to ensure all the required namespaces
+        self._delete_namespace(namespace)
+        self.install()
 
     def _deploy_minio_tlog_namespace(self):
         self.logger.info("create namespaces to be used as a tlog for minio")
@@ -541,8 +501,7 @@ class S3(TemplateBase):
             'kernelArgs': [{
                 'name': 'development',
                 'key': 'development'
-            },
-                {
+            }, {
                 'name': 'zerotier',
                 'key': 'zerotier',
                 'value': self.data['mgmtNic']['id']
@@ -639,6 +598,10 @@ class S3(TemplateBase):
         """
         Checks state of namespaces from minio service and bubble it up
         """
+        try:
+            self.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            return
         vm_robot, _ = self._vm_robot_and_ip()
         minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
         state = minio.state
@@ -675,7 +638,12 @@ class S3(TemplateBase):
         minio = None
         while time.time() < now + 2400:
             try:
-                minio = vm_robot.services.find_or_create(MINIO_TEMPLATE_UID, self.guid, minio_data)
+                minios = vm_robot.services.find(MINIO_TEMPLATE_UID, self.guid)
+                if minios:
+                    minio = minios[0]
+                    minio.schedule_action('update_zerodbs', args={'zerodbs': namespaces_connections}).wait(die=True)
+                else:
+                    minio = vm_robot.services.create(MINIO_TEMPLATE_UID, self.guid, minio_data)
                 break
             except requests.ConnectionError:
                 self.logger.info("vm not up yet...waiting some more")
