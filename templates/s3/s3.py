@@ -638,7 +638,7 @@ class S3(TemplateBase):
         minio = None
         while time.time() < now + 2400:
             try:
-                minios = vm_robot.services.find(templates=MINIO_TEMPLATE_UID, name=self.guid)
+                minios = vm_robot.services.find(template=MINIO_TEMPLATE_UID, name=self.guid)
                 if minios:
                     minio = minios[0]
                     minio.schedule_action('update_zerodbs', args={'zerodbs': namespaces_connections}).wait(die=True)
