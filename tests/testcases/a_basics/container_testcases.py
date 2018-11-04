@@ -5,8 +5,7 @@ from random import randint
 from zerorobot.dsl.ZeroRobotManager import ServiceCreateError
 from tests.controller.controller import Controller
 
-class TESTContainer(BaseTest):
-
+class TestContainer(BaseTest):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -34,14 +33,11 @@ class TESTContainer(BaseTest):
         self.assertTrue([c for c in conts.values() if c['container']['arguments']['hostname'] == container_1_data['hostname']])
         self.assertTrue([c for c in conts.values() if c['container']['arguments']['hostname'] == container_2_data['hostname']])
 
-
-    def test002_create_container_with_all_possible_params(self):
+    def test002_create_container_without_flist(self):
         """ ZRT-ZOS-002
-        *Test case for creating container with all possible parameters*
+        *Test case for creating container without flist*
         **Test Scenario:**
         #. Create a container without providing flist parameter, should fail.
-        #. Create a container with all possible parameters.
-        #. Check if the parameters have been reflected correctly.
         """
         self.log('Create a container without providing flist parameter, should fail.')
         container_data = self.get_container_default_data()
@@ -50,7 +46,14 @@ class TESTContainer(BaseTest):
             self.controller.container_manager.install(wait=True, data=container_data)
         self.assertIn("parameter 'flist' not valid: ", e.exception.args[0])
 
-        self.log('Create a container with all possible parameters.')
+    def test003_create_container_with_env_and_ports_parameters(self):
+        """ ZRT-ZOS-003
+        *Test case for creating container with env and ports parameter*
+        **Test Scenario:**
+        #. Create a container with env and ports parameters.
+        #. Check if the env and ports parameters have been reflected correctly. 
+        """
+        self.log('Create a container with env and ports parameters.')
         container_data = self.get_container_default_data()
         env_name = self.random_string()
         env_value = self.random_string()
@@ -60,21 +63,16 @@ class TESTContainer(BaseTest):
         self.controller.container_manager.install(wait=True, data=container_data)
         self.assertTrue(self.controller.container_manager.install_state, " Installtion state is False")
 
-
         self.log('Check if the parameters have been reflected correctly')
         conts = self.controller.node.client.container.list()
         self.assertTrue([c for c in conts.values() if c['container']['arguments']['hostname'] == container_data['hostname']])
-
-
-        self.assertTrue([c for c in conts.values() if c['container']['arguments']['hostname'] == container_data['hostname']])
-
         (cont_id, cont) = [c for c in conts.items() if c[1]['container']['arguments']['hostname'] == container_data['hostname']][0]
         cont_cl = self.controller.node.client.container.client(cont_id)
         self.assertTrue(cont_cl.bash('echo $%s' % env_name).get().stdout.strip(), env_value)
         self.assertTrue(cont['container']['arguments']['port'], {destination_port: 80})
 
-    def test003_start_stop_container(self):
-        """ ZRT-ZOS-003
+    def test004_start_stop_container(self):
+        """ ZRT-ZOS-004
         *Test case for starting and stopping container*
         **Test Scenario:**
         #. Create a container (C1).

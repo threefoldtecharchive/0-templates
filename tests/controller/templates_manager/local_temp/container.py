@@ -3,7 +3,8 @@ from zerorobot.service_collection import ServiceNotFoundError
 from testconfig import config
 import random
 
-class CONTManager:
+
+class ContManager:
     def __init__(self, parent, service_name=None):
         self.container_template = 'github.com/threefoldtech/0-templates/container/0.0.1'
         self._parent = parent
@@ -13,8 +14,9 @@ class CONTManager:
         if service_name:
             try:
                 self._container_service = self.robot.service.get(name=service_name)
-            except ServiceNotFoundError:
-                self._container_service = None
+            except ServiceNotFoundError as e :
+                print(e.exception.args[0])
+                raise
 
     @property
     def service(self):
@@ -40,6 +42,6 @@ class CONTManager:
     def start(self):
         return self.service.schedule_action('start')
 
-    def stop(self, force=True):
+    def stop(self):
         return self.service.schedule_action('stop')
     
