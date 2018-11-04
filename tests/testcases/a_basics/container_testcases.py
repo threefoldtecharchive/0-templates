@@ -6,12 +6,6 @@ from zerorobot.dsl.ZeroRobotManager import ServiceCreateError
 from tests.controller.controller import Controller
 
 class TestContainer(BaseTest):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def setUp(self):
-        super().setUp()
-
     def test001_create_containers(self):
         """ ZRT-ZOS-001
         *Test case for creatings container on a zero-os node*
