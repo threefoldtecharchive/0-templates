@@ -234,6 +234,7 @@ class Vm(TemplateBase):
                 return
 
     def _populate_port_forwards(self, ports):
+        ports = copy.deepcopy(ports)
         # count how many port we need to find
         count = 0
         for pf in ports:
