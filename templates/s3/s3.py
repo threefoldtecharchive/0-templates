@@ -505,7 +505,7 @@ class S3(TemplateBase):
         }
         vm_data = {
             'cpu': 2,
-            'memory': 1000,
+            'memory': 4000,
             'image': 'zero-os',
             'mgmtNic': mgmt_nic,
             'disks': [{
