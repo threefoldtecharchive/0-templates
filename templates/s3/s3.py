@@ -215,19 +215,8 @@ class S3(TemplateBase):
         vm_robot, _ = self._vm_robot_and_ip()
         return vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
 
-    def _get_master_info(self):
-        robot = self.api.robots.get(self.data['master']['node'], self.data['master']['url'])
-        namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['master']['name'])
-        master_connection = namespace_connection_info(namespace)
-        self.data['master']['address'] = master_connection
-
-        return {
-            'address': master_connection,
-            'namespace': self._tlog_namespace,
-        }
-
     def install(self):
-        def _get_master_info():
+        def get_master_info():
             robot = self.api.robots.get(self.data['master']['node'], self.data['master']['url'])
             namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['master']['name'])
             master_connection = namespace_connection_info(namespace)
@@ -261,7 +250,7 @@ class S3(TemplateBase):
 
         master = {'namespace': '', 'address': ''}
         if self.data['master'].get('name'):
-            master_gl = gevent.spawn(_get_master_info)
+            master_gl = gevent.spawn(get_master_info)
             tasks.append(master_gl)
 
         self.logger.info("wait for all namespaces and vm to be installed")
