@@ -17,6 +17,8 @@ class BaseTest(TestCase):
         self.ssh_key = self.load_ssh_key()
         self.node_ip = self.config['robot']['remote_server'][7:-5]
         self.node = self.controller.node
+        self.container_flist ="https://hub.grid.tf/tf-bootable/ubuntu:16.04.flist"
+        self.container_storage ="zdb://hub.grid.tf:9900"
 
     @classmethod
     def setUpClass(cls):
