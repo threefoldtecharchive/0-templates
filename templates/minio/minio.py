@@ -9,6 +9,7 @@ from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
                                       SERVICE_STATE_SKIPPED,
                                       SERVICE_STATE_WARNING, StateCheckError)
+import gevent
 
 PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
 
@@ -82,6 +83,9 @@ class Minio(TemplateBase):
         self.logger.info('Installing minio %s' % self.name)
         self._reserve_port()
         self.state.set('actions', 'install', 'ok')
+        self.state.delete('data_shards')
+        self.state.delete('tlog_shards')
+
         for addr in self.data['zerodbs']:
             self.state.set('data_shards', addr, SERVICE_STATE_OK)
         if self.data['tlog']:
@@ -128,6 +132,8 @@ class Minio(TemplateBase):
             minio_sal.create_config()
             minio_sal.reload()
 
+        self.state.delete('data_shards')
+
         # we consider shards info to be valid when we update them
         for addr in self.data['zerodbs']:
             self.state.set('data_shards', addr, SERVICE_STATE_OK)
@@ -157,6 +163,9 @@ class Minio(TemplateBase):
         if minio_sal.is_running():
             minio_sal.create_config()
             minio_sal.reload()
+
+    def check_and_repair(self):
+        gevent.spawn(self._minio_sal.check_and_repair)
 
     @retry(exceptions=ServiceNotFoundError, tries=3, delay=3, backoff=2)
     def _reserve_port(self):

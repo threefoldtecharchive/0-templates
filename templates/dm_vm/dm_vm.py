@@ -160,6 +160,7 @@ class DmVm(TemplateBase):
         except ServiceNotFoundError:
             pass
 
+        self.data['ports'] = []
         for disk in self.data['disks']:
             try:
                 vdisk = self._node_api.services.get(

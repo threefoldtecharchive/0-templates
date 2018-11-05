@@ -234,6 +234,7 @@ class Vm(TemplateBase):
                 return
 
     def _populate_port_forwards(self, ports):
+        ports = copy.deepcopy(ports)
         # count how many port we need to find
         count = 0
         for pf in ports:
@@ -263,3 +264,5 @@ class Vm(TemplateBase):
         if not ports:
             return
         port_mgr.schedule_action("release", {"service_guid": self.guid, 'ports': ports})
+        for port in self.data['ports']:
+            port['source'] = None

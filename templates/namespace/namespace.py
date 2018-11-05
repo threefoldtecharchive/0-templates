@@ -33,7 +33,10 @@ class Namespace(TemplateBase):
 
     def _monitor(self):
         self.logger.info('Monitor namespace %s' % self.name)
-        self.state.check('actions', 'install', 'ok')
+        try:
+            self.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            return
 
         try:
             self._zerodb.state.check('status', 'running', 'ok')
@@ -80,7 +83,6 @@ class Namespace(TemplateBase):
         return self._zerodb.schedule_action('namespace_private_url', args={'name': self.data['nsName']}).wait(die=True).result
 
     def uninstall(self):
-        self.state.check('actions', 'install', 'ok')
         self._zerodb.schedule_action('namespace_delete', args={'name': self.data['nsName']}).wait(die=True)
         self.state.delete('actions', 'install')
 
