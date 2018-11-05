@@ -11,10 +11,7 @@ class VdiskManager:
         self.robot = self._parent.remote_robot
         self._vdisk_service = service_name
         if service_name:
-            try:
-                self._vdisk_service = self.robot.service.get(name=service_name)
-            except ServiceNotFoundError:
-                self._vdisk_service = None
+            self._vdisk_service = self.robot.service.get(name=service_name)
 
     @property
     def service(self):
@@ -31,7 +28,7 @@ class VdiskManager:
             'size': 20,
             'mountPoint': '/mnt/{}'.format(self._parent._generate_random_string()),
             'filesystem': 'ext4',
-            'label': 'label',
+            'label': self._parent._generate_random_string(),
         }
         if kwargs:
             default_data.update(kwargs)

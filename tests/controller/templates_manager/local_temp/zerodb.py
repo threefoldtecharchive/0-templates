@@ -12,11 +12,8 @@ class ZDBManager:
         self.robot = self._parent.remote_robot
         self._zdb_service = service_name
         if service_name:
-            try:
-                self._zdb_service = self.robot.service.get(name=service_name)
-            except ServiceNotFoundError:
-                self._zdb_service = None
-
+            self._zdb_service = self.robot.service.get(name=service_name)
+         
     @property
     def service(self):
         if self._zdb_service == None:

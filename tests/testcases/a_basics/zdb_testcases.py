@@ -28,7 +28,7 @@ class ZDBTestCases(BaseTest):
         self.log('Create zerodb (zdb) with basic params, should succeed')
         admin_passwd = self.random_string()
         zdb = self.controller.zdb_manager
-        zdb.install(wait=True, path=self.mount_paths[0], admin=admin_passwd, mode=mode)
+        zdb.install(wait=True, path=self.mount_paths, admin=admin_passwd, mode=mode)
 
         self.log('Check that the params has been reflected correctly.')
         container_name = 'zerodb_' + zdb.zdb_service_name
@@ -56,7 +56,7 @@ class ZDBTestCases(BaseTest):
         self.log('Create zerodb (zdb) with basic params, should succeed')
         admin_passwd = self.random_string()
         zdb = self.controller.zdb_manager
-        zdb.install(wait=True, path=self.mount_paths[0], admin=admin_passwd)
+        zdb.install(wait=True, path=self.mount_paths, admin=admin_passwd)
 
         self.log('list the namespaces, should be empty')
         namespaces = zdb.namespace_list()
@@ -89,7 +89,7 @@ class ZDBTestCases(BaseTest):
         self.log('Create zerodb (zdb) with basic params, should succeed')
         admin_passwd = self.random_string()
         zdb = self.controller.zdb_manager
-        zdb.install(wait=True, path=self.mount_paths[0], admin=admin_passwd)
+        zdb.install(wait=True, path=self.mount_paths, admin=admin_passwd)
 
         self.log('Create namespace (NS), should succeed')
         ns_name = self.random_string()
@@ -132,7 +132,7 @@ class ZDBTestCases(BaseTest):
         #. Check that Namespace (NS) is still there.
         """
         zdb = self.controller.zdb_manager
-        zdb.install(wait=True, path=self.mount_paths[0])
+        zdb.install(wait=True, path=self.mount_paths)
 
         self.log('Create namespace (NS), should succeed')
         ns_name = self.random_string()

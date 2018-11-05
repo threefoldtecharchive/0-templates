@@ -6,23 +6,23 @@ from jumpscale import j
 import requests
 
 
-class TESTVM(BaseTest):
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        for vm in cls.vms:
+class TestVm(BaseTest):
+    def tearDown(self):
+        for vm in self.vms:
             vm.uninstall()
-        cls.vms.clear()
+        self.vms.clear()
 
-        for zdb in cls.zdbs:
+        for zdb in self.zdbs:
             namespaces = zdb.namespace_list().result
             for namespace in namespaces:
                 zdb.namespace_delete(namespace['name'])
             zdb.stop()
-        cls.zdbs.clear()
+        self.zdbs.clear()
 
-        for vdisk in cls.vdisks:
+        for vdisk in self.vdisks:
             vdisk.uninstall()
+        self.vdisks.clear()
+        super().tearDown()
 
     def test001_create_vm(self):
         """ ZRT-ZOS-003
@@ -86,9 +86,8 @@ class TESTVM(BaseTest):
 
         """
         self.log('Get zerotier client.')
-        zt_id = self.config['zt']['zt_netwrok_id']
         zt_client = self.controller.zt_client
-        zt_network = [{'name': self.random_string(), 'type': 'zerotier', 'id': zt_id, 'ztClient': zt_client.service_name}]
+        zt_network = [{'name': self.random_string(), 'type': 'zerotier', 'id': self.zt_id, 'ztClient': zt_client.service_name}]
 
         self.log('Create vm[vm1] with zerotier network, should succeed.')
         ssh_config = [{'path': '/root/.ssh/authorized_keys', 'content': self.ssh_key, 'name': 'sshkey'}]
@@ -167,13 +166,15 @@ class TESTVM(BaseTest):
         self.log('Create zerodb [zdb], should succeed.')
         zdb_name = self.random_string()
         zdb = self.controller.zdb_manager
-        zdb.install(wait=True, path=self.mount_paths[0], name=zdb_name)
+        zdb.install(wait=True, path=self.mount_paths, name=zdb_name)
         self.zdbs.append(zdb)
 
         self.log('Create vdisk [D] using namespace on [zdb], should succeed.')
         disk_name = self.random_string()
+        mount_point = '/mnt/{}'.format(disk_name)
+        disk_size = random.randint(1, int(self.disk_size/10))
         vdisk = self.controller.vdisk
-        vdisk.install(zerodb=zdb_name, nsName=disk_name, filesystem=filesystem, diskType=self.disk_type)
+        vdisk.install(zerodb=zdb_name, nsName=disk_name, filesystem=filesystem, mountPoint=mount_point, diskType=self.disk_type, size=disk_size, label=disk_name)
         self.vdisks.append(vdisk)
 
         self.log('Create vm [VM] with disk [D], should succeed.')
@@ -181,9 +182,9 @@ class TESTVM(BaseTest):
         ssh_config = [{'path': '/root/.ssh/authorized_keys', 'content': self.ssh_key, 'name': 'sshkey'}]
         disk = [{'name': disk_name,
                  'url': vdisk.url().result,
-                 'mountPoint':'/mnt/{}'.format(disk_name),
+                 'mountPoint': mount_point,
                  'filesystem': filesystem,
-                 'label': 'label'}]
+                 'label': disk_name}]
         vm.install(wait=True, configs=ssh_config, disks=disk)
         self.vms.append(vm)
 
