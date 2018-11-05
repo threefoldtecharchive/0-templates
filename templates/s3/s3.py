@@ -430,8 +430,6 @@ class S3(TemplateBase):
         return deployed_namespaces
 
     def _test_namespace_ok(self, namespace):
-        return False
-
         retries = 3
         # First we will Try to wait and see if the zdb will be self healed or not
         while retries:
@@ -524,6 +522,7 @@ class S3(TemplateBase):
             t = vm.schedule_action('install')
             t.wait()
             if t.state != 'ok':
+                vm.schedule_action('uninstall').wait(die=True)
                 vm.delete(wait=True, timeout=60, die=False)
             else:
                 return vm
