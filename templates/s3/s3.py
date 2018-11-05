@@ -34,6 +34,7 @@ class S3(TemplateBase):
         self._farm = j.sal_zos.farm.get(self.data['farmerIyoOrg'])
 
         self._robots = {}
+        self.namespaces_dict = {}
 
     def validate(self):
         if self.data['parityShards'] > self.data['dataShards']:
@@ -90,12 +91,16 @@ class S3(TemplateBase):
         return self.data['minioUrls']
 
     def _get_namespace_by_address(self, address):
+        if address in self.namespaces_dict:
+            return self.namespaces_dict[address]
+
         for namespace in self.data['namespaces']:
             robot = self.api.robots.get(namespace['node'], namespace['url'])
             ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
             connection_info = namespace_connection_info(ns)
 
             if connection_info == address:
+                self.namespaces_dict[address] = namespace
                 return namespace
         else:
             raise ValueError("Can't find a namespace with address: {}".format(address))
