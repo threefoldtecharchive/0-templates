@@ -464,6 +464,7 @@ class S3(TemplateBase):
         # to ensure all the required namespaces
         self._delete_namespace(namespace)
         self.install()
+        self._minio().schedule_action('check_and_repair').wait(die=True)
 
     def _deploy_minio_tlog_namespace(self):
         self.logger.info("create namespaces to be used as a tlog for minio")
