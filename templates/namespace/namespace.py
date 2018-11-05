@@ -36,7 +36,7 @@ class Namespace(TemplateBase):
         try:
             self.state.check('actions', 'install', 'ok')
         except StateCheckError:
-            pass
+            return
 
         try:
             self._zerodb.state.check('status', 'running', 'ok')
