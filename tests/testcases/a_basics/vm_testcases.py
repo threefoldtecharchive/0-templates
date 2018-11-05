@@ -86,7 +86,7 @@ class TestVm(BaseTest):
 
         """
         self.log('Get zerotier client.')
-        zt_client = self.controller.zt_client
+        zt_client = self.controller.zt_client(self.controller)
         zt_network = [{'name': self.random_string(), 'type': 'zerotier', 'id': self.zt_id, 'ztClient': zt_client.service_name}]
 
         self.log('Create vm[vm1] with zerotier network, should succeed.')

@@ -21,13 +21,14 @@ class VdiskManager:
             return self._vdisk_service
 
     def install(self, wait=True, **kwargs):
+        filesystem=['ext4', 'ext3', 'ext2', 'btrfs']
         default_data = {
             'nsName': self._parent._generate_random_string(),
             'zerodb': '',
             'diskType': 'ssd',
-            'size': 20,
+            'size': random.randint(1, 20),
             'mountPoint': '/mnt/{}'.format(self._parent._generate_random_string()),
-            'filesystem': 'ext4',
+            'filesystem': random.choice(filesystem),
             'label': self._parent._generate_random_string(),
         }
         if kwargs:
