@@ -29,19 +29,16 @@ class DmVm(TemplateBase):
         if not self.data['nodeId']:
             raise ValueError('Invalid input, Vm requires nodeId')
 
-        # capacity = j.clients.threefold_directory.get(interactive=False)
-        # try:
-        #     node, _ = capacity.api.GetCapacity(self.data['nodeId'])
-        # except HTTPError as err:
-        #     if err.response.status_code == 404:
-        #         raise ValueError('Node {} does not exist'.format(self.data['nodeId']))
-        #     raise err
+        capacity = j.clients.threefold_directory.get(interactive=False)
+        try:
+            node, _ = capacity.api.GetCapacity(self.data['nodeId'])
+        except HTTPError as err:
+            if err.response.status_code == 404:
+                raise ValueError('Node {} does not exist'.format(self.data['nodeId']))
+            raise err
 
-        # self._node_api = self.api.robots.get(self.data['nodeId'], node.robot_address)
-        # self._node_robot_url = node.robot_address
-        self._node_api = self.api
-        self._node_robot_url = 'http://localhost:6600'
-
+        self._node_api = self.api.robots.get(self.data['nodeId'], node.robot_address)
+        self._node_robot_url = node.robot_address
 
         if self.data['image'].partition(':')[0] not in ['zero-os', 'ubuntu']:
             raise ValueError('Invalid image')

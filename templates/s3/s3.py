@@ -55,7 +55,6 @@ class S3(TemplateBase):
 
     @property
     def _nodes(self):
-        return [{'node_id': 'local', 'robot_address': 'http://localhost:6600'}]
         nodes = self._farm.filter_online_nodes()
         if not nodes:
             raise ValueError('There are no online nodes in this farm')
@@ -536,7 +535,7 @@ class S3(TemplateBase):
             t = vm.schedule_action('install')
             t.wait()
             if t.state != 'ok':
-                vm.schedule_action('uninstall')(wait=True, timeout=60, die=False)
+                vm.delete(wait=True, timeout=60, die=False)
             else:
                 return vm
 
@@ -585,7 +584,7 @@ class S3(TemplateBase):
                     deployed_nr_namespaces += 1
 
                     # update amount of ressource so the next iteration of the loop will sort the list of nodes properly
-                    # nodes[nodes.index(node)]['used_resources'][storage_key] += size
+                    nodes[nodes.index(node)]['used_resources'][storage_key] += size
 
                     yield (namespace, node)
 
@@ -731,7 +730,6 @@ def namespace_connection_info(namespace):
 
 
 def sort_by_less_used(nodes, storage_key):
-    return nodes
     def key(node):
         return node['total_resources'][storage_key] - node['used_resources'][storage_key]
     return sorted(nodes, key=key, reverse=True)
