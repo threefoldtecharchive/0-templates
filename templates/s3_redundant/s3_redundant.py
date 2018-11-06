@@ -5,6 +5,7 @@ from zerorobot.template.decorator import timeout
 from zerorobot.template.state import StateCheckError, StateCategoryNotExistsError
 
 S3_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/s3/0.0.1'
+REVERSE_PROXY_UID = 'github.com/threefoldtech/0-templates/reverse_proxy/0.0.1'
 
 
 class S3Redundant(TemplateBase):
@@ -151,12 +152,21 @@ class S3Redundant(TemplateBase):
         old_active = self.data['activeS3']
         old_passive = self.data['passiveS3']
         passive_s3.schedule_action('promote').wait(die=True)
+        self.data['passiveS3'] = old_active
+        self.data['activeS3'] = old_passive
+
+        urls = passive_s3.schedule_action('url').wait(die=True).result
+        if self.data['reverseProxy']:
+            try:
+                reverse_proxy = self.api.services.get(template_uid=REVERSE_PROXY_UID, name=self.data['reverseProxy'])
+                reverse_proxy.schedule_action('update_servers', args={'servers': [urls['public']]})
+            except ServiceNotFoundError:
+                self.logger.warning('Failed to find  and update reverse_proxy {}'.format(self.data['reverseProxy']))
+
+
         master_tlog = passive_s3.schedule_action('tlog').wait(die=True).result
         active_s3.schedule_action('update_master', args={'master': master_tlog}).wait(die=True)
         active_s3.schedule_action('redeploy').wait(die=True)
-
-        self.data['passiveS3'] = old_active
-        self.data['activeS3'] = old_passive
 
     def install(self):
         self.logger.info('Installing s3_redundant {}'.format(self.name))
@@ -254,3 +264,7 @@ class S3Redundant(TemplateBase):
 
     def get_passive_ip(self):
         return self._passive_s3().data['mgmtNic']['ip']
+
+    def update_reverse_proxy(self, reverse_proxy):
+        self.data['reverseProxy'] = reverse_proxy
+

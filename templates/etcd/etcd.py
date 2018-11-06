@@ -36,8 +36,12 @@ class Etcd(TemplateBase):
 
 
     def _monitor(self):
+        try:
+            self.state.check('actions', 'start', 'ok')
+        except StateCheckError:
+            return
+
         self.logger.info('Monitor etcd %s' % self.name)
-        self.state.check('actions', 'start', 'ok')
 
         if not self._etcd_sal.is_running():
             self.state.delete('status', 'running')
