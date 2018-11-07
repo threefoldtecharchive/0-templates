@@ -5,6 +5,7 @@ from zerorobot.template.decorator import timeout
 from zerorobot.template.state import StateCheckError, StateCategoryNotExistsError
 
 S3_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/s3/0.0.1'
+REVERSE_PROXY_UID = 'github.com/threefoldtech/0-templates/reverse_proxy/0.0.1'
 
 
 class S3Redundant(TemplateBase):
@@ -60,7 +61,7 @@ class S3Redundant(TemplateBase):
         so address is not really useful
         """
         # TODO: we need to test the tlog namespace before taking an action
-        self.promote()
+        self._promote()
 
     def _handle_passive_tlog_failure(self, address):
         """
@@ -143,20 +144,31 @@ class S3Redundant(TemplateBase):
 
         # active is down, promote the passive and redeploy a vm for the old active
         if not active:
-            self.promote()
+            self._promote()
 
-    def promote(self):
+    def _promote(self):
         active_s3 = self._active_s3()
         passive_s3 = self._passive_s3()
         old_active = self.data['activeS3']
         old_passive = self.data['passiveS3']
         passive_s3.schedule_action('promote').wait(die=True)
+        self.data['passiveS3'] = old_active
+        self.data['activeS3'] = old_passive
+        self.save()
+
+        self._update_reverse_proxy_servers()
+
         master_tlog = passive_s3.schedule_action('tlog').wait(die=True).result
         active_s3.schedule_action('update_master', args={'master': master_tlog}).wait(die=True)
         active_s3.schedule_action('redeploy').wait(die=True)
 
-        self.data['passiveS3'] = old_active
-        self.data['activeS3'] = old_passive
+    def _update_reverse_proxy_servers(self):
+        urls = self._active_s3().schedule_action('url').wait(die=True).result
+        try:
+            reverse_proxy = self.api.services.get(template_uid=REVERSE_PROXY_UID, name=self.data['reverseProxy'])
+            reverse_proxy.schedule_action('update_servers', args={'servers': [urls['public']]})
+        except ServiceNotFoundError:
+            self.logger.warning('Failed to find  and update reverse_proxy {}'.format(self.data['reverseProxy']))
 
     def install(self):
         self.logger.info('Installing s3_redundant {}'.format(self.name))
@@ -246,11 +258,11 @@ class S3Redundant(TemplateBase):
         self.stop_passive()
         self.start_passive()
 
-    def get_etcd_client(self):
-        pass
+    def update_reverse_proxy(self, reverse_proxy):
+        self.data['reverseProxy'] = reverse_proxy
+        try:
+            self.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            return
+        self._update_reverse_proxy_servers()
 
-    def get_active_ip(self):
-        return self._active_s3().data['mgmtNic']['ip']
-
-    def get_passive_ip(self):
-        return self._passive_s3().data['mgmtNic']['ip']

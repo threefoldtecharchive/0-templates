@@ -77,14 +77,26 @@ class WebGateway(TemplateBase):
     def install(self):
         self.logger.info('Installing web gateway {}'.format(self.name))
         cluster_connection = self._install_etcd_cluster()
+        if not cluster_connection['etcds']:
+            raise RuntimeError('Failed to retrieve etcd cluster etcd connections')
         traefik_endpoint = ','.join(['{}:{}'.format(connection['ip'], connection['client_port']) for connection in cluster_connection['etcds']])
         coredns_endpoint = ' '.join([connection['client_url'] for connection in cluster_connection['etcds']])
         self._install_traefik(traefik_endpoint)
         self._install_coredns(coredns_endpoint)
+        self._set_public_ips(cluster_connection)
 
         self.state.set('actions', 'install', 'ok')
         self.state.set('actions', 'start', 'ok')
         self.state.set('status', 'running', 'ok')
+
+    def _set_public_ips(self, cluster_connection):
+        """
+        Create the etcd client and webgateway sal instance and set the public ips
+        """
+        for etcd in cluster_connection['etcds']:
+            j.clients.etcd.get(self._etcds_name, data={'host': etcd['ip'], 'port': etcd['client_port'], 'user': cluster_connection['user'], 'password_': cluster_connection['password']})
+            break
+        j.sal.webgateway.get(self.name, data={'etcd_instance': self._etcds_name, 'public_ips': self.data['publicIps']})
 
     def _create_zt_clients(self, nics, node_url):
         result = deepcopy(nics)
@@ -190,4 +202,8 @@ class WebGateway(TemplateBase):
 
     def connection_info(self):
         self.state.check('status', 'running', 'ok')
-        return self._etcd_cluster.schedule_action('connection_info').wait(die=True).result
+        cluster = self._etcd_cluster.schedule_action('connection_info').wait(die=True).result
+        return {
+            'etcd_cluster': cluster,
+            'public_ips': self.data['publicIps']
+        }
