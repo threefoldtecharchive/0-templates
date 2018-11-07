@@ -96,10 +96,5 @@ class Coredns(TemplateBase):
     def update_endpoint(self ,etcd_endpoint):
         self.data['etcdEndpoint'] = etcd_endpoint
         self.state.check('actions', 'install', 'ok')
-        self.logger.info('updating coredns %s' % self.name)
-        self._coredns_sal.stop()
-        self.state.delete('actions', 'start')
-        self.state.delete('status', 'running')
-        self._coredns_sal.start()
-        self.state.set('actions', 'start', 'ok')
-        self.state.set('status', 'running', 'ok')
+        self.stop()
+        self.start()

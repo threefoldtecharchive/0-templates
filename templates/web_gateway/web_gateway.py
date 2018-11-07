@@ -107,7 +107,7 @@ class WebGateway(TemplateBase):
 
         self._install_traefik(traefik_endpoint)
         self._install_coredns(coredns_endpoint)
-        self._set_public_ips(cluster_connection)
+        self._set_public_ips(self.data['etcdConnectionInfo'])
 
         self.state.set('actions', 'install', 'ok')
         self.state.set('actions', 'start', 'ok')
