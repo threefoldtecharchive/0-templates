@@ -6,6 +6,7 @@ struct Schema {
     etcdPassword @2 :Text; # etcd root user password
     farmerIyoOrg @3 :Text; # farmer for nodes to create etcd instances on
     publicNode @4 :Text; # node to deploy traefik and coredns on
+    etcdConnectionInfo @5 :Text; #save last etcd connection info
 
     struct Nic {
         type @0 :NicType;
