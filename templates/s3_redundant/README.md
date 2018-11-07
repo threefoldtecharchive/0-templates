@@ -34,6 +34,7 @@ Enum StorageType:
 - `start_passive`: start the passive s3 instance.
 - `stop_passive`: stop the passive s3 instance.
 - `upgrade_passive`: upgrade the passive s3 instance.
+- `update_reverse_proxy`: update the reverseProxy value in the service's data. And then update this reverse proxy service with the active s3 url.
 
 
 ### Examples:

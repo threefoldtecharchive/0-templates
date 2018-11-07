@@ -9,8 +9,10 @@ This template responsible for creating and managing a web gateway consisting of 
 - `nrEtcds`: number of etcd instances in the etcd cluster
 - `etcdPassword`: etcd cluster root user password. If not supplied, the template will generate it.
 - `nics`: list of nics used for the traefik, coredns and etcd containers
-- `publicNode`: the id of the node to deploy traefik and coredns on 
+- `publicNode`: the id of the node to deploy traefik and coredns on
+- `publicIps`: the list of public ips that will be exposed by coredns
 - `etcdConnectionInfo`: save the last etcd connection info
+
 
 Nic:
 - `id`: vxlan or vlan id or zerotier network id
@@ -19,8 +21,8 @@ Nic:
 - `name`: nic name
 - `ztClient`: zerotier_client service name to use to authorize. This service has to exist on the node.
 
-NicType enum: 
-- `default` 
+NicType enum:
+- `default`
 - `vlan`
 - `vxlan`
 - `zerotier`
@@ -41,8 +43,9 @@ args = {
     'farmerIyoOrg': 'farmer',
     'nrEtcds': 3,
     'publicNode': '124121421',
-    }  
-    
+    'publicIps': ['271.2.1.3']
+    }
+
 wg = robot.services.create('github.com/threefoldtech/0-templates/web_gateway/0.0.1', 'wg', data=args)
 wg.schedule_action('install')
 wg.schedule_action('start')
@@ -65,7 +68,9 @@ services:
           farmerIyoIrg: 'farmer'
           nrEtcds: 3
           publicNode: 124121421
-          
+          publicIps:
+            - '271.2.1.3'
+
 actions:
     - template: 'github.com/threefoldtech/0-templates/web_gateway/0.0.1'
       service: 'wg'
