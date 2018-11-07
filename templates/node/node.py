@@ -30,9 +30,7 @@ class Node(TemplateBase):
 
     def __init__(self, name, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        self._node_sal = j.clients.zos.get(NODE_CLIENT, data={
-            'unixsocket': '/tmp/redis.sock'
-        })
+        self._node_sal = j.clients.zos.get(NODE_CLIENT)
         self.recurring_action('_monitor', 30)  # every 30 seconds
         self.recurring_action('_network_monitor', 30)  # every 30 seconds
         self.gl_mgr.add("_register", self._register)

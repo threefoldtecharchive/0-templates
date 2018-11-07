@@ -52,6 +52,16 @@ class ZrobotConfig(TemplateBase):
             j.core.state.configSetInDict("myconfig", "secrets", "")
             j.core.state.configSetInDict("myconfig", "namespace", namespace)
 
+        # ensure the local zos client exist in zerodb
+        j.clients.zos.get('local', {
+            'db': 0,
+            'host': '127.0.0.1',
+            'password_': '',
+            'port': 6379,
+            'ssl': True,
+            'timeout': 120,
+            'unixsocket': '/tmp/redis.sock'})
+
         self._kill_robot()
 
     def delete(self):
