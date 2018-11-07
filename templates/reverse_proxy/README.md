@@ -7,7 +7,7 @@ This template responsible for creating a reverse_proxy
 
 - `webGateway`: the name of the web_gateway service to use. This service should already be installed.
 - `domain`: the domain to expose.
-- `servers`: the backend servers.
+- `servers`: the backend servers. **optional**
 
 
 ### Actions

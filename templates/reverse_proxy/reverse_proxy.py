@@ -18,7 +18,7 @@ class ReverseProxy(TemplateBase):
         self.add_delete_callback(self.uninstall)
 
     def validate(self):
-        for key in ['webGateway', 'domain', 'servers']:
+        for key in ['webGateway', 'domain']:
             if not self.data[key]:
                 raise ValueError('Invalid value for {}'.format(key))
 
