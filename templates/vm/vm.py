@@ -172,7 +172,7 @@ class Vm(TemplateBase):
         self.state.check('actions', 'install', 'ok')
         self._vm_sal.enable_vnc()
 
-    def info(self, timeout=None):
+    def info(self, timeout=300):
         self._update_vdisk_url()
         info = self._vm_sal.info or {}
         nics = copy.deepcopy(self.data['nics'])
