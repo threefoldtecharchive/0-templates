@@ -35,9 +35,9 @@ class WebGateway(TemplateBase):
         self.logger.info('Monitor web gateway %s' % self.name)
         self.state.check('actions', 'start', 'ok')
         try:
-            self._etcd_cluster.state.check('status','running','ok')
-            self._traefik.state.check('status','running','ok')
-            self._coredns.state.check('status','running','ok')
+            self._etcd_cluster.state.check('status', 'running', 'ok')
+            self._traefik.state.check('status', 'running', 'ok')
+            self._coredns.state.check('status', 'running', 'ok')
             self.state.set('status', 'running', 'ok')
         except StateCheckError:
             self.state.delete('status', 'running')
@@ -104,7 +104,7 @@ class WebGateway(TemplateBase):
     def install(self):
         self.logger.info('Installing web gateway {}'.format(self.name))
         self.data['etcdConnectionInfo'] = self._install_etcd_cluster()
-        
+
         if not self.data['etcdConnectionInfo']['etcds']:
             raise RuntimeError('Failed to retrieve etcd cluster etcd connections')
 
@@ -227,6 +227,9 @@ class WebGateway(TemplateBase):
         self._uninstall_traefik()
         self._uninstall_coredns()
         self.data['etcdConnectionInfo'] = None
+        self.state.delete('status', 'running')
+        self.state.delete('actions', 'start')
+        self.state.delete('actions', 'install')
 
     def connection_info(self):
         self.state.check('status', 'running', 'ok')
