@@ -55,22 +55,23 @@ class Vm(TemplateBase):
         except StateCheckError:
             return
 
+        self.state.set('status', 'running', 'ok')
         vm_sal = self._vm_sal
 
         if not vm_sal.is_running():
-            self.state.delete('status', 'running')
-
             for disk in self.data['disks']:
                 vdisk = self.api.services.get(template_uid=VDISK_TEMPLATE_UID, name=disk['name'])
-                vdisk.state.check('status', 'running', 'ok')  # Cannot start vm until vdisks are running
+                try:
+                    vdisk.state.check('status', 'running', 'ok')  # Cannot start vm until vdisks are running
+                except StateCheckError:
+                    self.state.delete('status', 'running')
+                    raise
 
             self._update_vdisk_url()
             vm_sal.deploy()
 
-            if vm_sal.is_running():
-                self.state.set('status', 'running', 'ok')
-        else:
-            self.state.set('status', 'running', 'ok')
+            if not vm_sal.is_running():
+                self.state.delete('status', 'running')
 
         # handle reboot
         try:
