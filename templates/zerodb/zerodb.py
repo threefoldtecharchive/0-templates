@@ -50,6 +50,24 @@ class Zerodb(TemplateBase):
             self._deploy()
             if self._zerodb_sal.is_running():
                 self.state.set('status', 'running', 'ok')
+            else:
+                data = {
+                    'attributes': {},
+                    'resource': self.guid,
+                    'text': 'Failed to start zerodb {}'.format(self.name),
+                    'environment': '',
+                    'severity': 'ERROR',
+                    'event': 'Hardware',
+                    'tags': [],
+                    'service': ['zerodb']
+                }
+                alertas = self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1')
+                for alerta in alertas:
+                    try:
+                        alerta.state.check('actions', 'install', 'ok')
+                        alerta.schedule_action('send_alert', args={'data': data})
+                    except StateCheckError:
+                        pass
         else:
             self.state.set('status', 'running', 'ok')
 
