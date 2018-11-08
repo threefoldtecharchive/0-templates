@@ -53,19 +53,15 @@ class Vdisk(TemplateBase):
                     'attributes': {},
                     'resource': self.guid,
                     'text': 'Failed to start vdisk {}'.format(self.name),
-                    'environment': '',
-                    'severity': 'ERROR',
+                    'environment': 'Production',
+                    'severity': 'critical',
                     'event': 'Hardware',
                     'tags': [],
                     'service': ['vdisk']
                 }
             alertas = self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1')
             for alerta in alertas:
-                try:
-                    alerta.state.check('actions', 'install', 'ok')
-                    alerta.schedule_action('send_alert', args={'data': data})
-                except StateCheckError:
-                    pass
+                alerta.schedule_action('send_alert', args={'data': data})
             self.state.delete('status', 'running')
 
     def install(self):
