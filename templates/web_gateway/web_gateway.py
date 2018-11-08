@@ -1,4 +1,5 @@
 import gevent
+import json
 from copy import deepcopy
 from requests import HTTPError
 
@@ -28,6 +29,26 @@ class WebGateway(TemplateBase):
         self._etcds_name = 'etcds_%s' % self.guid
         self._coredns_name = "coredns_%s" % self.guid
         self._traefik_name = "traefik_%s" % self.guid
+        self.recurring_action('_monitor', 30)  # every 30 seconds
+
+    def _monitor(self):
+        self.logger.info('Monitor web gateway %s' % self.name)
+        self.state.check('actions', 'start', 'ok')
+        try:
+            self._etcd_cluster.state.check('status','running','ok')
+            self._traefik.state.check('status','running','ok')
+            self._coredns.state.check('status','running','ok')
+            self.state.set('status', 'running', 'ok')
+        except StateCheckError:
+            self.state.delete('status', 'running')
+
+        cluster_connection = self._etcd_cluster.schedule_action('connection_info').wait(die=True).result
+        if self.data['etcdConnectionInfo']['etcds'] != cluster_connection['etcds']:
+            self.data['etcdConnectionInfo']['etcds'] = cluster_connection['etcds']
+            traefik_endpoint = ','.join(['{}:{}'.format(connection['ip'], connection['client_port']) for connection in self.data['etcdConnectionInfo']['etcds']])
+            coredns_endpoint = ' '.join([connection['client_url'] for connection in self.data['etcdConnectionInfo']['etcds']])
+            self._coredns.schedule_action('update_endpoint', args=coredns_endpoint).wait(die=True)
+            self._traefik.schedule_action('update_endpoint', args=traefik_endpoint).wait(die=True)
 
     def validate(self):
         for nic in self.data['nics']:
@@ -76,14 +97,17 @@ class WebGateway(TemplateBase):
 
     def install(self):
         self.logger.info('Installing web gateway {}'.format(self.name))
-        cluster_connection = self._install_etcd_cluster()
-        if not cluster_connection['etcds']:
+        self.data['etcdConnectionInfo'] = self._install_etcd_cluster()
+        
+        if not self.data['etcdConnectionInfo']['etcds']:
             raise RuntimeError('Failed to retrieve etcd cluster etcd connections')
-        traefik_endpoint = ','.join(['{}:{}'.format(connection['ip'], connection['client_port']) for connection in cluster_connection['etcds']])
-        coredns_endpoint = ' '.join([connection['client_url'] for connection in cluster_connection['etcds']])
+        
+        traefik_endpoint = ','.join(['{}:{}'.format(connection['ip'], connection['client_port']) for connection in self.data['etcdConnectionInfo']['etcds']])
+        coredns_endpoint = ' '.join([connection['client_url'] for connection in self.data['etcdConnectionInfo']['etcds']])
+
         self._install_traefik(traefik_endpoint)
         self._install_coredns(coredns_endpoint)
-        self._set_public_ips(cluster_connection)
+        self._set_public_ips(self.data['etcdConnectionInfo'])
 
         self.state.set('actions', 'install', 'ok')
         self.state.set('actions', 'start', 'ok')
