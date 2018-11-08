@@ -11,10 +11,8 @@ class VMManager:
         self.robot = self._parent.remote_robot
         self._vm_service = service_name
         if service_name:
-            try:
-                self._vm_service = self.robot.service.get(name=service_name)
-            except ServiceNotFoundError:
-                self._vm_service = None
+            self._vm_service = self.robot.service.get(name=service_name)
+
 
     @property
     def service(self):
@@ -52,7 +50,7 @@ class VMManager:
         self.service.schedule_action('uninstall').wait(die=wait)
 
     def info(self):
-        return self.service.schedule_action('info')
+        return self.service.schedule_action('info').wait(die=True)
 
     def shutdown(self, force=True):
         return self.service.schedule_action('shutdown')
@@ -79,4 +77,12 @@ class VMManager:
         return self.service.schedule_action('enable_vnc')    
 
     def disable_vnc(self):
-        return self.service.schedule_action('disable_vnc')    
+        return self.service.schedule_action('disable_vnc')
+    
+    def add_portforward(self, name, source, target):
+        if type(source) != int or type(target) != int:
+            raise ValueError ('Source and Target type must be int')
+        return self.service.schedule_action('add_portforward', args={'name': name, 'source': source, 'target': target})
+
+    def remove_portforward(self, name):
+        return self.service.schedule_action('remove_portforward', args={'name': name})

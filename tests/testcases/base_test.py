@@ -19,10 +19,18 @@ class BaseTest(TestCase):
         self.node = self.controller.node
         self.container_flist ="https://hub.grid.tf/tf-bootable/ubuntu:16.04.flist"
         self.container_storage ="zdb://hub.grid.tf:9900"
+        self.zt_id = self.config['zt']['zt_netwrok_id']
 
     @classmethod
     def setUpClass(cls):
-        pass
+        cls.vms = []
+        cls.zdbs = []
+        cls.vdisks = []
+        self = cls()
+        cls.disks_mount_paths = self.zdb_mounts()
+        cls.disk_type = self.select_disk_type()
+        cls.mount_paths = self.get_disk_mount_path(cls.disk_type)
+        cls.disk_size = self.get_disk_size()
 
     @classmethod
     def tearDownClass(cls):
@@ -98,4 +106,64 @@ class BaseTest(TestCase):
         return ssh
 
     def random_string(self):
-        return str(uuid4()).replace('-', '')[10:]
+        return str(uuid4()).replace('-', '')[:10]
+
+    def get_zt_ip(self, obj):
+        for _ in range(20):
+            try:
+                ip = obj.info().result['nics'][0]['ip']
+                self.assertTrue(ip)
+                return ip
+            except Exception:
+                time.sleep(5)
+        else:
+            raise RuntimeError("Can't get zerotier ip")
+        
+
+    def zdb_mounts(self):
+        disk_mount=[]
+        self.node.zerodbs.prepare()
+        storage_pools = self.node.storagepools.list()
+        for sp in storage_pools:
+            if sp.name == 'zos-cache':
+                continue
+            try:
+                file_system = sp.get('zdb')
+            except Exception:
+                continue
+            disk_name = sp.device[len('/dev/'):-1]
+            zdb_mount = file_system.path
+            disk_mount.append({'disk': disk_name, 'mountpoint': zdb_mount})
+        return disk_mount
+
+    def get_disk_mount_path(self, disk_type):
+        disk_RO = '0' if disk_type == "ssd" else '1'
+        for disk in self.disks_mount_paths:
+            self.disk_name = disk['disk']
+            disk_info = self.node.client.disk.getinfo(self.disk_name)
+            if disk_info['ro'] == disk_RO:
+                disk_path = disk['mountpoint']
+                return disk_path
+
+    def get_disks_type(self):
+        disks = self.node.client.disk.list()
+        disks_type = {'ssd': 0, 'hdd': 0}
+        for disk in disks:
+            if int(disk["ro"])==0:
+                disks_type["ssd"]+=1
+            else:
+                disks_type["hdd"]+=1
+        return disks_type
+
+    def select_disk_type(self):
+        disks_info = self.get_disks_type()
+        if disks_info['hdd'] > disks_info['ssd']:
+            disk_type = 'hdd'
+        else:
+            disk_type = 'ssd'
+        return disk_type
+
+    def get_disk_size(self):
+        size_bytes = self.node.client.disk.getinfo(self.disk_name)['size']
+        size_gb = size_bytes / 1024**3
+        return int(size_gb)
