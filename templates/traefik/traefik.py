@@ -94,6 +94,6 @@ class Traefik(TemplateBase):
 
     def update_endpoint(self ,etcd_endpoint):
         self.data['etcdEndpoint'] = etcd_endpoint
-        self.state.check('actions', 'install', 'ok')
-        self.stop()
-        self.start()
+        self.state.check('actions', 'start', 'ok')
+        self._traefik_sal.stop()
+        self._traefik_sal.start()

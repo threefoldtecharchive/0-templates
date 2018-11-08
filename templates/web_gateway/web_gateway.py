@@ -45,10 +45,8 @@ class WebGateway(TemplateBase):
         cluster_connection = self._etcd_cluster.schedule_action('connection_info').wait(die=True).result
         if self.data['etcdConnectionInfo']['etcds'] != cluster_connection['etcds']:
             self.data['etcdConnectionInfo']['etcds'] = cluster_connection['etcds']
-            traefik_endpoint = ','.join(['{}:{}'.format(connection['ip'], connection['client_port']) for connection in self.data['etcdConnectionInfo']['etcds']])
-            coredns_endpoint = ' '.join([connection['client_url'] for connection in self.data['etcdConnectionInfo']['etcds']])
-            self._coredns.schedule_action('update_endpoint', args=coredns_endpoint).wait(die=True)
-            self._traefik.schedule_action('update_endpoint', args=traefik_endpoint).wait(die=True)
+            self._coredns.schedule_action('update_endpoint', args=self._coredns_endpoint()).wait(die=True)
+            self._traefik.schedule_action('update_endpoint', args=self._traefik_endpoint()).wait(die=True)
 
     def validate(self):
         for nic in self.data['nics']:
@@ -95,18 +93,23 @@ class WebGateway(TemplateBase):
     def _coredns(self):
         return self._public_api.services.get(template_uid=COREDNS_TEMPLATE_UID, name=self._coredns_name)
 
+    def _coredns_endpoint(self):
+        coredns_endpoint = ' '.join([connection['client_url'] for connection in self.data['etcdConnectionInfo']['etcds']])
+        return coredns_endpoint
+
+    def _traefik_endpoint(self):
+        traefik_endpoint = ','.join(['{}:{}'.format(connection['ip'], connection['client_port']) for connection in self.data['etcdConnectionInfo']['etcds']])
+        return traefik_endpoint
+
     def install(self):
         self.logger.info('Installing web gateway {}'.format(self.name))
         self.data['etcdConnectionInfo'] = self._install_etcd_cluster()
         
         if not self.data['etcdConnectionInfo']['etcds']:
             raise RuntimeError('Failed to retrieve etcd cluster etcd connections')
-        
-        traefik_endpoint = ','.join(['{}:{}'.format(connection['ip'], connection['client_port']) for connection in self.data['etcdConnectionInfo']['etcds']])
-        coredns_endpoint = ' '.join([connection['client_url'] for connection in self.data['etcdConnectionInfo']['etcds']])
 
-        self._install_traefik(traefik_endpoint)
-        self._install_coredns(coredns_endpoint)
+        self._install_traefik(self._traefik_endpoint())
+        self._install_coredns(self._coredns_endpoint())
         self._set_public_ips(self.data['etcdConnectionInfo'])
 
         self.state.set('actions', 'install', 'ok')
@@ -223,6 +226,7 @@ class WebGateway(TemplateBase):
         self._uninstall_etcd_cluster()
         self._uninstall_traefik()
         self._uninstall_coredns()
+        self.data['etcdConnectionInfo'] = None
 
     def connection_info(self):
         self.state.check('status', 'running', 'ok')
