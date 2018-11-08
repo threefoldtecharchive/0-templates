@@ -9,6 +9,7 @@ from zerorobot.template.state import StateCheckError
 from JumpscaleZrobot.test.utils import ZrobotBaseTest
 from zeroboot_ipmi_host import ZerobootIpmiHost
 
+
 class TestZerobootIpmiHostTemplate(ZrobotBaseTest):
     @classmethod
     def setUpClass(cls):
@@ -68,18 +69,6 @@ class TestZerobootIpmiHostTemplate(ZrobotBaseTest):
                     'ipmiClient': 'zboot1-ipmi',
                     'mac': 'well:this:a:weird:mac:address',
                     'ip': '10.10.1.1',
-                    'hostname': 'test-01',
-                    'lkrnUrl': 'some.ixpe.url',
-                },
-                'message': "Should fail: missing network",
-                'missing': 'network',
-            },
-            {
-                'data': {
-                    'zerobootClient': 'zboot1-zb',
-                    'ipmiClient': 'zboot1-ipmi',
-                    'mac': 'well:this:a:weird:mac:address',
-                    'ip': '10.10.1.1',
                     'network': '10.10.1.0/24',
                     'lkrnUrl': 'some.ixpe.url',
                 },
@@ -115,9 +104,9 @@ class TestZerobootIpmiHostTemplate(ZrobotBaseTest):
             instance = ZerobootIpmiHost(name="test", data=tc['data'])
 
             with pytest.raises(
-                    ValueError, message="Unexpected success: %s\n\nData: %s" %(tc['message'], tc['data'])) as excinfo:
+                    ValueError, message="Unexpected success: %s\n\nData: %s" % (tc['message'], tc['data'])) as excinfo:
                 instance.validate()
-            
+
             if tc['missing'] not in str(excinfo):
                 pytest.fail(
                     "Error message did not contain missing field('%s'): %s" % (tc['missing'], str(excinfo)))

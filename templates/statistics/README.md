@@ -4,7 +4,7 @@
 This template is responsible for get statistics of node then add it in InfluxDB to Visualization in grafana
 ### Schema:
 
-- `influxdbClient`: instance name that created from influxdb_Client template (the name of the service itself).
+- `influxdbClient`: instance name that created from [influxdb_Client template](../influxdb_client) (the name of the service itself).
 
 ### Actions
 - `install`: get the reporting every 5 minutes
@@ -14,8 +14,10 @@ This template is responsible for get statistics of node then add it in InfluxDB 
 ### Examples:
 #### DSL (api interface):
 ```python
-data = {'instanceName': 'influxdb_client_created'}
-stat = robot.services.create('github.com/threefoldtech/0-templates/statistics/0.0.1','1e2b8c6b-b5b9-42c1-99f4-f9149dc25743')
+data = {'influxdbClient': 'influxdb_client_created'}
+stat = robot.services.create('github.com/threefoldtech/0-templates/statistics/0.0.1',
+    service_name='statistics_collector', 
+    data=data)
 stat.schedule_action('install')
 ```
 
@@ -23,7 +25,7 @@ stat.schedule_action('install')
 ```yaml
 services:
     - github.com/threefoldtech/0-templates/statistics/0.0.1__1e2b8c6b-b5b9-42c1-99f4-f9149dc25743:
-        instanceName : 'influxdb_client_created'
+        influxdbClient : 'influxdb_client_created'
 
 actions:
     - template: github.com/threefoldtech/0-templates/statistics/0.0.1

@@ -52,7 +52,7 @@ Optionally, in order to delete your existing ZeroTier configuration instance:
 j.clients.zerotier.delete(instance=zt_config_instance_name)
 ```
 
-In case you need to create a (new) JumpScale client for ZeroTier:
+In case you need to create a (new) Jumpscale client for ZeroTier:
 ```python
 zt_token = '***'
 #zt_token =  zt_client.config.data['token_']
@@ -137,11 +137,11 @@ In order to use these Digital Me service templates you need a Zero-Robot, which 
 So first step is to get a running instance of a Zero-Robot on your local machine, or any (virtual) machine you have admin access to.
 
 @todo, also discuss the Docker option, and make sure demo can be done from Windows machine.
-@todo, also verify how to automate the installation from JumpScale, using prefab?
+@todo, also verify how to automate the installation from Jumpscale, using prefab?
 
 Based on the steps as documented in [Getting started with Zero-Robot](https://github.com/yveskerwyn/jumpscale/blob/master/12-zero-robot.md) do the following.
 
-First make sure you have an up to date JumpScale installation, execute the following in the `core9`, `lib9` and `prefab9` directories:
+First make sure you have an up to date Jumpscale installation, execute the following in the `core9`, `lib9` and `prefab9` directories:
 ```bash
 git pull
 pip install -e .
@@ -223,7 +223,7 @@ List all services:
 zrobot service list
 ```
 
-In the JumpScale interactive shell:
+In the Jumpscale interactive shell:
 ```python
 j.clients.zrobot.list()
 dm_robot_name = 'local_dm_robot'
@@ -318,7 +318,7 @@ To check the flist version that was used:
 zos_sal.client.info.version()
 ```
 
-And finally in another JumpScale interactive shell, stream the Zero-Robot output:
+And finally in another Jumpscale interactive shell, stream the Zero-Robot output:
 ```python
 j.clients.zos.list()
 zos_instance_name = 'my node'

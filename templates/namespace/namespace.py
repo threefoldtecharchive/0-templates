@@ -16,11 +16,13 @@ class Namespace(TemplateBase):
         self.add_delete_callback(self.uninstall)
         if not self.data.get('password'):
             self.data['password'] = j.data.idgenerator.generateXCharID(32)
+        self.recurring_action('_monitor', 30)  # every 30 seconds
 
     def validate(self):
+        self.state.delete('status', 'running')
         try:
             # ensure that a node service exists
-            node = self.api.services.get(template_account='zero-os', template_name='node')
+            node = self.api.services.get(template_account='threefoldtech', template_name='node')
             node.state.check('actions', 'install', 'ok')
         except:
             raise RuntimeError("Node service not found, can't install the namespace")
@@ -28,6 +30,19 @@ class Namespace(TemplateBase):
         for param in ['diskType', 'size', 'mode']:
             if not self.data.get(param):
                 raise ValueError("parameter '{}' not valid: {}".format(param, str(self.data[param])))
+
+    def _monitor(self):
+        self.logger.info('Monitor namespace %s' % self.name)
+        try:
+            self.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            return
+
+        try:
+            self._zerodb.state.check('status', 'running', 'ok')
+            self.state.set('status', 'running', 'ok')
+        except StateCheckError:
+            self.state.delete('status', 'running')
 
     @property
     def _zerodb(self):
@@ -41,13 +56,13 @@ class Namespace(TemplateBase):
         except StateCheckError:
             pass
 
-        node = self.api.services.get(template_account='zero-os', template_name='node')
+        node = self.api.services.get(template_account='threefoldtech', template_name='node')
         kwargs = {
-            'disktype': self.data['diskType'].upper(),
+            'disktype': self.data['diskType'],
             'mode': self.data['mode'],
             'password': self.data['password'],
             'public': self.data['public'],
-            'size': self.data['size'],
+            'ns_size': self.data['size'],
             'name': self.data['nsName'],
         }
         # use the method on the node service to create the zdb and the namespace.
@@ -68,7 +83,6 @@ class Namespace(TemplateBase):
         return self._zerodb.schedule_action('namespace_private_url', args={'name': self.data['nsName']}).wait(die=True).result
 
     def uninstall(self):
-        self.state.check('actions', 'install', 'ok')
         self._zerodb.schedule_action('namespace_delete', args={'name': self.data['nsName']}).wait(die=True)
         self.state.delete('actions', 'install')
 

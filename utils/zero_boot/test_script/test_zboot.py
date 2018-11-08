@@ -14,7 +14,7 @@ MAX_RETRIES = 10 # max amount of pings/alive checks
 ROBOT_INSTANCE = "zboot-robot1"
 ZEROBOOT_POOL = 'pool-1'
 MAX_RESERVATIONS_PER_RUN = 10
-BOOT_URL = "https://bootstrap.gig.tech/krn/master/0/development"
+BOOT_URL = "https://bootstrap.grid.tf/krn/master/0/development"
 
 VM_SSH_KEY_PATH = "/tmp/zboot_testkey" # Where to store generated key to use in test (pub key will be copied into vm so we can ssh to it)
 VM_SSH_PORT = 2222

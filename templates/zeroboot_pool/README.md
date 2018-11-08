@@ -1,4 +1,4 @@
-## template: github.com/zero-os/0-boot-templates/zeroboot_pool/0.0.1
+## template: github.com/threefoldtech/0-templates/zeroboot_pool/0.0.1
 
 ### Description:
 
@@ -19,7 +19,7 @@ This template is responsible for keeping track of a pool of zeroboot hosts (zero
     Argmuments:
     - host: name of the host service to remove to the pool
 - unreserved_host: Returns a zeroboot host instance that has not been reserved yet.  
-It does this by checking which hosts in the pool do not have an installed reservation service (template: `github.com/zero-os/0-boot-templates/zeroboot_reservation`)
+It does this by checking which hosts in the pool do not have an installed reservation service (template: `github.com/threefoldtech/0-boot-templates/zeroboot_reservation`)
 
     Arguments:
     - caller_guid: will skip service with this guid to prevent deadlock.

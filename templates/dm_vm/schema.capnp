@@ -1,20 +1,33 @@
-@0x82a66cb45b1e9ace; 
+@0x82a66cb45b1e9ace;
 
 
 
 struct Schema {
-    memory @0: UInt16 = 128; # Amount of memory in MiB
+    memory @0: UInt16 = 1024; # Amount of memory in MiB
     cpu @1: UInt16 = 1; # Number of virtual CPUs
-    zerotier @2: Zerotier; # zerotier nic to attach to the vm
+    mgmtNic @2: Nic; # zerotier nic to attach to the vm
     image @3: Text; # image name specifying if it is a `zero-os` or `ubuntu` image
     disks @4: List(Disk); # list of disks to attach to the vm
-    configs @5: List(Config); # list of Config
-    ztIdentity @6: Text; # VM zerotier ID
-    nodeId @7: Text; # the node_id from the capacity registeration of the the node you want to deploy the vm on
+    ports @5 :List(Port); # List of portforwards from node to vm
+    configs @6: List(Config); # list of Config
+    ztIdentity @7: Text; # VM zerotier ID
+    nodeId @8: Text; # the node_id from the capacity registeration of the the node you want to deploy the vm on
+    kernelArgs @9 :List(Arg); # list of vm kernel args 
 
+    struct Arg {
+        name @0 :Text;
+        key @1 :Text;
+        value @2 :Text;
+    }
    struct Config {
         path @0: Text;
         content @1: Text;
+        name @2: Text;
+   }
+
+   struct Port {
+        source @0: Int32;
+        target @1: Int32;
         name @2: Text;
    }
 
@@ -38,8 +51,14 @@ struct Schema {
         ssd @1;
     }
 
-   struct Zerotier {
-      id @0: Text;
-      ztClient @1: Text;
-   }
+    struct Nic {
+      id @0: Text; # VxLan id or zerotier network id
+      type @1: NicType;
+      ztClient @2: Text;
+      hwaddr @3: Text;
+    }
+
+    enum NicType {
+      zerotier @0;
+    }
 }

@@ -18,6 +18,7 @@ class ZerotierClient(TemplateBase):
         if self.name in j.clients.zerotier.list():
             return
 
+    def validate(self):
         # create the client instance
         token = self.data.get('token')
         if not token:
@@ -37,14 +38,13 @@ class ZerotierClient(TemplateBase):
 
     def _get_remote_robot(self, url):
         robotname = urlparse(url).netloc
-        j.clients.zrobot.get(robotname, {'url': url}, interactive=False)
-        return j.clients.zrobot.robots[robotname]
+        return self.api.robots.get(robotname, url)
 
-    def add_to_robot(self, url, serviceguid):
+    def add_to_robot(self, url, name):
         robotapi = self._get_remote_robot(url)
-        robotapi.services.find_or_create(ZT_TEMPLATE_UID, service_name=serviceguid, data={'token': self.data['token']})
+        robotapi.services.find_or_create(ZT_TEMPLATE_UID, service_name=name, data={'token': self.data['token']})
 
-    def remove_from_robot(self, url, serviceguid):
+    def remove_from_robot(self, url, name):
         robotapi = self._get_remote_robot(url)
-        for service in robotapi.services.find(template_uid=ZT_TEMPLATE_UID, name=serviceguid):
+        for service in robotapi.services.find(template_uid=ZT_TEMPLATE_UID, name=name):
             service.delete()

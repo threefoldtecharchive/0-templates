@@ -7,6 +7,7 @@ from vm import Vm, NODE_CLIENT
 from zerorobot.template.state import StateCheckError
 
 from JumpscaleZrobot.test.utils import ZrobotBaseTest
+from vm import populate_port_forwards
 
 
 class TestVmTemplate(ZrobotBaseTest):
@@ -290,11 +291,24 @@ class TestVmTemplate(ZrobotBaseTest):
         with pytest.raises(StateCheckError):
             vm.state.check('status', 'rebooting', 'ok')
 
-    def test_monitor_before_install(self):
-        """
-        Test monitor before install
-        :return:
-        """
-        with pytest.raises(StateCheckError, message='monitor vm before install should raise an error'):
-            vm = Vm('vm', data=self.valid_data)
-            vm._monitor()
+    def test_populate_ports(self):
+        ports = [
+            {'source': '', 'dest': 9000, 'name': 'foo'},
+            {'source': '', 'dest': 9001, 'name': 'bar'},
+            {'source': 8080, 'dest': 9002, 'name': 'buz'},
+        ]
+        node_sal = MagicMock()
+        node_sal.freeports.return_value = [2000, 2001]
+        result = populate_port_forwards(ports, node_sal)
+        assert result == [
+            {'source': 2001, 'dest': 9000, 'name': 'foo'},
+            {'source': 2000, 'dest': 9001, 'name': 'bar'},
+            {'source': 8080, 'dest': 9002, 'name': 'buz'},
+        ]
+
+        ports = [
+            {'source': 2000, 'dest': 9000, 'name': 'foo'},
+            {'source': 2001, 'dest': 9001, 'name': 'bar'},
+        ]
+        result = populate_port_forwards(ports, node_sal)
+        assert result == ports

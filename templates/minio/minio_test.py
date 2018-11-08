@@ -1,10 +1,22 @@
-from unittest.mock import MagicMock, patch
 import os
+from unittest import TestCase
+from unittest.mock import MagicMock, patch
+
 import pytest
 
-from minio import Minio, MINIO_FLIST, NODE_CLIENT
-from zerorobot.template.state import StateCheckError
+from jumpscale import j
 from JumpscaleZrobot.test.utils import ZrobotBaseTest
+from minio import (LOG_LVL_CRITICAL_ERROR, LOG_LVL_JOB, LOG_LVL_LOG_STRUCTURED,
+                   LOG_LVL_LOG_UNKNOWN, LOG_LVL_MESSAGE_INTERNAL,
+                   LOG_LVL_MESSAGE_PUBLIC, LOG_LVL_OPS_ERROR,
+                   LOG_LVL_RESULT_HRD, LOG_LVL_RESULT_JSON,
+                   LOG_LVL_RESULT_TOML, LOG_LVL_RESULT_YAML,
+                   LOG_LVL_STATISTICS, LOG_LVL_STDERR, LOG_LVL_STDOUT,
+                   LOG_LVL_WARNING, NODE_CLIENT, Minio, _health_monitoring)
+from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
+                                      SERVICE_STATE_SKIPPED,
+                                      SERVICE_STATE_WARNING, ServiceState,
+                                      StateCheckError)
 
 
 class TestMinioTemplate(ZrobotBaseTest):
@@ -22,11 +34,11 @@ class TestMinioTemplate(ZrobotBaseTest):
             'password': 'password',
             'zerodbs': ['192.24.121.42:9900'],
             'privateKey': '',
-            'resticPassword': 'pass',
-            'resticRepo': 'repo/',
-            'resticRepoPassword': '',
-            'resticUsername': 'username',
-            'metaPrivateKey': '1234567890abcdef'
+            'metaPrivateKey': '1234567890abcdef',
+            'blockSize': 1048576,
+            'dataShard': 1,
+            'parityShard': 0,
+            'tlog': {'address': '', 'namespace': ''}
         }
 
     def setUp(self):
@@ -70,18 +82,18 @@ class TestMinioTemplate(ZrobotBaseTest):
         get_node = patch('jumpscale.j.clients.zos.get', MagicMock(return_value='node_sal')).start()
         minio = Minio('minio', data=self.valid_data)
 
-        assert minio.node_sal == 'node_sal'
+        assert minio._node_sal == 'node_sal'
         get_node.assert_called_once_with(NODE_CLIENT)
 
     def test_minio_sal(self):
         """
         Test node_sal property
         """
-        minio_sal = patch('jumpscale.j.sal_zos.get_minio', MagicMock(return_value='minio_sal')).start()
+        minio_sal = patch('jumpscale.j.sal_zos.minio.get', MagicMock(return_value='minio_sal')).start()
         minio = Minio('minio', data=self.valid_data)
         minio._get_zdbs = MagicMock()
 
-        assert minio.minio_sal == 'minio_sal'
+        assert minio._minio_sal == 'minio_sal'
         assert minio_sal.called
 
     def test_install(self):
@@ -93,9 +105,7 @@ class TestMinioTemplate(ZrobotBaseTest):
         minio._get_zdbs = MagicMock()
         minio.install()
 
-        assert minio.data['resticRepoPassword'] != ''
         container_data = {
-            'flist': MINIO_FLIST,
             'node': self.valid_data['node'],
             'env':  [
                 {'name': 'MINIO_ACCESS_KEY', 'value': 'login'}, {'name': 'MINIO_SECRET_KEY', 'value': 'password'},
@@ -115,7 +125,7 @@ class TestMinioTemplate(ZrobotBaseTest):
         minio.api.services.get = MagicMock()
         minio._get_zdbs = MagicMock()
         minio.start()
-        minio.minio_sal.start.assert_called_once_with()
+        minio._minio_sal.start.assert_called_once_with()
         minio.state.check('actions', 'start', 'ok')
 
     def test_start_before_install(self):
@@ -137,8 +147,8 @@ class TestMinioTemplate(ZrobotBaseTest):
         minio._get_zdbs = MagicMock()
         minio.stop()
 
-        minio.minio_sal.stop.assert_called_once_with()
-        minio.state.delete.assert_called_once_with('actions', 'start')
+        minio._minio_sal.stop.assert_called_once_with()
+        minio.state.delete.call_count == 2
 
     def test_stop_before_install(self):
         """
@@ -157,5 +167,32 @@ class TestMinioTemplate(ZrobotBaseTest):
         minio.state.delete = MagicMock()
 
         minio.uninstall()
-        minio.minio_sal.destroy.assert_called_once_with()
-        minio.state.delete.assert_called_once_with('actions', 'install')
+        minio._minio_sal.destroy.assert_called_once_with()
+        minio.state.delete.call_count == 2
+
+
+class TestMinioHealthMonitor(TestCase):
+
+    def setUp(self):
+        self.encoder = j.data.serializer.json
+
+    def test_hdd_failure(self):
+        state = ServiceState()
+        logs = [(LOG_LVL_MESSAGE_INTERNAL, self.encoder.dumps({'error': 'IO error', 'shard': '192.168.0.1:9000'}), None)]
+        for level, msg, flag in logs:
+            _health_monitoring(state, level, msg, flag)
+
+        assert 'data_shards' in state.categories
+        assert state.categories['data_shards']['192.168.0.1:9000'] == SERVICE_STATE_ERROR
+
+    def test_tlog_failure(self):
+        state = ServiceState()
+        logs = [(LOG_LVL_MESSAGE_INTERNAL, self.encoder.dumps({'error': 'IO error', 'tlog': '192.168.0.1:9000'}), None)]
+        for level, msg, flag in logs:
+            _health_monitoring(state, level, msg, flag)
+
+        assert 'tlog_shards' in state.categories
+        assert state.categories['tlog_shards']['192.168.0.1:9000'] == SERVICE_STATE_ERROR
+
+    def test_zos_failure(self):
+        pass

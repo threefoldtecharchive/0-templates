@@ -1,14 +1,22 @@
-@0xbbc678cc7d18ad06;
+@0xb198f305ed84eb26;
+
 
 struct Schema {
     mode @0: Mode=direct; # a value from enum Mode representing the 0-db mode
     sync @1: Bool=false; # boolean indicating whether all write should be sync'd or not.
-    path @2: Text; # path to use for zdb data
-    nodePort @3: Int32=9900; # the node port used in the portforwarding
-    admin @4: Text; # admin password
-    namespaces @5: List(Namespace); # a list of namespaces deployed on this zerodb
-    nics @6 :List(Nic); # Configuration of the attached nics to the zerodb container
-    ztIdentity @7: Text;
+    path @2: Text; # path to use for zdb data. Filled out by the template if it is not supplied.
+    admin @3: Text; # admin password
+    namespaces @4: List(Namespace); # a list of namespaces deployed on this zerodb
+    nics @5 :List(Nic); # Configuration of the attached nics to the zerodb container
+    ztIdentity @6: Text; # ztidentity of the container running 0-db
+    size @7: Int32; # disk size of the 0-db. Only applicable for
+    diskType @8 :DiskType; # type of disk to use for this zerodb
+    nodePort @9 :Int32; # public listening port
+
+    enum DiskType{
+        hdd @0;
+        ssd @1;
+    }
 
     struct Nic {
         type @0: NicType;

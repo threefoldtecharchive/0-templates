@@ -34,7 +34,7 @@ popd
 # installing core and plugins
 for target in jumpscale_core jumpscale_lib jumpscale_prefab; do
     pushd ${target}
-    pip3 install .
+    pip3 install -e .
     popd
 done
 popd

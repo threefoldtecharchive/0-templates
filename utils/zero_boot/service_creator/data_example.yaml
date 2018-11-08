@@ -1,0 +1,42 @@
+zeroboot_pool: "name of the pool"
+ssh_client:
+    instance:
+        host: ''
+        login: ''
+        password: ''
+        port: ''
+ipmi_client:
+    instance:
+        bcm: ''
+        user: ''
+        password:
+racktivity_client:
+    instance:
+        host: ''
+        password: ''
+        port: ''
+        username: ''
+zeroboot_client:
+    instance:
+        networkId: ''
+        sshClient: ''
+        zerotierClient: ''
+zeroboot_ipmi_host:
+    instance:
+        hostname: ''
+        ip: ''
+        ipmiClient: ''
+        lkrnUrl: ''
+        mac: ''
+        zerobootClient: ''
+zeroboot_racktivity_host:
+    instance:
+        hostname: ''
+        ip: ''
+        lkrnUrl: ''
+        mac: ''
+        racktivities:
+        -   client: ''
+            port: ''
+            powermodule: ''
+        zerobootClient: ''

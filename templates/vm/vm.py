@@ -1,10 +1,14 @@
-from jumpscale import j
-from zerorobot.template.base import TemplateBase
-from zerorobot.template.state import StateCheckError
 import copy
+
+from jumpscale import j
+from zerorobot.service_collection import ServiceNotFoundError
+from zerorobot.template.base import TemplateBase
+from zerorobot.template.decorator import retry
+from zerorobot.template.state import StateCheckError
 
 NODE_CLIENT = 'local'
 VDISK_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vdisk/0.0.1'
+PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
 
 
 class Vm(TemplateBase):
@@ -28,9 +32,13 @@ class Vm(TemplateBase):
 
     @property
     def _vm_sal(self):
+        node_sal = self._node_sal
+        self.data['ports'] = self._populate_port_forwards(self.data['ports'])
+
         data = self.data.copy()
         data['name'] = self.name
-        return self._node_sal.primitives.from_dict('vm', data)
+
+        return node_sal.primitives.from_dict('vm', data)
 
     @property
     def _node_sal(self):
@@ -41,23 +49,29 @@ class Vm(TemplateBase):
 
     def _monitor(self):
         self.logger.info('Monitor vm %s' % self.name)
-        self.state.check('actions', 'install', 'ok')
-        self.state.check('actions', 'start', 'ok')
+        try:
+            self.state.check('actions', 'install', 'ok')
+            self.state.check('actions', 'start', 'ok')
+        except StateCheckError:
+            return
 
-        if not self._vm_sal.is_running():
-            self.state.delete('status', 'running')
+        self.state.set('status', 'running', 'ok')
+        vm_sal = self._vm_sal
 
+        if not vm_sal.is_running():
             for disk in self.data['disks']:
                 vdisk = self.api.services.get(template_uid=VDISK_TEMPLATE_UID, name=disk['name'])
-                vdisk.state.check('status', 'running', 'ok')  # Cannot start vm until vdisks are running
+                try:
+                    vdisk.state.check('status', 'running', 'ok')  # Cannot start vm until vdisks are running
+                except StateCheckError:
+                    self.state.delete('status', 'running')
+                    raise
 
             self._update_vdisk_url()
-            self._vm_sal.deploy()
+            vm_sal.deploy()
 
-            if self._vm_sal.is_running():
-                self.state.set('status', 'running', 'ok')
-        else:
-            self.state.set('status', 'running', 'ok')
+            if not vm_sal.is_running():
+                self.state.delete('status', 'running')
 
         # handle reboot
         try:
@@ -69,6 +83,9 @@ class Vm(TemplateBase):
 
     def update_ipxeurl(self, url):
         self.data['ipxeUrl'] = url
+
+    def update_kernelargs(self, kernel_args):
+        self.data['kernelArgs'] = kernel_args
 
     def generate_identity(self):
         self.data['ztIdentity'] = self._node_sal.generate_zerotier_identity()
@@ -97,6 +114,9 @@ class Vm(TemplateBase):
     def uninstall(self):
         self.logger.info('Uninstalling vm %s' % self.name)
         self._vm_sal.destroy()
+
+        self._release_ports()
+
         self.state.delete('actions', 'install')
         self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
@@ -152,7 +172,7 @@ class Vm(TemplateBase):
         self.state.check('actions', 'install', 'ok')
         self._vm_sal.enable_vnc()
 
-    def info(self, timeout=None):
+    def info(self, timeout=300):
         self._update_vdisk_url()
         info = self._vm_sal.info or {}
         nics = copy.deepcopy(self.data['nics'])
@@ -168,15 +188,82 @@ class Vm(TemplateBase):
                 except (RuntimeError, ValueError) as e:
                     self.logger.warning('Failed to retreive zt ip: %s', str(e))
 
+        node_sal = self._node_sal
         return {
             'vnc': info.get('vnc'),
             'status': info.get('state', 'halted'),
             'disks': self.data['disks'],
             'nics': nics,
             'ztIdentity': self.data['ztIdentity'],
+            'ports': {p['source']: p['target'] for p in self.data['ports']},
+            'host': {
+                'storage_addr': node_sal.storage_addr,
+                'public_addr': node_sal.public_addr,
+                'management_addr': node_sal.management_address,
+            }
         }
 
     def disable_vnc(self):
         self.logger.info('Disable vnc for vm %s' % self.name)
         self.state.check('actions', 'install', 'ok')
         self._vm_sal.disable_vnc()
+
+    def add_portforward(self, name, target, source=None):
+        for forward in list(self.data['ports']):
+            if forward['name'] == name and (forward['target'] != target or source and source != forward['source']):
+                raise RuntimeError("port forward with name {} already exist for a different target or a different source".format(name))
+            elif forward['name'] == name:
+                return forward
+
+        node_sal = self._node_sal
+        forward = {
+            'name': name,
+            'target': target,
+            'source': source,
+        }
+        forward = self._populate_port_forwards([forward])[0]
+        self.data['ports'].append(forward)
+
+        node_sal.client.kvm.add_portfoward(self._vm_sal.uuid, forward['source'], forward['target'])
+        return forward
+
+    def remove_portforward(self, name):
+        for forward in list(self.data['ports']):
+            if forward['name'] == name:
+                self._node_sal.client.kvm.remove_portfoward(self._vm_sal.uuid, str(forward['source']), forward['target'])
+                self.data['ports'].remove(forward)
+                return
+
+    def _populate_port_forwards(self, ports):
+        ports = copy.deepcopy(ports)
+        # count how many port we need to find
+        count = 0
+        for pf in ports:
+            if not pf.get('source'):
+                count += 1
+
+        if count > 0:
+            # ask the port manager 'count' number of free port
+            free_ports = self._reserve_ports(count)
+            # assigned the free port to the forward where source is missing
+            for i, pf in enumerate(ports):
+                if not pf.get('source'):
+                    ports[i]['source'] = free_ports.pop()
+
+        return ports
+
+    @retry(exceptions=ServiceNotFoundError, tries=3, delay=3, backoff=2)
+    def _reserve_ports(self, count):
+        port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
+        free_ports = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': count}).wait(die=True).result
+        return free_ports
+
+    @retry(exceptions=ServiceNotFoundError, tries=3, delay=3, backoff=2)
+    def _release_ports(self):
+        port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
+        ports = [x['source'] for x in self.data['ports']]
+        if not ports:
+            return
+        port_mgr.schedule_action("release", {"service_guid": self.guid, 'ports': ports})
+        for port in self.data['ports']:
+            port['source'] = None

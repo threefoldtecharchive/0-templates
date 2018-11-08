@@ -46,7 +46,7 @@ class Healthcheck(TemplateBase):
         # node_sal.healthcheck.ssh_cleanup(job=job)
 
         # TODO: this need to be configurable
-        flist_healhcheck = 'https://hub.gig.tech/gig-official-apps/healthcheck.flist'
+        flist_healhcheck = 'https://hub.grid.tf/tf-official-apps/healthcheck.flist'
         with node_sal.healthcheck.with_container(flist_healhcheck) as cont:
             _update_healthcheck_state(self, node_sal.healthcheck.node_temperature(cont))
             _update_healthcheck_state(self, node_sal.healthcheck.powersupply(cont))

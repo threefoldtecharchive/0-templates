@@ -9,6 +9,7 @@ from zerorobot.template.state import StateCheckError
 from JumpscaleZrobot.test.utils import ZrobotBaseTest
 from zeroboot_pool import ZerobootPool
 
+
 class TestZerobootPoolTemplate(ZrobotBaseTest):
     @classmethod
     def setUpClass(cls):
@@ -17,7 +18,7 @@ class TestZerobootPoolTemplate(ZrobotBaseTest):
     def test_valid_host_validation(self):
         pool = ZerobootPool(name="test")
         # mock racktivity host service
-        pool.api.services.get = MagicMock(return_value=MagicMock(template_uid="github.com/zero-os/0-boot-templates/zeroboot_racktivity_host/0.0.1"))
+        pool.api.services.get = MagicMock(return_value=MagicMock(template_uid="github.com/threefoldtech/0-templates/zeroboot_racktivity_host/0.0.1"))
         pool.api.services.get().state.check = MagicMock(return_value=None)
 
         pool._validate_host("test_host_instance")
@@ -25,7 +26,7 @@ class TestZerobootPoolTemplate(ZrobotBaseTest):
     def test_host_validation_invalid_template(self):
         pool = ZerobootPool(name="test")
         # mock racktivity host service
-        pool.api.services.get = MagicMock(return_value=MagicMock(template_uid="github.com/zero-os/0-boot-templates/a_random_template/0.0.1"))
+        pool.api.services.get = MagicMock(return_value=MagicMock(template_uid="github.com/threefoldtech/0-templates/a_random_template/0.0.1"))
         pool.api.services.get().state.check = MagicMock(return_value=None)
 
         with pytest.raises(RuntimeError, message="Invalid template should raise RuntimeError"):
@@ -34,7 +35,7 @@ class TestZerobootPoolTemplate(ZrobotBaseTest):
     def test_host_validation_failed_state_check(self):
         pool = ZerobootPool(name="test")
         # mock racktivity host service
-        pool.api.services.get = MagicMock(return_value=MagicMock(template_uid="github.com/zero-os/0-boot-templates/zeroboot_racktivity_host/0.0.1"))
+        pool.api.services.get = MagicMock(return_value=MagicMock(template_uid="github.com/threefoldtech/0-templates/zeroboot_racktivity_host/0.0.1"))
         pool.api.services.get().state.check = MagicMock(side_effect=StateCheckError("state check failed"))
 
         with pytest.raises(StateCheckError, message="Uninstalled host should raise StateCheckError"):
@@ -72,7 +73,7 @@ class TestZerobootPoolTemplate(ZrobotBaseTest):
         pool = ZerobootPool(name="test", data={"zerobootHosts": ["host1", "host2", "host3"]})
         pool._validate_host = MagicMock()
 
-         # remove host
+        # remove host
         pool.remove("host3")
 
         assert len(pool.data.get("zerobootHosts")) == 2
@@ -142,7 +143,7 @@ class TestZerobootPoolTemplate(ZrobotBaseTest):
 
         if r2 not in hosts:
             pytest.fail("Returned host was not in set hosts list")
-        
+
         if r1 == r2:
             pytest.fail("Different reservations can not be of the same host: reservation1:'%s'; reservation2:'%s'" % (r1, r2))
 

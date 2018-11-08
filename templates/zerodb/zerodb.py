@@ -1,9 +1,11 @@
 from jumpscale import j
+from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
+from zerorobot.template.decorator import retry
 from zerorobot.template.state import StateCheckError
 
-
 NODE_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node/0.0.1'
+PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
 NODE_CLIENT = 'local'
 
 
@@ -14,15 +16,12 @@ class Zerodb(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
+        # hardcoded local instance, this service is only intended to be install by the node robot
+        self._node_sal = j.clients.zos.get(NODE_CLIENT)
         self.recurring_action('_monitor', 10)  # every 10 seconds
 
     def validate(self):
         self.state.delete('status', 'running')
-
-    @property
-    def _node_sal(self):
-        # hardcoded local instance, this service is only intended to be install by the node robot
-        return j.clients.zos.get(NODE_CLIENT)
 
     @property
     def _zerodb_sal(self):
@@ -33,21 +32,23 @@ class Zerodb(TemplateBase):
     def _deploy(self):
         zerodb_sal = self._zerodb_sal
         zerodb_sal.deploy()
-        self.data['nodePort'] = zerodb_sal.node_port
         self.data['ztIdentity'] = zerodb_sal.zt_identity
 
     def _monitor(self):
         self.logger.info('Monitor zerodb %s' % self.name)
-        self.state.check('actions', 'install', 'ok')
-        self.state.check('actions', 'start', 'ok')
+        try:
+            self.state.check('actions', 'install', 'ok')
+            self.state.check('actions', 'start', 'ok')
+        except StateCheckError:
+            return
 
-        node = self.api.services.get(template_account='zero-os', template_name='node')
+        node = self.api.services.get(template_account='threefoldtech', template_name='node')
         node.state.check('disks', 'mounted', 'ok')
 
-        if not self._zerodb_sal.is_running()[0]:
+        if not self._zerodb_sal.is_running():
             self.state.delete('status', 'running')
-            self._zerodb_sal.start()
-            if self._zerodb_sal.is_running()[0]:
+            self._deploy()
+            if self._zerodb_sal.is_running():
                 self.state.set('status', 'running', 'ok')
         else:
             self.state.set('status', 'running', 'ok')
@@ -59,6 +60,18 @@ class Zerodb(TemplateBase):
         if not self.data['admin']:
             self.data['admin'] = j.data.idgenerator.generateXCharID(25)
 
+        if not self.data['path']:
+            node = self.api.services.get(template_account='threefoldtech', template_name='node')
+            kwargs = {
+                'disktype': self.data['diskType'],
+                'size': self.data['size'],
+                'name': self.name,
+            }
+            self.data['path'] = node.schedule_action('zdb_path', kwargs).wait(die=True).result
+            if not self.data['path']:
+                raise RuntimeError('Failed to find a suitable disk for the zerodb')
+
+        self._reserve_port()
         self._deploy()
         self.state.set('actions', 'install', 'ok')
         self.state.set('actions', 'start', 'ok')
@@ -68,8 +81,8 @@ class Zerodb(TemplateBase):
         """
         start zerodb server
         """
-        self.state.check('actions', 'install', 'ok')
         self.logger.info('Starting zerodb %s' % self.name)
+        self.state.check('actions', 'install', 'ok')
         self._deploy()
         self.state.set('actions', 'start', 'ok')
         self.state.set('status', 'running', 'ok')
@@ -149,8 +162,16 @@ class Zerodb(TemplateBase):
         self.state.check('status', 'running', 'ok')
         if self._namespace_exists_update_delete(name):
             raise ValueError('Namespace {} already exists'.format(name))
-        self.data['namespaces'].append({'name': name, 'size': size, 'password': password, 'public': public})
-        self._zerodb_sal.deploy()
+
+        namespace = {'name': name, 'size': size, 'password': password, 'public': public}
+        self.data['namespaces'].append(namespace)
+
+        try:
+            self._zerodb_sal.deploy()
+        except:
+            self.data['namespaces'].remove(namespace)
+            self._zerodb_sal.deploy()
+            raise
 
     def namespace_set(self, name, prop, value):
         """
@@ -161,27 +182,51 @@ class Zerodb(TemplateBase):
         """
         self.state.check('status', 'running', 'ok')
 
-        if not self._namespace_exists_update_delete(name, prop, value):
+        namespace = self._namespace_exists_update_delete(name, prop, value)
+        if not namespace:
             raise LookupError('Namespace {} doesn\'t exist'.format(name))
-        self._zerodb_sal.deploy()
+
+        try:
+            self._zerodb_sal.deploy()
+        except:
+            self._namespace_exists_update_delete(name, prop, namespace[prop])
+            self._zerodb_sal.deploy()
+            raise
 
     def namespace_delete(self, name):
         """
         Delete a namespace
         """
         self.state.check('status', 'running', 'ok')
-        if not self._namespace_exists_update_delete(name, delete=True):
+        namespace = self._namespace_exists_update_delete(name, delete=True)
+        if not namespace:
             return
 
-        self._zerodb_sal.deploy()
+        try:
+            self._zerodb_sal.deploy()
+        except:
+            self.data['namespaces'].append(namespace)
+            self._zerodb_sal.deploy()
+            raise
 
     def connection_info(self):
+        zdb_sal = self._zerodb_sal
         return {
-            'ip': self._node_sal.public_addr,
-            'port': self.data['nodePort']
+            'ip': zdb_sal.node.public_addr,
+            'storage_ip': zdb_sal.node.storage_addr,
+            'port': self.data['nodePort'],
         }
 
     def _namespace_exists_update_delete(self, name, prop=None, value=None, delete=False):
+        """
+        Helper function to check if namespace <name> exists in self.data['namespaces'], and either update property <prop> with
+        a new value or delete the namespace.
+        It returns the namespace before any updates which is used in recovery in case the deploy on the zerodb fails.
+        :param name: namespace name
+        :param prop: property name
+        :param value: property value
+        :param delete: boolen indicating if the namespace should be deleted
+        """
         if prop and delete:
             raise ValueError('Can\'t set property and delete at the same time')
         if prop and prop not in ['size', 'password', 'public']:
@@ -189,11 +234,15 @@ class Zerodb(TemplateBase):
 
         for namespace in self.data['namespaces']:
             if namespace['name'] == name:
+                ns = dict(namespace)
                 if prop:
-                    if prop not in ['size', 'password', 'public']:
-                        raise ValueError('Property must be size, password, or public')
                     namespace[prop] = value
                 if delete:
                     self.data['namespaces'].remove(namespace)
-                return True
+                return ns
         return False
+
+    @retry(exceptions=ServiceNotFoundError, tries=3, delay=3, backoff=2)
+    def _reserve_port(self):
+        port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
+        self.data['nodePort'] = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': 1}).wait(die=True).result[0]

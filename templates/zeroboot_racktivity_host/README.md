@@ -1,9 +1,11 @@
-## template: github.com/zero-os/0-boot-templates/zeroboot_racktivity_client/0.0.1
+## template: github.com/threefoldtech/0-templates/zeroboot_racktivity_client/0.0.1
 
 ### Description:
 
 This template is responsible for managing a zeroboot host with Racktivity power management.
 Through this template, one can manage the power state and boot configuration of the host.
+
+Make sure the robot has a route to the host's Racktivity device.
 
 ### Schema:
 
@@ -12,7 +14,6 @@ Through this template, one can manage the power state and boot configuration of 
     - client: Racktivity service/client instance name
     - port: Target's port on the Racktivity device
     - powermodule: Racktivity module ID (only Racktivity for SE models)
-- network: Zeroboot network that contains the host
 - mac: Target mac address
 - ip: Target IP address
 - hostname: Target hostname

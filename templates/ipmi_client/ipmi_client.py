@@ -12,7 +12,7 @@ class IpmiClient(TemplateBase):
 
     def validate(self):
         # client instance already exists
-        if self.name in j.clients.zboot.list():
+        if self.name in j.clients.ipmi.list():
             return
 
         # create the client instance
@@ -32,7 +32,7 @@ class IpmiClient(TemplateBase):
             'password_': password,
             'port': self.data.get('port')
         }
-        _ = j.clients.ipmi.get(instance=self.name, data=data, interactive=False)
+        j.clients.ipmi.get(instance=self.name, data=data, interactive=False)
 
     def delete(self):
         """

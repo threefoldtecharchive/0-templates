@@ -18,7 +18,6 @@ class TestZerodbTemplate(ZrobotBaseTest):
 
     def setUp(self):
         self.valid_data = {
-            'nodePort': 9900,
             'mode': 'user',
             'sync': False,
             'admin': '',
@@ -26,6 +25,8 @@ class TestZerodbTemplate(ZrobotBaseTest):
             'namespaces': [],
             'ztIdentity': '',
             'nics': [],
+            'diskType': 'hdd',
+            'size': 2,
         }
         patch('jumpscale.j.clients', MagicMock()).start()
 
@@ -83,6 +84,18 @@ class TestZerodbTemplate(ZrobotBaseTest):
 
         zdb.state.check('actions', 'install', 'ok')
         assert zdb.data['admin'] == 'password'
+
+    def test_install_empty_path(self):
+        """
+        Test install action sets path if empty
+        """
+        data = self.valid_data.copy()
+        data['path'] = ''
+        zdb = Zerodb('zdb', data=data)
+        zdb.api = MagicMock()
+        zdb.api.services.get.return_value.schedule_action.return_value.wait.return_value.result = 'path', 'name'
+        zdb.install()
+        assert zdb.data['path'] == 'path'
 
     def test_start_before_install(self):
         """
@@ -270,22 +283,22 @@ class TestZerodbTemplate(ZrobotBaseTest):
         Test _deploy helper function
         """
         zdb = Zerodb('zdb', data=self.valid_data)
-        zdb_sal = MagicMock(node_port=9900, zt_identity='identity')
+        zdb_sal = MagicMock(zt_identity='identity')
 
         zdb._node_sal.primitives.from_dict.return_value = zdb_sal
         zdb._deploy()
         assert zdb.data['ztIdentity'] == zdb_sal.zt_identity
-        assert zdb.data['nodePort'] == zdb_sal.node_port
 
     def test_connection_info(self):
         """
         Test connection_info action
         """
         zdb = Zerodb('zdb', data=self.valid_data)
-        node_sal = MagicMock(public_addr='127.0.0.1')
-        patch('jumpscale.j.clients.zos.get', MagicMock(return_value=node_sal)).start()
+        node = MagicMock( public_addr='127.0.0.1', storageAddr='127.0.0.1')
+        zdb_sal = MagicMock(node_port=9000, node=node)
+        zdb._node_sal.primitives.from_dict.return_value = zdb_sal
         assert zdb.connection_info() == {
-            'ip': node_sal.public_addr,
+            'ip': zdb_sal.node.public_addr,
             'port': zdb.data['nodePort'],
         }
 

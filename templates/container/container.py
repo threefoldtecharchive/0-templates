@@ -14,6 +14,9 @@ class Container(TemplateBase):
 
     def __init__(self, name, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
+        self.recurring_action('_monitor', 30)  # every 30 seconds
+        self._container = None
+        self._node_sal = j.clients.zos.get(NODE_CLIENT)
 
     def validate(self):
         for param in ['flist']:
@@ -21,20 +24,33 @@ class Container(TemplateBase):
                 raise ValueError("parameter '%s' not valid: %s" % (param, str(self.data[param])))
 
     @property
-    def node_sal(self):
-        return j.clients.zos.get(NODE_CLIENT)
-
-    @property
-    def container_sal(self):
-        try:
-            return self.node_sal.containers.get(self.name)
-        except LookupError:
+    def _container_sal(self):
+        if not self._container:
             self.install()
-            return self.node_sal.containers.get(self.name)
+            self._container = self._node_sal.containers.get(self.name)
+        return self._container
+
+    def _monitor(self):
+        try:
+            self.state.check('actions', 'start', 'ok')
+        except StateCheckError:
+            return
+
+        self.logger.info('Monitor container %s' % self.name)
+        if not self._container_sal.is_running():
+            self.state.delete('status', 'running')
+            self.install()
+            if self._container_sal.is_running():
+                self.state.set('status', 'running', 'ok')
+        else:
+            self.state.set('status', 'running', 'ok')
 
     def install(self):
         # convert "src:dst" to {src:dst}
-        ports = j.sal_zos.utils.format_ports(self.data['ports'])
+        ports = {}
+        for p in self.data['ports']:
+            src, dst = p.split(":")
+            ports[src] = int(dst)
 
         mounts = {}
         for mount in self.data['mounts']:
@@ -44,7 +60,7 @@ class Container(TemplateBase):
         for env in self.data['env']:
             envs[env['name']] = env['value']
 
-        self.node_sal.containers.create(self.name, self.data['flist'], hostname=self.data['hostname'],
+        self._node_sal.containers.create(self.name, self.data['flist'], hostname=self.data['hostname'],
                                         mounts=mounts, nics=self.data['nics'],
                                         host_network=self.data['hostNetworking'],
                                         ports=ports, storage=self.data['storage'],
@@ -58,10 +74,10 @@ class Container(TemplateBase):
             if self._compare_objects(existing_nic, nic, 'type', 'id'):
                 raise ValueError('Nic with same type/id combination already exists')
         self.data['nics'].append(nic)
-        self.container_sal.add_nic(nic)
+        self._container_sal.add_nic(nic)
 
     def remove_nic(self, nicname):
-        self.container_sal.remove_nic(nicname)
+        self._container_sal.remove_nic(nicname)
 
     def _compare_objects(self, obj1, obj2, *keys):
         for key in keys:
@@ -72,13 +88,18 @@ class Container(TemplateBase):
     def start(self):
         self.state.check('actions', 'install', 'ok')
         self.logger.info('Starting container %s' % self.name)
-        self.container_sal.start()
+        self._container_sal.start()
         self.state.set('actions', 'start', 'ok')
 
     def stop(self):
         self.state.check('actions', 'install', 'ok')
         self.logger.info('Stopping container %s' % self.name)
-        self.container_sal.stop()
+        try:
+            self._node_sal.containers.get(self.name)
+            self._container_sal.stop()
+            self._container = None
+        except LookupError:
+            pass
         self.state.delete('actions', 'start')
 
     def uninstall(self):

@@ -25,6 +25,7 @@ class TestGatewayTemplate(ZrobotBaseTest):
             'httpproxies': [],
             'domain': 'domain',
             'certificates': [],
+            'routes': [],
             'ztIdentity': '',
         }
         patch('jumpscale.j.clients', MagicMock()).start()
@@ -254,7 +255,7 @@ class TestGatewayTemplate(ZrobotBaseTest):
         Test add_http_proxy action if another proxy has the same host
         """
         with pytest.raises(ValueError,
-                   message='action should raise an error if another http proxy with the same host exist'):
+                           message='action should raise an error if another http proxy with the same host exist'):
             proxy = {'host': 'host', 'destinations': ['destination'],  'types': ['http'], 'name': 'proxy'}
             proxy2 = {'host': 'host', 'destinations': ['destination'],  'types': ['http'], 'name': 'proxy2'}
             self.valid_data['httpproxies'].append(proxy)
@@ -310,11 +311,11 @@ class TestGatewayTemplate(ZrobotBaseTest):
         """
         Test add_dhcp_host action
         """
-        self.valid_data['networks'] = [{'name': 'network', 'dhcpserver': {'hosts': [{'macaddress': 'address1'}]}}]
+        self.valid_data['networks'] = [{'name': 'network', 'dhcpserver': {'hosts': [{'macaddress': 'address1', 'hostname':'one', 'ipaddress':'ip'}]}}]
         gw = Gateway('gw', data=self.valid_data)
         gw.state.set('actions', 'start', 'ok')
-        gw.add_dhcp_host('network', {'macaddress': 'address2'})
-        assert gw.data['networks'] == [{'name': 'network', 'dhcpserver': {'hosts': [{'macaddress': 'address1'}, {'macaddress': 'address2'}]}}]
+        gw.add_dhcp_host('network', {'macaddress': 'address2', 'hostname': 'two', 'ipaddress':'ip2'})
+        assert gw.data['networks'] == [{'name': 'network', 'dhcpserver': {'hosts': [{'macaddress': 'address1', 'hostname':'one','ipaddress':'ip'}, {'macaddress': 'address2', 'hostname': 'two', 'ipaddress':'ip2'}]}}]
         gw._gateway_sal.configure_dhcp.assert_called_once_with()
         gw._gateway_sal.configure_cloudinit.assert_called_once_with()
 
@@ -322,13 +323,12 @@ class TestGatewayTemplate(ZrobotBaseTest):
         """
         Test add_dhcp_host action raises exception
         """
-        with pytest.raises(RuntimeError,
+        with pytest.raises(ValueError,
                            message='action should raise an error if configure_dhcp raises an exception'):
-            self.valid_data['networks'] = [{'name': 'network', 'dhcpserver': {'hosts': [{'macaddress': 'address1'}]}}]
+            self.valid_data['networks'] = [{'name': 'network', 'dhcpserver': {'hosts': [{'macaddress': 'address1', 'hostname':'one'}]}}]
             gw = Gateway('gw', data=self.valid_data)
             gw.state.set('actions', 'start', 'ok')
-            gw._gateway_sal.configure_dhcp.side_effect = RuntimeError
-            gw.add_dhcp_host('network', {'macaddress': 'address2'})
+            gw.add_dhcp_host('network', {'macaddress': 'address2', 'hostname': 'one'})
             assert gw.data['networks'] == []
             assert gw._gateway_sal.configure_dhcp.call_count == 2
             assert gw._gateway_sal.configure_cloudinit.call_count == 2
@@ -405,7 +405,7 @@ class TestGatewayTemplate(ZrobotBaseTest):
         Test remove_dhcp_host action if network with name doesnt exist
         """
         with pytest.raises(LookupError,
-                   message='action should raise an error if network with this name doesnt exist'):
+                           message='action should raise an error if network with this name doesnt exist'):
             gw = Gateway('gw', data=self.valid_data)
             gw.state.set('actions', 'start', 'ok')
             gw.remove_dhcp_host('network', {'macaddress': 'address2'})
@@ -559,4 +559,3 @@ class TestGatewayTemplate(ZrobotBaseTest):
         gw.state.set('actions', 'start', 'ok')
         gw.stop()
         gw._gateway_sal.stop.called_once_with()
-
