@@ -116,7 +116,7 @@ class Minio(TemplateBase):
 
     def uninstall(self):
         self.logger.info('Uninstalling minio %s' % self.name)
-        self.healer.stop()
+        self._healer.stop()
         self._minio_sal.destroy()
 
         self._release_port()
