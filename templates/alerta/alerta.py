@@ -18,6 +18,10 @@ class Alerta(TemplateBase):
         }
 
     def validate(self):
+        if 'apikey' in self.data:
+            self.data['apiKey'] = self.data['apikey']
+        if 'envname' in self.data:
+            self.data['envName'] = self.data['envname']
         for param in ['url', 'apiKey']:
             if not self.data[param]:
                 raise ValueError("parameter '%s' needs to be set" % (param))
