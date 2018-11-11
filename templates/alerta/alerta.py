@@ -12,16 +12,16 @@ class Alerta(TemplateBase):
 
     def __init__(self, name, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
+        if 'apikey' in self.data:
+            self.data['apiKey'] = self.data['apikey']
+        if 'envname' in self.data:
+            self.data['envName'] = self.data['envname']
         self.headers = {
             "Authorization": "Key {}".format(self.data['apiKey']),
             "Content-type": "application/json"
         }
 
     def validate(self):
-        if 'apikey' in self.data:
-            self.data['apiKey'] = self.data['apikey']
-        if 'envname' in self.data:
-            self.data['envName'] = self.data['envname']
         for param in ['url', 'apiKey']:
             if not self.data[param]:
                 raise ValueError("parameter '%s' needs to be set" % (param))
