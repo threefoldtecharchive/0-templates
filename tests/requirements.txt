@@ -1,0 +1,8 @@
+nose
+nose-progressive
+nose-testconfig
+parameterized
+requests
+vncdotool
+termcolor
+argparse

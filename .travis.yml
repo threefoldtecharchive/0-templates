@@ -1,18 +1,48 @@
-language: python
-cache: pip
-sudo: required
-dist: trusty
+matrix:
+  include:
+    - language: python
+      sudo: true
+      dist: trusty
+      python: 3.5
+      if: type IN (api, cron)
+      before_install:
+        - sudo apt-get install -y python3.5 python3.5-dev
+        - sudo rm -f /usr/bin/python
+        - sudo rm -f /usr/bin/python3
+        - sudo ln -s /usr/bin/python3.5 /usr/bin/python
+        - sudo ln -s /usr/bin/python3.5 /usr/bin/python3
 
-python:
-  - "3.5"
 
-install:
-  - pip3 install codecov pytest pytest-cov erppeek
-  - ./utils/jumpscale_install.sh
-  - ./utils/zrobot_install.sh
+      install:
+        - curl -s https://install.zerotier.com/ | sudo bash
+        - sudo zerotier-cli join ${env_zt_network}
+        - sudo bash tests/travis/jumpscale_install.sh ${JSBRANCH}
+        - sudo apt-get install sshpass
+        - sudo pip3 install -r tests/requirements.txt
 
-script:
-  - make test
+      before_script:
+        - sudo python3 tests/travis/farm_setup.py --password ${vm_password} --vm_ip ${VM_IP}  --branch ${JSBRANCH} --zt_token ${zerotier_token} --zt_network ${env_zt_network}
 
-after_success:
-  - codecov
+      script:
+        - sudo sshpass -p ${vm_password} ssh -o StrictHostKeyChecking=no root@${VM_IP} "cd 0-templates/tests/; nosetests -v -s ${tests_path} --tc-file config.ini"
+      after_script:
+        - sudo zerotier-cli leave ${env_zt_network}
+
+    - language: python
+      cache: pip
+      sudo: required
+      dist: trusty
+
+      python:
+        - "3.5"
+
+      install:
+        - pip3 install codecov pytest pytest-cov erppeek
+        - ./utils/jumpscale_install.sh
+        - ./utils/zrobot_install.sh
+
+      script:
+        - make test
+
+      after_success:
+        - codecov
