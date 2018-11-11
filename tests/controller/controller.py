@@ -1,6 +1,6 @@
 from jumpscale import j
 from uuid import uuid4
-from tests.controller.templates_manager.local_temp import vm, container, zerodb, vdisk
+from tests.controller.templates_manager.local_temp import vm, container, zerodb, vdisk, gateway
 from tests.controller.templates_manager.general_temp import zt_client
 
 logger = j.logger.get('controller.log')
@@ -30,6 +30,7 @@ class Controller:
         self.vdisk = vdisk.VdiskManager(parent=self, service_name=None)
         self.container_manager = container.ContManager
         self.zt_client = zt_client.ZT_Client
+        self.gw_manager = gateway.GWManager
 
     def _generate_random_string(self):
         return str(uuid4()).replace('-', '')[10:]
