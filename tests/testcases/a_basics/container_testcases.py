@@ -184,7 +184,6 @@ class TestContainer(BaseTest):
         content = response.content.decode('utf-8').strip()
         self.assertEqual(content, data)
     
-    @unittest.skip('https://github.com/threefoldtech/0-templates/issues/205')
     def test007_add_initprocess_to_container(self):
         """ ZRT-ZOS-019
         *Test case for adding init process to container*
@@ -195,8 +194,8 @@ class TestContainer(BaseTest):
         """
         self.log('Create a container (C1) with init process.')
         container = self.controller.container_manager(parent=self.controller, service_name=None)
-        pid = str(randint(500, 1000))
-        container.install(wait=True, initProcesses=[{'name': 'sleep', 'args': ['1000s'], 'id': pid}])
+        job_id = str(randint(500, 1000))
+        container.install(wait=True, initProcesses=[{'name': 'sleep', 'args': ['1000s'], 'id': job_id}])
         self.containers.append(container)
         self.assertTrue(container.install_state, " Installtion state is False")
 
@@ -204,12 +203,13 @@ class TestContainer(BaseTest):
         conts = self.node.containers.list()
         cont = [c for c in conts if container.data['hostname'] in c.hostname][0]
         client = self.node.client.container.client(cont.id)
-        
+
         self.log('Check that process is created, should be found.')
-        processes = client.process.list()
-        process = [p for p in processes if p['name'] == 'sleep'][0]
-        self.assertEqual(process['pid'], '3777')
-        self.assertEqual(process['cmdline'], '/bin/sleep 1000s')
+        jobs = client.job.list()
+        job = [j for j in jobs if j['cmd']['id'] == job_id][0]
+        self.assertTrue(job)
+        self.assertEqual(job['cmd']['arguments']['name'], 'sleep')
+        self.assertEqual(job['cmd']['arguments']['args'][0], '1000s')
     
     def test008_create_containers_with_same_port_forward(self):
         """ ZRT-ZOS-020
