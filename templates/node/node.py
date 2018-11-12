@@ -128,8 +128,8 @@ class Node(TemplateBase):
         self.state.set('actions', 'install', 'ok')
 
     def reboot(self):
-        self._stop_all_containers()
-        self._stop_all_vms()
+        # self._stop_all_containers()
+        # self._stop_all_vms()
 
         self.logger.info('Rebooting node %s' % self.name)
         self.state.set('status', 'rebooting', 'ok')
@@ -243,6 +243,8 @@ class Node(TemplateBase):
                 return False
             if info['type'] not in disktypes:
                 return False
+            if not info['running']:
+                return False
             return True
 
         zdbinfos = list(filter(usable_zdb, self._list_zdbs_info()))
@@ -252,7 +254,7 @@ class Node(TemplateBase):
 
         # sort result by free size, first item of the list is the the one with bigger free size
         for zdbinfo in sorted(zdbinfos, key=lambda r: r['free'], reverse=True):
-            zdb = self.api.services.get(template_name=ZDB_TEMPLATE_UID, name=zdbinfo['service_name'])
+            zdb = self.api.services.get(template_uid=ZDB_TEMPLATE_UID, name=zdbinfo['service_name'])
             namespaces = [ns['name'] for ns in zdb.schedule_action('namespace_list').wait(die=True).result]
             if namespace_name not in namespaces:
                 zdb.schedule_action('namespace_create', namespace).wait(die=True)

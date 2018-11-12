@@ -20,9 +20,6 @@ class Zerodb(TemplateBase):
         self._node_sal = j.clients.zos.get(NODE_CLIENT)
         self.recurring_action('_monitor', 10)  # every 10 seconds
 
-    def validate(self):
-        self.state.delete('status', 'running')
-
     @property
     def _zerodb_sal(self):
         data = self.data.copy()
@@ -46,11 +43,11 @@ class Zerodb(TemplateBase):
         node.state.check('disks', 'mounted', 'ok')
 
         if not self._zerodb_sal.is_running():
-            self.state.delete('status', 'running')
             self._deploy()
             if self._zerodb_sal.is_running():
                 self.state.set('status', 'running', 'ok')
             else:
+                self.state.delete('status', 'running')
                 data = {
                     'attributes': {},
                     'resource': self.guid,
@@ -122,7 +119,13 @@ class Zerodb(TemplateBase):
         """
         Return disk information
         """
-        return self._zerodb_sal.info
+        info = self._zerodb_sal.info
+        try:
+            self.state.check('status', 'running', 'ok')
+            info['running'] = True
+        except StateCheckError:
+            info['running'] = False
+        return info
 
     def namespace_list(self):
         """
