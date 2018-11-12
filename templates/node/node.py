@@ -252,7 +252,7 @@ class Node(TemplateBase):
 
         # sort result by free size, first item of the list is the the one with bigger free size
         for zdbinfo in sorted(zdbinfos, key=lambda r: r['free'], reverse=True):
-            zdb = self.api.services.get(template_name=ZDB_TEMPLATE_UID, name=zdbinfo['service_name'])
+            zdb = self.api.services.get(template_uid=ZDB_TEMPLATE_UID, name=zdbinfo['service_name'])
             namespaces = [ns['name'] for ns in zdb.schedule_action('namespace_list').wait(die=True).result]
             if namespace_name not in namespaces:
                 zdb.schedule_action('namespace_create', namespace).wait(die=True)
