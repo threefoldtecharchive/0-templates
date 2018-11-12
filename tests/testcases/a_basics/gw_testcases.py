@@ -23,19 +23,17 @@ class GWTests(BaseTest):
         #. Create gateways[GW1] without public default network, should fail.
         #. Create gateways[GW1] with public default network, should succeed.
         """
-        import ipdb; ipdb.set_trace()
         self.log('Create gateways[GW1] without public default network, should fail.')
         network = [{'name': 'public_nic', 'type': 'default', 'public': False}]
         gateway = self.controller.gw_manager(parent=self.controller, service_name=None)
         with self.assertRaises(Exception) as e:
             gateway.install(wait=True, networks=network)
-        self.assertIn("Need exactly one public network", e.exception.args[1].args[0])
+        self.assertEqual("Need exactly one public network", e.exception.args[0])
 
         self.log('Create gateways[GW1] with public default network, should succeed.')
         network = [{'name': 'public_nic', 'type': 'default', 'public': True}]
         gateway.install(wait=True, networks=network)
         self.gws.append(gateway)
-        gateway.stop()
     
     def test002_add_network_name_exist(self):
         """ZRT-ZOS-012
@@ -55,13 +53,13 @@ class GWTests(BaseTest):
         network = {'name': "public_nic", 'type': "default", 'id': ''}
         with self.assertRaises(Exception) as e:
             gateway.add_network(network=network)
-        # self.assertIn("Network with name public_nic already exists", e.exception.args[1].args[0])
+        # self.assertEqual("Network with name public_nic already exists", e.exception.args[0])
 
         self.log("Add network [N2] with different type and same name to [GW1], should fail.")
         network = {'name': "public_nic", 'type': "zerotier"}
         with self.assertRaises(Exception) as e:
             gateway.add_network(network=network)
-        # self.assertIn("Network with name public_nic already exists", e.exception.args[1].args[0])        
+        # self.assertIn("Network with name public_nic already exists", e.exception.args[0])        
 
     def test003_remove_network(self):
         """ZRT-ZOS-013
@@ -80,7 +78,7 @@ class GWTests(BaseTest):
         self.log("Remove the public default network, should succeed.")
         with self.assertRaises(Exception) as e:
             gateway.remove_network('public_nic')
-        self.assertIn("Need exactly one public network", e.exception.args[1].args[0])
+        self.assertIn("Need exactly one public network", e.exception.args[0])
 
     def test004_deploy_getways_with_public_network(self):
         """ZRT-ZOS-014
@@ -99,7 +97,7 @@ class GWTests(BaseTest):
         gateway2 = self.controller.gw_manager(parent=self.controller, service_name=None)
         with self.assertRaises(Exception) as e:
             gateway2.install(wait=True)
-        self.assertIn("port already in use",e.exception.args[1].args[0])
+        self.assertIn("port already in use",e.exception.args[0])
         self.gws.append(gateway2)
 
     # def test05_create_gateway_with_public_and_zerotier_vm(self):

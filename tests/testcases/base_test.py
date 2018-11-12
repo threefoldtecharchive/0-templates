@@ -27,10 +27,10 @@ class BaseTest(TestCase):
         cls.zdbs = []
         cls.vdisks = []
         self = cls()
-        cls.disks_mount_paths = self.zdb_mounts()
-        cls.disk_type = self.select_disk_type()
-        cls.mount_paths = self.get_disk_mount_path(cls.disk_type)
-        cls.disk_size = self.get_disk_size()
+        # cls.disks_mount_paths = self.zdb_mounts()
+        # cls.disk_type = self.select_disk_type()
+        # cls.mount_paths = self.get_disk_mount_path(cls.disk_type)
+        # cls.disk_size = self.get_disk_size()
 
     @classmethod
     def tearDownClass(cls):
