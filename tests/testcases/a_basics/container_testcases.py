@@ -152,22 +152,28 @@ class TestContainer(BaseTest):
 
         self.log('Remove directory created')
         self.node.client.bash('rm -rf {}'.format(dir_path))
-        
-    def test006_add_port_forward_to_container(self):
+
+    @parameterized.expand(["True", "False"])    
+    def test006_add_port_forward_and_host_network_parameters_to_container(self, host_network):
         """ ZRT-ZOS-018
-        *Test case for adding port forward to container*
+        *Test case for adding port forward and host network parameters to container*
         **Test Scenario:**
-        #. Create a container (C1) with port forward (P1).
+        #. Create a container (C1) with port forward (P1) and host network True or False.
         #. Get container id and client.
         #. Create server on port (P1).
         #. Create a file (F1) on container (C1).
-        #. Try to get file (F1) through server using port forward, should be found. 
+        #. Try to get file (F1) through server using port forward, should be found.
+        #. in case host network is True, container will ignore the port forward.
         """
-        self.log('Create a container with port forward')
         host_port = randint(7000, 8000)
         guest_port = randint(3000, 4000)
         container = self.controller.container_manager(parent=self.controller, service_name=None)
-        container.install(wait=True, ports=['{}:{}'.format(host_port, guest_port)])
+        if host_network == "True":
+            self.log("Create a container (C1) with port forward (P1) and host network is True")
+            container.install(wait=True, ports=['{}:{}'.format(host_port, guest_port)], hostNetworking=True)
+        else:
+            self.log("Create a container (C1) with port forward (P1) and host network is False")
+            container.install(wait=True, ports=['{}:{}'.format(host_port, guest_port)])
         self.containers.append(container)
         self.assertTrue(container.install_state, " Installtion state is False")
 
@@ -186,11 +192,15 @@ class TestContainer(BaseTest):
         data = self.random_string()
         client.filesystem.mkdir(dir_path)
         client.bash('echo {} > {}'.format(data, file_path))
-
-        self.log('Try to get file (F1) through server using port forward, should be found. ')
-        response = requests.get('http://{}:{}{}'.format(self.node_ip, host_port, file_path))
-        content = response.content.decode('utf-8').strip()
-        self.assertEqual(content, data)
+        if host_network == "True":
+            self.log('In case of host network is True, container will ignore the port forward.')
+            with self.assertRaises(Exception):
+                requests.get('http://{}:{}{}'.format(self.node_ip, host_port, file_path))
+        else:
+            self.log('Try to get file (F1) through server using port forward, should be found. ')
+            response = requests.get('http://{}:{}{}'.format(self.node_ip, host_port, file_path))
+            content = response.content.decode('utf-8').strip()
+            self.assertEqual(content, data)
     
     def test007_add_initprocess_to_container(self):
         """ ZRT-ZOS-019
@@ -248,38 +258,3 @@ class TestContainer(BaseTest):
         container3.install(wait=True, ports=['{}:{}'.format(host_port, guest_port)])
         self.containers.append(container3)
         self.assertTrue(container3.install_state, " Installtion state is False")
-
-    @parameterized.expand(['False', 'True'])
-    def test009_create_containers_with_host_network(self, host_network):
-        """ ZRT-ZOS-020
-        *Test case for creating container with host network parameter*
-        **Test Scenario:**
-        #. Create a container (C1) with host network parameter.
-        #. Get container id and client.
-        #. Try to reach the network.
-   
-        """
-        self.log('Create a container (C1) without nics.')
-        container = self.controller.container_manager(parent=self.controller, service_name=None)
-        if host_network == 'True':
-            container.install(wait=True, nics=[], hostNetworking=True)
-        else:
-            container.install(wait=True, nics=[], hostNetworking=False)
-        self.containers.append(container)
-        self.assertTrue(container.install_state, " Installtion state is False")
-
-        self.log('Get container id and client.')
-        conts = self.node.containers.list()
-        cont = [c for c in conts if container.data['hostname'] in c.hostname][0]
-        client = self.node.client.container.client(cont.id)
-
-        self.log('Try to reach the network, should succeed.')
-        result = client.bash('ping 8.8.8.8 -w 5').get()
-        if host_network == 'True':
-            self.assertFalse(result.code)
-            self.assertEqual(result.state, 'SUCCESS')
-        else:
-            self.log('Try to reach the network, should fail.')
-            self.assertTrue(result.code)
-            self.assertEqual(result.state, 'ERROR')
-            self.assertEqual(result.stderr.strip(), 'connect: Network is unreachable')
