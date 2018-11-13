@@ -27,8 +27,8 @@ class Controller:
         # get instance from all templates_manager
         self.vm_manager = vm.VMManager(parent=self, service_name=None)
         self.zdb_manager = zerodb.ZDBManager(parent=self, service_name=None)
-        self.container_manager = container.ContManager(parent=self, service_name=None)
         self.vdisk = vdisk.VdiskManager(parent=self, service_name=None)
+        self.container_manager = container.ContManager
         self.zt_client = zt_client.ZT_Client
 
     def _generate_random_string(self):
