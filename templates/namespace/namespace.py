@@ -38,20 +38,20 @@ class Namespace(TemplateBase):
         except StateCheckError:
             return
 
-        def _reinstall():
+        if not self.data['zerodb']:
+            # Reinstall on a different zerodb
             self.state.delete('status', 'running')
             self.install()
-
-        if not self.data['zerodb']:
-            _reinstall()
 
         try:
             self._zerodb.state.check('status', 'running', 'ok')
             self.state.set('status', 'running', 'ok')
         except StateCheckError:
             self.logger.info('Zerodb is not reachable anymore, installing namespace on a different zerodb')
+            # Reinstall on a different zerodb
             self.data['zerodb'] = ''
-            _reinstall()
+            self.state.delete('status', 'running')
+            self.install()
 
     @property
     def _zerodb(self):
