@@ -186,7 +186,7 @@ class Vm(TemplateBase):
                 try:
                     network = zclient.network_get(nic['id'])
                     member = network.member_get(address=ztAddress)
-                    member.timeout = 300
+                    member.timeout = timeout
                     nic['ip'] = member.get_private_ip(timeout)
                 except (RuntimeError, ValueError) as e:
                     self.logger.warning('Failed to retreive zt ip: %s', str(e))
