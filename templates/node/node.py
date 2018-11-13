@@ -64,15 +64,6 @@ class Node(TemplateBase):
         except:
             self.state.delete('disks', 'mounted')
 
-        try:
-            # check if the node was rebooting and start containers and vms
-            self.state.check('status', 'rebooting', 'ok')
-            # self._start_all_containers()
-            # self._start_all_vms()
-            self.state.delete('status', 'rebooting')
-        except StateCheckError:
-            pass
-
     def _network_monitor(self):
         self.state.check('actions', 'install', 'ok')
 
@@ -128,11 +119,7 @@ class Node(TemplateBase):
         self.state.set('actions', 'install', 'ok')
 
     def reboot(self):
-        self._stop_all_containers()
-        self._stop_all_vms()
-
         self.logger.info('Rebooting node %s' % self.name)
-        self.state.set('status', 'rebooting', 'ok')
         self._node_sal.reboot()
 
     def zdb_path(self, disktype, size, name):
@@ -242,6 +229,8 @@ class Node(TemplateBase):
             if info['free'] / GiB < zdb_size:
                 return False
             if info['type'] not in disktypes:
+                return False
+            if not info['running']:
                 return False
             return True
 

@@ -55,7 +55,6 @@ class Vm(TemplateBase):
         except StateCheckError:
             return
 
-        self.state.set('status', 'running', 'ok')
         vm_sal = self._vm_sal
 
         if not vm_sal.is_running():
@@ -72,6 +71,10 @@ class Vm(TemplateBase):
 
             if not vm_sal.is_running():
                 self.state.delete('status', 'running')
+            else:
+                self.state.set('status', 'running', 'ok')
+        else:
+            self.state.set('status', 'running', 'ok')
 
         # handle reboot
         try:
