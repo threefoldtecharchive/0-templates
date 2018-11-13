@@ -167,3 +167,16 @@ class BaseTest(TestCase):
         size_bytes = self.node.client.disk.getinfo(self.disk_name)['size']
         size_gb = size_bytes / 1024**3
         return int(size_gb)
+
+    def get_zerotier_ip(self, ztIdentity, timeout=None):
+        ztAddress = ztIdentity.split(':')[0]
+        zt_client = j.clients.zerotier.get(instance=self.random_string(), data={'token_': self.config['zt']['zt_client']})
+        zt_network = zt_client.network_get(self.zt_id)
+        for _ in range(30):
+            try:
+                member = zt_network.member_get(address=ztAddress)
+                member.timeout = None
+                member_ip = member.get_private_ip(timeout)
+                return member_ip
+            except (RuntimeError, ValueError) as e:
+                time.sleep(10)

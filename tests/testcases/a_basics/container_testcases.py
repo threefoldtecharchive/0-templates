@@ -84,23 +84,29 @@ class TestContainer(BaseTest):
 
     @parameterized.expand(['before', 'after'])
     @unittest.skip('https://github.com/threefoldtech/0-templates/issues/201')
-    def test004_create_container_with_zt_nic(self, add):
+    def test004_add_zerotier_network_before_and_after_deploying_container(self, state):
         """ ZRT-ZOS-016
-        *Test case for creating container with zerotier network*
+        *Test case for adding zerotier network before and after deploying the container*
         **Test Scenario:**
 
+        #. Before the deployment:
+        #. Create a container (c1) with zerotier netowrk.
+        #. After the deployment:
         #. Create a container (C1).
-        #. Add zerotier network to container (c1).
+        #. Add zerotier network to container (c1) after the deployment.
         #. Check that netwrok is added successfully to the container.
         """
-        self.logger.info('Create a container (C1)')
-        zt_network = [{'name': self.random_string(), 'type': 'zerotier', 'id': self.zt_id}, {'type': 'default', 'name': 'defaultnic'}]
+        import ipdb; ipdb.set_trace()
+        zt_network = [{'name': self.random_string(), 'type': 'zerotier', 'id': self.zt_id}]
         container = self.controller.container_manager(parent=self.controller, service_name=None)
-        if add == 'before':
-            zt_network[0]['token'] = self.config['zt']['zt_client']
+        if state == 'before':
+            self.logger.info('Create a container (c1) with zerotier netowrk.')
+            zt_network[0]['ztClient'] = self.config['zt']['zt_client']
             container.install(wait=True, nics=zt_network)
         else:
-            container.install(wait=True)
+            self.log('Create a container (C1).')
+            container.install(wait=True, nics=[])
+            self.log('Add zerotier network to container (c1) after the deployment.')
             container.add_nic(zt_network[0])
         self.containers.append(container)
         self.assertTrue(container.install_state, " Installtion state is False")
@@ -108,7 +114,9 @@ class TestContainer(BaseTest):
         self.log('Check that netwrok is added successfully to the container.')
         conts = self.node.containers.list()
         cont = [c for c in conts if container.data['hostname'] in c.hostname][0]
-        self.assertEqual(cont.nics[0]['type'], 'zerotier')
+        identity = cont.identity
+        container_ip = self.get_zerotier_ip(ztIdentity=identity)
+        self.assertTrue(container_ip, "Failed to retreive zt ip: Cannot get private ip address for zerotier member")
 
     def test005_add_mount_container(self):
         """ ZRT-ZOS-017
@@ -223,23 +231,23 @@ class TestContainer(BaseTest):
         self.log('Create a container (C1) with port forward (P1).')
         host_port = randint(7000, 8000)
         guest_port = randint(3000, 4000)
-        container = self.controller.container_manager(parent=self.controller, service_name=None)
-        container.install(wait=True, ports=['{}:{}'.format(host_port, guest_port)])
-        self.assertTrue(container.install_state, " Installtion state is False")
+        container1 = self.controller.container_manager(parent=self.controller, service_name=None)
+        container1.install(wait=True, ports=['{}:{}'.format(host_port, guest_port)])
+        self.assertTrue(container1.install_state, " Installtion state is False")
 
         self.log('Create another container (C2) with same port forward (P1), should fail.')
         with self.assertRaises(RuntimeError) as e:
-            container1 = self.controller.container_manager(parent=self.controller, service_name=None)
-            container1.install(wait=True, ports=['{}:{}'.format(host_port, guest_port)])
+            container2 = self.controller.container_manager(parent=self.controller, service_name=None)
+            container2.install(wait=True, ports=['{}:{}'.format(host_port, guest_port)])
 
         self.log('Stop container (C1).')
-        container.stop()
+        container1.stop()
 
         self.log('Create another container (C3) with same port forward (P1), should success.')
-        container2 = self.controller.container_manager(parent=self.controller, service_name=None)
-        container2.install(wait=True, ports=['{}:{}'.format(host_port, guest_port)])
-        self.containers.append(container2)
-        self.assertTrue(container.install_state, " Installtion state is False")
+        container3 = self.controller.container_manager(parent=self.controller, service_name=None)
+        container3.install(wait=True, ports=['{}:{}'.format(host_port, guest_port)])
+        self.containers.append(container3)
+        self.assertTrue(container3.install_state, " Installtion state is False")
 
     @parameterized.expand(['False', 'True'])
     def test009_create_containers_with_host_network(self, host_network):
@@ -265,12 +273,13 @@ class TestContainer(BaseTest):
         cont = [c for c in conts if container.data['hostname'] in c.hostname][0]
         client = self.node.client.container.client(cont.id)
 
-        self.log('Try to reach the network, should fail.')
+        self.log('Try to reach the network, should succeed.')
         result = client.bash('ping 8.8.8.8 -w 5').get()
         if host_network == 'True':
             self.assertFalse(result.code)
             self.assertEqual(result.state, 'SUCCESS')
         else:
+            self.log('Try to reach the network, should fail.')
             self.assertTrue(result.code)
             self.assertEqual(result.state, 'ERROR')
             self.assertEqual(result.stderr.strip(), 'connect: Network is unreachable')

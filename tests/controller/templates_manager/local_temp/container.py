@@ -65,4 +65,4 @@ class ContManager:
         return self.service.schedule_action('add_nic', args={'nic': nic}).wait(die=True)
 
     def remove_nic(self, name):
-        return self.service.schedule_action('add_nic', args={'name': name})
+        return self.service.schedule_action('remove_nic', args={'name': name})
