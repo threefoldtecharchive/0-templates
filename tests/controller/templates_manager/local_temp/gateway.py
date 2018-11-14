@@ -3,7 +3,6 @@ from zerorobot.service_collection import ServiceNotFoundError
 from testconfig import config
 import random
 
-
 class GWManager:
     def __init__(self, parent, service_name=None):
         self.gw_template = 'github.com/threefoldtech/0-templates/gateway/0.0.1'
@@ -12,10 +11,7 @@ class GWManager:
         self.robot = self._parent.remote_robot
         self._gw_service = None
         if service_name:
-            try:
-                self._gw_service = self.robot.service.get(name=service_name)
-            except ServiceNotFoundError:
-                self._gw_service = None
+            self._gw_service = self.robot.service.get(name=service_name)  
 
     @property
     def service(self):
@@ -31,7 +27,7 @@ class GWManager:
             'networks': [{'name': 'public_nic', 'type': 'default', 'public': True, 'id': ''}],
             'portforwards': [],
             'httpproxies': [],
-            'domain': 'domain',
+            'domain': '',
             'certificates': [],
             'routes': [],
             'ztIdentity': '',
