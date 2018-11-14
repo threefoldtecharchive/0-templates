@@ -53,9 +53,9 @@ class NodePortManager(TemplateBase):
         self.save()
 
     def _reserve(self, exclude):
-        port = self.node_sal.freeports(1)
+        port = self.node_sal.freeports(1)[0]
         while port in exclude:
             # this will eventually raised if no port is found
-            port = self.node_sal.freeports(1)
+            port = self.node_sal.freeports(1)[0]
         #  if we reached here, we found a free port
-        return port[0]
+        return port
