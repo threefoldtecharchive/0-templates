@@ -37,9 +37,9 @@ class Node(TemplateBase):
         self.gl_mgr.add("_port_manager", self._port_manager)
 
     def validate(self):
-        service = self.api.services.find(template_name='node')
-        if service and service[0].guid != self.guid:
-            raise Exception("The node service already exist (should one per node)")
+        nodes = self.api.services.find(template_name='node')
+        if nodes and nodes[0].guid != self.guid:
+            raise RuntimeError('Another node service exists. Only one node service per node is allowed')
         self.state.delete('disks', 'mounted')
 
         network = self.data.get('network')
