@@ -38,7 +38,7 @@ class Node(TemplateBase):
 
     def validate(self):
         service = self.api.services.find(template_name='node')
-        if service:
+        if service and service[0].guid != self.guid:
             raise Exception("The node service already exist (should one per node)")
         self.state.delete('disks', 'mounted')
 
