@@ -33,7 +33,11 @@ class WebGateway(TemplateBase):
 
     def _monitor(self):
         self.logger.info('Monitor web gateway %s' % self.name)
-        self.state.check('actions', 'start', 'ok')
+        try:
+            self.state.check('actions', 'start', 'ok')
+        except StateCheckError:
+            return
+
         try:
             self._etcd_cluster.state.check('status', 'running', 'ok')
             self._traefik.state.check('status', 'running', 'ok')
@@ -238,3 +242,7 @@ class WebGateway(TemplateBase):
             'etcd_cluster': cluster,
             'public_ips': self.data['publicIps']
         }
+
+    def public_ips_set(self, public_ips):
+        self.data['publicIps'] = public_ips
+        self._set_public_ips(self.data['etcdConnectionInfo'])
