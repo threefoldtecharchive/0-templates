@@ -1,1 +1,0 @@
-TIMEOUT_DEPLOY = 7200  # 120 minutes

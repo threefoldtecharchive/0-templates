@@ -9,7 +9,7 @@ from jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import timeout
-from ..globals import TIMEOUT_DEPLOY
+from JumpscaleLib.sal_zos.globals import TIMEOUT_DEPLOY
 from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
                                       SERVICE_STATE_SKIPPED,
                                       SERVICE_STATE_WARNING, StateCheckError)
@@ -594,7 +594,7 @@ class S3(TemplateBase):
                 'nsName': name,
             }
             namespace = robot.services.create(template_uid=NS_TEMPLATE_UID, data=data)
-            task = namespace.schedule_action('install').wait(timeout=TIMEOUT_DEPLOY)
+            task = namespace.schedule_action('install').wait(timeout=300)
             if task.eco:
                 namespace.delete()
                 raise NamespaceDeployError(task.eco.message, node)
