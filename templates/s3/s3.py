@@ -8,7 +8,8 @@ import netaddr
 from jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
-from zerorobot.template.decorator import timeout
+from zerorobot.template.decorator import 
+from ..globals import TIMEOUT_DEPLOY
 from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
                                       SERVICE_STATE_SKIPPED,
                                       SERVICE_STATE_WARNING, StateCheckError)
@@ -73,7 +74,7 @@ class S3(TemplateBase):
         minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
         public_port = minio.schedule_action('node_port').wait(die=True).result
 
-        vm_info = self._vm().schedule_action('info').wait(die=True, timeout=30).result
+        vm_info = self._vm().schedule_action('info').wait(die=True, timeout=TIMEOUT_DEPLOY).result
         storage_ip = vm_info['host']['storage_addr']
         storage_port = None
         for src, dest in vm_info['ports'].items():
@@ -387,7 +388,7 @@ class S3(TemplateBase):
 
     def _vm_robot_and_ip(self):
         vm = self._vm()
-        vminfo = vm.schedule_action('info', args={'timeout': 1200}).wait(die=True).result
+        vminfo = vm.schedule_action('info', args={'timeout': TIMEOUT_DEPLOY}).wait(die=True).result
         mgmt_ip = vminfo['zerotier'].get('ip')
 
         if not mgmt_ip:
@@ -593,7 +594,7 @@ class S3(TemplateBase):
                 'nsName': name,
             }
             namespace = robot.services.create(template_uid=NS_TEMPLATE_UID, data=data)
-            task = namespace.schedule_action('install').wait(timeout=300)
+            task = namespace.schedule_action('install').wait(timeout=TIMEOUT_DEPLOY)
             if task.eco:
                 namespace.delete()
                 raise NamespaceDeployError(task.eco.message, node)
