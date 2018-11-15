@@ -8,7 +8,7 @@ import netaddr
 from jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
-from zerorobot.template.decorator import 
+from zerorobot.template.decorator import timeout
 from ..globals import TIMEOUT_DEPLOY
 from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
                                       SERVICE_STATE_SKIPPED,
