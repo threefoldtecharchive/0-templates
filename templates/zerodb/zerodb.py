@@ -6,6 +6,8 @@ from zerorobot.template.state import StateCheckError
 
 NODE_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node/0.0.1'
 PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
+ZDB_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerodb/0.0.1'
+
 NODE_CLIENT = 'local'
 
 
@@ -19,6 +21,21 @@ class Zerodb(TemplateBase):
         # hardcoded local instance, this service is only intended to be install by the node robot
         self._node_sal = j.clients.zos.get(NODE_CLIENT)
         self.recurring_action('_monitor', 10)  # every 10 seconds
+
+    def validate(self):
+        # generate admin password
+        if not self.data['admin']:
+            self.data['admin'] = j.data.idgenerator.generateXCharID(25)
+
+        if self.data['path']:
+            zdbs = self.api.services.find(template_uid=ZDB_TEMPLATE_UID)
+            tasks = [zdb.schedule_action('path') for zdb in zdbs if zdb.name != self.name]
+            paths = []
+            for t in tasks:
+                path = t.wait(timeout=30, die=True).result
+                paths.append(path)
+            if self.data['path'] in paths:
+                    raise ValueError('Path {} is already used by another zerodb service'.format(self.data['path']))
 
     @property
     def _zerodb_sal(self):
@@ -67,10 +84,6 @@ class Zerodb(TemplateBase):
     def install(self):
         self.logger.info('Installing zerodb %s' % self.name)
 
-        # generate admin password
-        if not self.data['admin']:
-            self.data['admin'] = j.data.idgenerator.generateXCharID(25)
-
         if not self.data['path']:
             node = self.api.services.get(template_account='threefoldtech', template_name='node')
             kwargs = {
@@ -115,17 +128,15 @@ class Zerodb(TemplateBase):
         self.stop()
         self.start()
 
+    def path(self):
+        return self.data['path']
+
     def info(self):
         """
         Return disk information
         """
-        info = self._zerodb_sal.info
-        try:
-            self.state.check('status', 'running', 'ok')
-            info['running'] = True
-        except StateCheckError:
-            info['running'] = False
-        return info
+        self.state.check('actions', 'install', 'ok')
+        return self._zerodb_sal.info
 
     def namespace_list(self):
         """

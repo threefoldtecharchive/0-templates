@@ -170,12 +170,8 @@ class Node(TemplateBase):
                 except ValueError:
                     pass  # no zdb filesystem on this storagepool
 
-            # all path used by installed zerodb services
-            zdb_infos = self._list_zdbs_info()
-            zdb_infos = filter(lambda info: info['service_name'] != name, zdb_infos)
-            # sort result by free size, first item of the list is the the one with bigger free size
-            results = sorted(zdb_infos, key=lambda r: r['free'], reverse=True)
-            zdb_paths = [res['path'] for res in results]
+            # all path used by zerodb services
+            zdb_paths = self._list_zdbs_path(exclude_zdb=name)
 
             # path that are not used by zerodb services but have a storagepool, so we can use them
             free_path = list(set(fs_paths) - set(zdb_paths))
@@ -233,11 +229,9 @@ class Node(TemplateBase):
                 return False
             if info['type'] not in disktypes:
                 return False
-            if not info['running']:
-                return False
             return True
 
-        zdbinfos = list(filter(usable_zdb, self._list_zdbs_info()))
+        zdbinfos = list(filter(usable_zdb, self._list_running_zdbs_info()))
         if len(zdbinfos) <= 0:
             message = 'Not enough free space for namespace creation with size {} and type {}'.format(ns_size, ','.join(disktypes))
             raise NoNamespaceAvailability(message)
@@ -299,17 +293,23 @@ class Node(TemplateBase):
         zdb.schedule_action('install').wait(die=True)
         zdb.schedule_action('start').wait(die=True)
 
-    def _list_zdbs_info(self):
+    def _list_running_zdbs_info(self):
         """
-        list the paths used by all the zerodbs installed on the node
+        list zdb info of all running zerodbs installed on the node
 
-        :param excepted: list of zerodb service name that should be skipped
-        :type excepted: [str]
-
-        :return: a list of zerodb path sorted by free size descending
-        :rtype: [str]
+        :return: a list of zerodb services info
+        :rtype: [dict]
         """
+        def usable_zdb(zdb):
+            try:
+                zdb.state.check('status', 'running', 'true')
+                return True
+            except StateCheckError:
+                return False
+
         zdbs = self.api.services.find(template_uid=ZDB_TEMPLATE_UID)
+        zdbs = list(filter(usable_zdb, zdbs))
+
         tasks = [zdb.schedule_action('info') for zdb in zdbs]
         results = []
         for t in tasks:
@@ -318,6 +318,20 @@ class Node(TemplateBase):
             results.append(result)
         return results
 
+    def _list_zdbs_path(self, exclude_zdb=''):
+        """
+        list the paths used by all the zerodbs installed on the node
+
+        :return: a list of zerodb path
+        :rtype: [str]
+        """
+        zdbs = self.api.services.find(template_uid=ZDB_TEMPLATE_UID)
+        tasks = [zdb.schedule_action('path') for zdb in zdbs if zdb.name != exclude_zdb]
+        paths = []
+        for t in tasks:
+            path = t.wait(timeout=30, die=True).result
+            paths.append(path)
+        return paths
 
 def _validate_network(network):
     cidr = network.get('cidr')
