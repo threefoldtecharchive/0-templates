@@ -27,15 +27,15 @@ class Zerodb(TemplateBase):
         if not self.data['admin']:
             self.data['admin'] = j.data.idgenerator.generateXCharID(25)
 
-        if self.data['path']:
-            zdbs = self.api.services.find(template_uid=ZDB_TEMPLATE_UID)
-            tasks = [zdb.schedule_action('path') for zdb in zdbs if zdb.name != self.name]
-            paths = []
-            for t in tasks:
-                path = t.wait(timeout=30, die=True).result
-                paths.append(path)
-            if self.data['path'] in paths:
-                    raise ValueError('Path {} is already used by another zerodb service'.format(self.data['path']))
+        # if self.data['path']:
+        #     zdbs = self.api.services.find(template_uid=ZDB_TEMPLATE_UID)
+        #     tasks = [zdb.schedule_action('path') for zdb in zdbs if zdb.name != self.name]
+        #     paths = []
+        #     for t in tasks:
+        #         path = t.wait(timeout=30, die=True).result
+        #         paths.append(path)
+        #     if self.data['path'] in paths:
+        #             raise ValueError('Path {} is already used by another zerodb service'.format(self.data['path']))
 
     @property
     def _zerodb_sal(self):
@@ -274,3 +274,13 @@ class Zerodb(TemplateBase):
     def _reserve_port(self):
         port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
         self.data['nodePort'] = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': 1}).wait(die=True).result[0]
+
+    def uninstall(self):
+        """
+        uninstall zerodb server
+        """
+        self.logger.info('Uninstalling zerodb %s' % self.name)
+        import pdb; pdb.set_trace()
+        self._zerodb_sal.destroy()
+        self.state.delete('actions', 'install')
+        self.state.delete('status', 'running')

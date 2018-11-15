@@ -4,6 +4,7 @@ from zerorobot.template.state import StateCheckError
 from zerorobot.service_collection import ServiceNotFoundError
 
 ZERODB_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerodb/0.0.1'
+NAMESPACE_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/namespace/0.0.1'
 NODE_CLIENT = 'local'
 
 
@@ -16,8 +17,6 @@ class Vdisk(TemplateBase):
         super().__init__(name=name, guid=guid, data=data)
         self.add_delete_callback(self.uninstall)
         self.recurring_action('_monitor', 10)
-        if not self.data.get('password'):
-            self.data['password'] = j.data.idgenerator.generateXCharID(32)
 
     def validate(self):
         try:
@@ -25,11 +24,14 @@ class Vdisk(TemplateBase):
             node = self.api.services.get(template_account='threefoldtech', template_name='node')
             node.state.check('actions', 'install', 'ok')
         except:
-            raise RuntimeError("not node service found, can't install the namespace")
+            raise RuntimeError("no node service found, can't create the vdisk")
 
         for param in ['diskType', 'size', 'label']:
             if not self.data.get(param):
                 raise ValueError("parameter '%s' not valid: %s" % (param, str(self.data[param])))
+
+        self.data['password'] = self.data['password'] if self.data['password'] else j.data.idgenerator.generateXCharID(32)
+        self.data['nsName'] = self.data['nsName'] if self.data['nsName'] else j.data.idgenerator.generateGUID()
 
     @property
     def _node_sal(self):
@@ -39,8 +41,12 @@ class Vdisk(TemplateBase):
         return j.clients.zos.get(NODE_CLIENT)
 
     @property
+    def _namespace(self):
+        return self.api.services.get(template_uid=NAMESPACE_TEMPLATE_UID, name=self.data['namespace'])
+
+    @property
     def _zerodb(self):
-        return self.api.services.get(template_uid=ZERODB_TEMPLATE_UID, name=self.data['zerodb'])
+        return self.api.services.get(template_uid=ZERODB_TEMPLATE_UID, name=self._namespace.data['zerodb'])
 
     def _monitor(self):
         self.state.check('actions', 'install', 'ok')
@@ -72,17 +78,20 @@ class Vdisk(TemplateBase):
         except StateCheckError:
             pass
 
-        node = self.api.services.get(template_account='threefoldtech', template_name='node')
         kwargs = {
-            'disktype': self.data['diskType'],
+            'diskType': self.data['diskType'],
             'mode': 'user',
             'password': self.data['password'],
             'public': False,
-            'ns_size': int(self.data['size']),
+            'size': int(self.data['size']),
+            'nsName': self.data['nsName'],
         }
-        # use the method on the node service to create the zdb and the namespace.
-        # this action hold the logic of the capacity planning for the zdb and namespaces
-        self.data['zerodb'], self.data['nsName'] = node.schedule_action('create_zdb_namespace', kwargs).wait(die=True).result
+        if not self.data['namespace']:
+            ns = self.api.services.create(NAMESPACE_TEMPLATE_UID, data=kwargs)
+            self.data['namespace'] = ns.name
+        else:
+            ns = self.api.services.get(template_uid=NAMESPACE_TEMPLATE_UID, name=self.data['namespace'])
+        ns.schedule_action('install').wait(die=True)
 
         zerodb_data = self._zerodb.data.copy()
         zerodb_data['name'] = self._zerodb.name
@@ -101,17 +110,24 @@ class Vdisk(TemplateBase):
 
     def info(self):
         self.state.check('actions', 'install', 'ok')
-        return self._zerodb.schedule_action('namespace_info', args={'name': self.data['nsName']}).wait(die=True).result
+        return self._namespace.schedule_action('info').wait(die=True).result
 
     def url(self):
         self.state.check('actions', 'install', 'ok')
-        return self._zerodb.schedule_action('namespace_url', args={'name': self.data['nsName']}).wait(die=True).result
+        return self._namespace.schedule_action('url').wait(die=True).result
 
     def private_url(self):
         self.state.check('actions', 'install', 'ok')
-        return self._zerodb.schedule_action('namespace_private_url', args={'name': self.data['nsName']}).wait(die=True).result
+        return self._namespace.schedule_action('private_url').wait(die=True).result
 
     def uninstall(self):
-        self._zerodb.schedule_action('namespace_delete', args={'name': self.data['nsName']}).wait(die=True)
+        if self.data['namespace']:
+            try:
+                namespace = self._namespace
+                namespace.schedule_action('uninstall').wait(die=True)
+                namespace.delete()
+            except ServiceNotFoundError:
+                pass
+        self.data['namespace'] = ''
         self.state.delete('actions', 'install')
         self.state.delete('status', 'running')

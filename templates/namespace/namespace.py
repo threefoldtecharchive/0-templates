@@ -14,8 +14,6 @@ class Namespace(TemplateBase):
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self.add_delete_callback(self.uninstall)
-        if not self.data.get('password'):
-            self.data['password'] = j.data.idgenerator.generateXCharID(32)
         self.recurring_action('_monitor', 30)  # every 30 seconds
 
     def validate(self):
@@ -30,6 +28,9 @@ class Namespace(TemplateBase):
         for param in ['diskType', 'size', 'mode']:
             if not self.data.get(param):
                 raise ValueError("parameter '{}' not valid: {}".format(param, str(self.data[param])))
+
+        self.data['nsName'] = self.data['nsName'] if self.data['nsName'] else j.data.idgenerator.generateGUID()
+        self.data['password'] = self.data['password'] if self.data['password'] else j.data.idgenerator.generateXCharID(32)
 
     def _monitor(self):
         self.logger.info('Monitor namespace %s' % self.name)
@@ -57,6 +58,44 @@ class Namespace(TemplateBase):
     def _zerodb(self):
         return self.api.services.get(template_uid=ZERODB_TEMPLATE_UID, name=self.data['zerodb'])
 
+    def _create_hdd_namespace(self):
+
+        node = self.api.services.get(template_account='threefoldtech', template_name='node')
+        kwargs = {
+            'disktype': self.data['diskType'],
+            'mode': self.data['mode'],
+            'password': self.data['password'],
+            'public': self.data['public'],
+            'ns_size': self.data['size'],
+            'ns_name': self.data['nsName'],
+        }
+        # use the method on the node service to create the zdb and the namespace.
+        # this action hold the logic of the capacity planning for the zdb and namespaces
+        self.data['zerodb'] = node.schedule_action('create_zdb_namespace', kwargs).wait(die=True).result
+        self.save()
+
+    def _create_ssd_namespace(self):
+        namespace = {
+            'name': self.data['nsName'],
+            'size': self.data['size'],
+            'password': self.data['password'],
+            'public': self.data['public'],
+        }
+        zdb_data = {
+            'mode': self.data['mode'],
+            'sync': False,
+            'diskType': self.data['diskType'],
+            'size': self.data['size'],
+            'namespaces': [namespace],
+        }
+        if not self.data['zerodb']:
+            zdb = self.api.services.create(ZERODB_TEMPLATE_UID, data=zdb_data)
+            self.data['zerodb'] = zdb.name
+        else:
+            zdb = self.api.services.get(template_uid=ZERODB_TEMPLATE_UID, name=self.data['zerodb'])
+        zdb.schedule_action('install').wait(die=True)
+        zdb.schedule_action('start').wait(die=True)
+
     def install(self):
         try:
             # no op is already installed
@@ -66,18 +105,11 @@ class Namespace(TemplateBase):
         except StateCheckError:
             pass
 
-        node = self.api.services.get(template_account='threefoldtech', template_name='node')
-        kwargs = {
-            'disktype': self.data['diskType'],
-            'mode': self.data['mode'],
-            'password': self.data['password'],
-            'public': self.data['public'],
-            'ns_size': self.data['size'],
-            'name': self.data['nsName'],
-        }
-        # use the method on the node service to create the zdb and the namespace.
-        # this action hold the logic of the capacity planning for the zdb and namespaces
-        self.data['zerodb'], self.data['nsName'] = node.schedule_action('create_zdb_namespace', kwargs).wait(die=True).result
+        if self.data['diskType'] == 'hdd':
+            self._create_hdd_namespace()
+        else:
+            self._create_ssd_namespace()
+
         self.state.set('actions', 'install', 'ok')
 
     def info(self):
@@ -93,7 +125,22 @@ class Namespace(TemplateBase):
         return self._zerodb.schedule_action('namespace_private_url', args={'name': self.data['nsName']}).wait(die=True).result
 
     def uninstall(self):
-        self._zerodb.schedule_action('namespace_delete', args={'name': self.data['nsName']}).wait(die=True)
+        if not self.data['zerodb']:
+            self.state.delete('actions', 'install')
+            return
+        import pdb; pdb.set_trace()
+        try:
+            if self.data['diskType'] == 'ssd':
+                zdb = self._zerodb
+                zdb.schedule_action('namespace_delete', args={'name': self.data['nsName']}).wait(die=True)
+                zdb.schedule_action('uninstall').wait(die=True)
+                zdb.delete()
+            if self.data['diskType'] == 'hdd':
+                self._zerodb.schedule_action('namespace_delete', args={'name': self.data['nsName']}).wait(die=True)
+        except ServiceNotFoundError:
+            pass
+
+        self.data['zerodb'] = ''
         self.state.delete('actions', 'install')
 
     def connection_info(self):

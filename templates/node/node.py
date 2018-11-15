@@ -190,25 +190,20 @@ class Node(TemplateBase):
 
         raise RuntimeError("unsupported disktype:%s" % disktype)
 
-    def create_zdb_namespace(self, disktype, mode, password, public, ns_size, name='', zdb_size=None):
-        if disktype not in ['hdd', 'ssd']:
+    def create_zdb_namespace(self, disktype, mode, password, public, ns_size, ns_name, zdb_size=None):
+        if disktype != 'hdd':
             raise ValueError('Disktype should be hdd or ssd')
+        else:
+            disktypes = ['HDD', 'ARCHIVE']
+
         if mode not in ['seq', 'user', 'direct']:
             raise ValueError('ZDB mode should be user, direct or seq')
 
-        if disktype == 'hdd':
-            disktypes = ['HDD', 'ARCHIVE']
-        elif disktype == 'ssd':
-            disktypes = ['SSD', 'NVME']
-        else:
-            raise ValueError("disk type %s not supported" % disktype)
-
-        namespace_name = j.data.idgenerator.generateGUID() if not name else name
         zdb_name = j.data.idgenerator.generateGUID()
 
         zdb_size = zdb_size if zdb_size else ns_size
         namespace = {
-            'name': namespace_name,
+            'name': ns_name,
             'size': ns_size,
             'password': password,
             'public': public,
@@ -216,7 +211,7 @@ class Node(TemplateBase):
         try:
             mountpoint = self.zdb_path(disktype, zdb_size, zdb_name)
             self._create_zdb(zdb_name, mountpoint, mode, zdb_size, disktype, [namespace])
-            return zdb_name, namespace_name
+            return zdb_name
         except ZDBPathNotFound:
             # at this point we could find a place where to create a new zerodb
             # let's look at the already existing one
@@ -240,10 +235,10 @@ class Node(TemplateBase):
         for zdbinfo in sorted(zdbinfos, key=lambda r: r['free'], reverse=True):
             zdb = self.api.services.get(template_uid=ZDB_TEMPLATE_UID, name=zdbinfo['service_name'])
             namespaces = [ns['name'] for ns in zdb.schedule_action('namespace_list').wait(die=True).result]
-            if namespace_name not in namespaces:
+            if ns_name not in namespaces:
                 zdb.schedule_action('namespace_create', namespace).wait(die=True)
-                return zdb.name, namespace_name
-        message = 'Namespace {} already exists on all zerodbs'.format(namespace_name)
+                return zdb.name
+        message = 'Namespace {} already exists on all zerodbs'.format(ns_name)
         raise NoNamespaceAvailability(message)
 
     @timeout(30, error_message='info action timeout')
