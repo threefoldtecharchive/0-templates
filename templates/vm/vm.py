@@ -6,6 +6,7 @@ from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry
 from zerorobot.template.state import StateCheckError
 
+from JumpscaleLib.sal_zos.globals import TIMEOUT_DEPLOY
 NODE_CLIENT = 'local'
 VDISK_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vdisk/0.0.1'
 PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
@@ -175,7 +176,7 @@ class Vm(TemplateBase):
         self.state.check('actions', 'install', 'ok')
         self._vm_sal.enable_vnc()
 
-    def info(self, timeout=300):
+    def info(self, timeout=TIMEOUT_DEPLOY):
         self._update_vdisk_url()
         info = self._vm_sal.info or {}
         nics = copy.deepcopy(self.data['nics'])
