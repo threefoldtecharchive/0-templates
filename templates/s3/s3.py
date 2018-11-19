@@ -10,8 +10,8 @@ from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import timeout
 from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
-                                      SERVICE_STATE_SKIPPED,
-                                      SERVICE_STATE_WARNING, StateCheckError)
+                                      SERVICE_STATE_SKIPPED, SERVICE_STATE_WARNING,
+                                      StateCheckError, StateCategoryNotExistsError)
 
 VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/dm_vm/0.0.1'
 GATEWAY_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/gateway/0.0.1'
@@ -170,6 +170,17 @@ class S3(TemplateBase):
             self.state.check('actions', 'install', 'ok')
         except StateCheckError:
             return
+
+        self.logger.info('Monitor minio vm disk')
+        try:
+            disk_state = self.state.get('vm', 'disk')
+            if disk_state == 'error':
+                self.state.delete('vm', 'running')
+                return
+        except StateCategoryNotExistsError:
+            # disk state is only set on error, so we can ignore
+            # the check exception
+            pass
 
         self.logger.info('Monitor minio vm')
         state = self._vm().state
@@ -613,8 +624,14 @@ class S3(TemplateBase):
         vm_robot, _ = self._vm_robot_and_ip()
         minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
         state = minio.state
+        try:
+            disk_state = state.get('vm', 'disk')
+            self.state.set('vm', 'disk', disk_state)
+        except:
+            # probably no state set on the minio disk
+            pass
 
-        for connection_info, shard_state in state.get('data_shards').items():
+        for connection_info, shard_state in state.categories.get('data_shards', {}).items():
             try:
                 self._get_namespace_by_address(connection_info)
             except ValueError:
@@ -624,7 +641,7 @@ class S3(TemplateBase):
             if shard_state == 'error':
                 self.state.set('data_shards', connection_info, SERVICE_STATE_ERROR)
 
-        for connection_info, shard_state in state.get('tlog_shards').items():
+        for connection_info, shard_state in state.categories.get('tlog_shards', {}).items():
             if shard_state == 'error':
                 self.state.set('tlog_shards', connection_info, SERVICE_STATE_ERROR)
 
