@@ -24,11 +24,11 @@ This template is responsible for reporting alerts to the alerta server.
 
 robot = j.clients.zrobot.robots['main']
 args = {
-    'url': "http://{address}/api/",
-    'apiKey': "{apikey}",
-    'envName': "{envname}"
+    'url': 'http://{address}/api',
+    'apiKey': '{apikey}',
+    'envName': '{envname}'
 }
-alerta = robot.services.create('github.com/threefoldtech/0-templates/alerta/0.0.1__reporter', 'alerta', data=args)
+alerta = robot.services.create('github.com/threefoldtech/0-templates/alerta/0.0.1', 'alerta', data=args)
 alerta.schedule_action('process_healthcheck')
 ```
 
