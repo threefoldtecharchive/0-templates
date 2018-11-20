@@ -631,7 +631,7 @@ class S3(TemplateBase):
             # probably no state set on the minio disk
             pass
 
-        for connection_info, shard_state in state.get('data_shards').items():
+        for connection_info, shard_state in state.categories.get('data_shards', {}).items():
             try:
                 self._get_namespace_by_address(connection_info)
             except ValueError:
@@ -641,7 +641,7 @@ class S3(TemplateBase):
             if shard_state == 'error':
                 self.state.set('data_shards', connection_info, SERVICE_STATE_ERROR)
 
-        for connection_info, shard_state in state.get('tlog_shards').items():
+        for connection_info, shard_state in state.categories.get('tlog_shards', {}).items():
             if shard_state == 'error':
                 self.state.set('tlog_shards', connection_info, SERVICE_STATE_ERROR)
 
