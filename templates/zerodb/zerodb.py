@@ -27,16 +27,6 @@ class Zerodb(TemplateBase):
         if not self.data['admin']:
             self.data['admin'] = j.data.idgenerator.generateXCharID(25)
 
-        # if self.data['path']:
-        #     zdbs = self.api.services.find(template_uid=ZDB_TEMPLATE_UID)
-        #     tasks = [zdb.schedule_action('path') for zdb in zdbs if zdb.name != self.name]
-        #     paths = []
-        #     for t in tasks:
-        #         path = t.wait(timeout=30, die=True).result
-        #         paths.append(path)
-        #     if self.data['path'] in paths:
-        #             raise ValueError('Path {} is already used by another zerodb service'.format(self.data['path']))
-
     @property
     def _zerodb_sal(self):
         data = self.data.copy()
