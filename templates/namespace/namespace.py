@@ -125,21 +125,20 @@ class Namespace(TemplateBase):
         return self._zerodb.schedule_action('namespace_private_url', args={'name': self.data['nsName']}).wait(die=True).result
 
     def uninstall(self):
-        if not self.data['zerodb']:
-            self.state.delete('actions', 'install')
-            return
-        try:
-            if self.data['diskType'] == 'ssd':
-                zdb = self._zerodb
-                zdb.schedule_action('namespace_delete', args={'name': self.data['nsName']}).wait(die=True)
-                zdb.schedule_action('uninstall').wait(die=True)
-                zdb.delete()
-            if self.data['diskType'] == 'hdd':
-                self._zerodb.schedule_action('namespace_delete', args={'name': self.data['nsName']}).wait(die=True)
-        except ServiceNotFoundError:
-            pass
+        if self.data['zerodb']:
+            try:
+                if self.data['diskType'] == 'ssd':
+                    zdb = self._zerodb
+                    zdb.schedule_action('namespace_delete', args={'name': self.data['nsName']}).wait(die=True)
+                    zdb.schedule_action('uninstall').wait(die=True)
+                    zdb.delete()
+                if self.data['diskType'] == 'hdd':
+                    self._zerodb.schedule_action('namespace_delete', args={'name': self.data['nsName']}).wait(die=True)
+            except ServiceNotFoundError:
+                pass
+            self.data['zerodb'] = ''
 
-        self.data['zerodb'] = ''
+        self.state.delete('status', 'running')
         self.state.delete('actions', 'install')
 
     def connection_info(self):
