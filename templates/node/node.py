@@ -70,6 +70,24 @@ class Node(TemplateBase):
     def _network_monitor(self):
         self.state.check('actions', 'install', 'ok')
 
+        for nic in j.sal.nettols.getNics():
+            if not nic.starswith('zt'):
+                continue
+            if not j.sal.nettools.isNicConnected(nic):
+                hostname = self._node_sal.client.info.os()['hostname']
+                node_id = self._node_sal.name
+                data = {
+                    'attributes': {},
+                    'resource': hostname,
+                    'text': 'network interface %s is down' % nic,
+                    'environment': 'Production',
+                    'severity': 'critical',
+                    'event': 'Network',
+                    'tags': ["node:%s" % hostname, "node_id:%s" % node_id, "interface:%s" % nic],
+                    'service': [self.template_uid.name]
+                }
+                send_alert(self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'), data)
+
         # make sure the bridges are installed
         for service in self.api.services.find(template_uid=BRIDGE_TEMPLATE_UID):
             self.logger.info("configuring bridge %s" % service.name)
@@ -326,6 +344,11 @@ def _validate_network(network):
     vlan = network.get('vlan')
     if not isinstance(vlan, int):
         raise ValueError('Network should have vlan configured')
+
+
+def send_alert(alertas, alert):
+    for alerta in alertas:
+        alerta.schedule_action('send_alert', args={'data': alert})
 
 
 class ZDBPathNotFound(Exception):
