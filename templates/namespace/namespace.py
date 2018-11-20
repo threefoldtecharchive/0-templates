@@ -128,7 +128,6 @@ class Namespace(TemplateBase):
         if not self.data['zerodb']:
             self.state.delete('actions', 'install')
             return
-        import pdb; pdb.set_trace()
         try:
             if self.data['diskType'] == 'ssd':
                 zdb = self._zerodb

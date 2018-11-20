@@ -297,7 +297,7 @@ class Node(TemplateBase):
         """
         def usable_zdb(zdb):
             try:
-                zdb.state.check('status', 'running', 'true')
+                zdb.state.check('status', 'running', 'ok')
                 return True
             except StateCheckError:
                 return False

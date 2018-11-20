@@ -30,7 +30,6 @@ class Vdisk(TemplateBase):
             if not self.data.get(param):
                 raise ValueError("parameter '%s' not valid: %s" % (param, str(self.data[param])))
 
-        self.data['password'] = self.data['password'] if self.data['password'] else j.data.idgenerator.generateXCharID(32)
         self.data['nsName'] = self.data['nsName'] if self.data['nsName'] else j.data.idgenerator.generateGUID()
 
     @property
@@ -52,7 +51,7 @@ class Vdisk(TemplateBase):
         self.state.check('actions', 'install', 'ok')
 
         try:
-            self._zerodb.state.check('status', 'running', 'ok')
+            self._namespace.state.check('status', 'running', 'ok')
             self.state.set('status', 'running', 'ok')
         except StateCheckError:
             data = {
@@ -81,7 +80,6 @@ class Vdisk(TemplateBase):
         kwargs = {
             'diskType': self.data['diskType'],
             'mode': 'user',
-            'password': self.data['password'],
             'public': False,
             'size': int(self.data['size']),
             'nsName': self.data['nsName'],

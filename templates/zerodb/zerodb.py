@@ -280,7 +280,6 @@ class Zerodb(TemplateBase):
         uninstall zerodb server
         """
         self.logger.info('Uninstalling zerodb %s' % self.name)
-        import pdb; pdb.set_trace()
         self._zerodb_sal.destroy()
         self.state.delete('actions', 'install')
         self.state.delete('status', 'running')
