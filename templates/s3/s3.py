@@ -175,7 +175,7 @@ class S3(TemplateBase):
         self.logger.info('Monitor minio vm disk')
         try:
             disk_state = self.state.get('vm', 'disk')
-            if disk_state == 'error':
+            if disk_state['disk'] == 'error':
                 self.state.delete('vm', 'running')
                 return
         except StateCategoryNotExistsError:
@@ -625,9 +625,10 @@ class S3(TemplateBase):
         vm_robot, _ = self._vm_robot_and_ip()
         minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
         state = minio.state
+
         try:
             disk_state = state.get('vm', 'disk')
-            self.state.set('vm', 'disk', disk_state)
+            self.state.set('vm', 'disk', disk_state['disk'])
         except:
             # probably no state set on the minio disk
             pass
