@@ -242,4 +242,6 @@ def _health_monitoring(state, level, msg, flag):
             state.set('data_shards', msg['shard'], SERVICE_STATE_ERROR)
         if 'tlog' in msg and not msg.get('master', False):  # we check only the minio owns tlog server, not it's master
             state.set('tlog_shards', msg['tlog'], SERVICE_STATE_ERROR)
+        if 'subsystem' in msg and msg['subsystem'] == 'disk':
+            state.set('vm', 'disk', 'error')
 
