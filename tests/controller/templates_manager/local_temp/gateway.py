@@ -21,9 +21,8 @@ class GWManager:
             return self._gw_service
 
     def install(self, wait=True, **kwargs):
-        default_data = {
-            'status': 'halted',
-            'hostname': 'hostname',
+        self.default_data = {
+            'hostname': self._parent._generate_random_string(),
             'networks': [{'name': 'public_nic', 'type': 'default', 'public': True, 'id': ''}],
             'portforwards': [],
             'httpproxies': [],
@@ -33,9 +32,11 @@ class GWManager:
             'ztIdentity': '',
         }
         if kwargs:
-            default_data.update(kwargs)
+            self.default_data.update(kwargs)
+            
         self.gw_service_name = self._parent._generate_random_string()
-        self._gw_service = self.robot.services.create(self.gw_template, self.gw_service_name, default_data)
+        self.logger.info('Install {} gateway'.format(self.gw_service_name))
+        self._gw_service = self.robot.services.create(self.gw_template, self.gw_service_name, self.default_data)
         self._gw_service.schedule_action('install').wait(die=wait)
 
     def add_portforward(self, data):
@@ -55,6 +56,7 @@ class GWManager:
 
     def remove_dhcp_host(self, network_name, host):
         return self.service.schedule_action('remove_dhcp_host', args={'network_name': network_name, 'host': host}).wait(die=True)
+
     def add_network(self, network):
         return self.service.schedule_action('add_network', args={'network': network}).wait(die=True)
 
