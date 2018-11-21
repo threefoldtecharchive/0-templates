@@ -157,11 +157,12 @@ class Node(TemplateBase):
         # all storage pool path of type disktypes and with more then size storage available
         storagepools = list(filter(usable_storagepool, node_sal.storagepools.list()))
         if not storagepools:
-            raise ZDBPathNotFound("all storagepools are already used by a zerodb")
+            raise ZDBPathNotFound("Could not find any usable  storage pool. Not enough space for disk type %s" % disktype)
+
+        storagepools.sort(key=lambda sp: sp.size - sp.total_quota(), reverse=True)
 
         if disktype == 'hdd':
             # sort less used pool first
-            storagepools.sort(key=lambda sp: sp.size - sp.total_quota(), reverse=True)
             fs_paths = []
             for sp in storagepools:
                 try:
@@ -184,11 +185,6 @@ class Node(TemplateBase):
             return free_path[0]
 
         if disktype == 'ssd':
-            # all storage pool path of type disktypes and with more then size storage available
-            storagepools = list(filter(usable_storagepool, node_sal.storagepools.list()))
-            if not storagepools:
-                raise ZDBPathNotFound("Could not find any usable  storage pool. Not enough space for disk type %s" % disktype)
-
             fs = storagepools[0].create('zdb_{}'.format(name), size * GiB)
             return fs.path
 
