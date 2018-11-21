@@ -342,6 +342,7 @@ class S3(TemplateBase):
 
         self.state.delete('actions', 'install')
         self.state.delete('status', 'running')
+        self.state.delete('vm', 'running')
 
     def url(self):
         self.state.check('actions', 'install', 'ok')
