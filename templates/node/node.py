@@ -165,7 +165,12 @@ class Node(TemplateBase):
         }
 
         # get all usable filesystem path for this type of disk and amount of storage
+        reserved = node_sal.find_persistance()
+
         def usable_storagepool(sp):
+            if sp.name == reserved.name:
+                return False
+
             if sp.type.value not in disks_types_map[disktype]:
                 return False
             if (sp.size - sp.total_quota() / GiB) <= size:
