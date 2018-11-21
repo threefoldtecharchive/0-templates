@@ -27,8 +27,8 @@ class S3(TemplateBase):
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self.recurring_action('_monitor_vm', 30)
-        self.recurring_action('_monitor', 60)  # every 30 seconds
-        self.recurring_action('_monitor_minio', 60)  # every 30 seconds
+        self.recurring_action('_monitor', 60)
+        self.recurring_action('_monitor_minio', 300)
         self.recurring_action('_ensure_namespaces_connections', 300)
         self.recurring_action('_update_url', 300)
 
@@ -633,19 +633,25 @@ class S3(TemplateBase):
             # probably no state set on the minio disk
             pass
 
-        for connection_info, shard_state in state.get('data_shards').items():
+        def test_namespace(info):
+            connection_info, shard_state = info
             try:
                 self._get_namespace_by_address(connection_info)
             except ValueError:
                 # this is probably an old shard that is not cleaned from data
-                continue
-
+                return
             if shard_state == 'error':
                 self.state.set('data_shards', connection_info, SERVICE_STATE_ERROR)
+
+        pool = gevent.pool.Pool(50)
+        pool.map(test_namespace, state.get('data_shards').items())
 
         for connection_info, shard_state in state.get('tlog_shards').items():
             if shard_state == 'error':
                 self.state.set('tlog_shards', connection_info, SERVICE_STATE_ERROR)
+
+
+        pool.join()
 
     def _deploy_minio(self, namespaces_connections, tlog_connection, master):
         vm_robot, _ = self._vm_robot_and_ip()
