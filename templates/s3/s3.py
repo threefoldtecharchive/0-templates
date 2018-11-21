@@ -9,9 +9,10 @@ from jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import timeout
+from JumpscaleLib.sal_zos.globals import TIMEOUT_DEPLOY
 from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
-                                      SERVICE_STATE_SKIPPED,
-                                      SERVICE_STATE_WARNING, StateCheckError)
+                                      SERVICE_STATE_SKIPPED, SERVICE_STATE_WARNING,
+                                      StateCheckError, StateCategoryNotExistsError)
 
 VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/dm_vm/0.0.1'
 GATEWAY_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/gateway/0.0.1'
@@ -73,7 +74,7 @@ class S3(TemplateBase):
         minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
         public_port = minio.schedule_action('node_port').wait(die=True).result
 
-        vm_info = self._vm().schedule_action('info').wait(die=True, timeout=30).result
+        vm_info = self._vm().schedule_action('info').wait(die=True, timeout=TIMEOUT_DEPLOY).result
         storage_ip = vm_info['host']['storage_addr']
         storage_port = None
         for src, dest in vm_info['ports'].items():
@@ -170,6 +171,17 @@ class S3(TemplateBase):
             self.state.check('actions', 'install', 'ok')
         except StateCheckError:
             return
+
+        self.logger.info('Monitor minio vm disk')
+        try:
+            disk_state = self.state.get('vm', 'disk')
+            if disk_state['disk'] == 'error':
+                self.state.delete('vm', 'running')
+                return
+        except StateCategoryNotExistsError:
+            # disk state is only set on error, so we can ignore
+            # the check exception
+            pass
 
         self.logger.info('Monitor minio vm')
         state = self._vm().state
@@ -387,7 +399,7 @@ class S3(TemplateBase):
 
     def _vm_robot_and_ip(self):
         vm = self._vm()
-        vminfo = vm.schedule_action('info', args={'timeout': 1200}).wait(die=True).result
+        vminfo = vm.schedule_action('info', args={'timeout': TIMEOUT_DEPLOY}).wait(die=True).result
         mgmt_ip = vminfo['zerotier'].get('ip')
 
         if not mgmt_ip:
@@ -435,8 +447,6 @@ class S3(TemplateBase):
         return deployed_namespaces
 
     def _test_namespace_ok(self, namespace):
-        return False
-
         retries = 3
         # First we will Try to wait and see if the zdb will be self healed or not
         while retries:
@@ -529,6 +539,7 @@ class S3(TemplateBase):
             t = vm.schedule_action('install')
             t.wait()
             if t.state != 'ok':
+                vm.schedule_action('uninstall').wait(die=True)
                 vm.delete(wait=True, timeout=60, die=False)
             else:
                 return vm
@@ -614,6 +625,13 @@ class S3(TemplateBase):
         vm_robot, _ = self._vm_robot_and_ip()
         minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
         state = minio.state
+
+        try:
+            disk_state = state.get('vm', 'disk')
+            self.state.set('vm', 'disk', disk_state['disk'])
+        except:
+            # probably no state set on the minio disk
+            pass
 
         for connection_info, shard_state in state.get('data_shards').items():
             try:

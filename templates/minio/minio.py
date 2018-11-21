@@ -116,7 +116,7 @@ class Minio(TemplateBase):
 
     def uninstall(self):
         self.logger.info('Uninstalling minio %s' % self.name)
-        self.healer.stop()
+        self._healer.stop()
         self._minio_sal.destroy()
 
         self._release_port()
@@ -242,4 +242,6 @@ def _health_monitoring(state, level, msg, flag):
             state.set('data_shards', msg['shard'], SERVICE_STATE_ERROR)
         if 'tlog' in msg and not msg.get('master', False):  # we check only the minio owns tlog server, not it's master
             state.set('tlog_shards', msg['tlog'], SERVICE_STATE_ERROR)
+        if 'subsystem' in msg and msg['subsystem'] == 'disk':
+            state.set('vm', 'disk', 'error')
 

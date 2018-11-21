@@ -3,6 +3,8 @@ from jumpscale import j
 from zerorobot.template.base import TemplateBase
 
 OK_STATES = ['OK', 'SKIPPED']
+
+
 class Alerta(TemplateBase):
 
     version = '0.0.1'
@@ -10,13 +12,17 @@ class Alerta(TemplateBase):
 
     def __init__(self, name, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
+        if 'apikey' in self.data:
+            self.data['apiKey'] = self.data['apikey']
+        if 'envname' in self.data:
+            self.data['envName'] = self.data['envname']
         self.headers = {
-            "Authorization": "Key {}".format(self.data['apikey']),
+            "Authorization": "Key {}".format(self.data['apiKey']),
             "Content-type": "application/json"
         }
 
     def validate(self):
-        for param in ['url', 'apikey']:
+        for param in ['url', 'apiKey']:
             if not self.data[param]:
                 raise ValueError("parameter '%s' needs to be set" % (param))
 
@@ -24,7 +30,7 @@ class Alerta(TemplateBase):
         category = healcheck_result['category'].lower()
         hid = healcheck_result['id']
         resource = healcheck_result['resource']
-        envname = self.data['envname']
+        envname = self.data['envName']
         for message in healcheck_result['messages']:
             uid = '{}_{}_{}'.format(name, hid, message['id'])
             alert = get_alert(self, uid)
@@ -41,14 +47,25 @@ class Alerta(TemplateBase):
                 report_data = {
                     'attributes': {},
                     'resource': uid,
-                    'text': message['text'], 
+                    'text': message['text'],
                     'environment': envname,
                     'severity': message['status'],
                     'event': category,
                     'tags': [],
                     'service': [resource]
                 }
-                send_alert(self, report_data)
+                self.send_alert(report_data)
+
+
+    def send_alert(self, data):
+        """
+        Add new entry to alerta
+        :param data: dict representing the new alert
+        :return:
+        """
+        resp = requests.post(self.data['url'] + "/alert", json=data, headers=self.headers)
+        if resp.status_code != 201:
+            self.logger.error("Couldn't sent alert, error code was %s, message: %s" % (resp.status_code, resp.text))
 
 def get_alert(service, resource):
     """
@@ -58,7 +75,7 @@ def get_alert(service, resource):
     :return: dict
     """
     resp = requests.get(service.data['url'] + "/alerts",
-                        params={'environment': service.data['envname'], 'resource': resource},
+                        params={'environment': service.data['envName'], 'resource': resource},
                         headers=service.headers)
 
     if resp.status_code != 200:
@@ -68,16 +85,6 @@ def get_alert(service, resource):
         if alert['status'] in ['open', 'ack']:
             return alert
 
-def send_alert(service, data):
-    """
-    Add new entry to alerta
-    :param service: alerta service
-    :param data: dict representing the new alert
-    :return:
-    """
-    resp = requests.post(service.data['url'] + "/alert", json=data, headers=service.headers)
-    if resp.status_code != 201:
-        service.logger.error("Couldn't sent alert, error code was %s, message: %s" % (resp.status_code, resp.text))
 
 def close_alert(service, alert_id):
     """

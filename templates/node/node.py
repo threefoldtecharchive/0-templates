@@ -37,6 +37,9 @@ class Node(TemplateBase):
         self.gl_mgr.add("_port_manager", self._port_manager)
 
     def validate(self):
+        nodes = self.api.services.find(template_name='node')
+        if nodes and nodes[0].guid != self.guid:
+            raise RuntimeError('Another node service exists. Only one node service per node is allowed')
         self.state.delete('disks', 'mounted')
 
         network = self.data.get('network')
@@ -64,17 +67,26 @@ class Node(TemplateBase):
         except:
             self.state.delete('disks', 'mounted')
 
-        try:
-            # check if the node was rebooting and start containers and vms
-            self.state.check('status', 'rebooting', 'ok')
-            # self._start_all_containers()
-            # self._start_all_vms()
-            self.state.delete('status', 'rebooting')
-        except StateCheckError:
-            pass
-
     def _network_monitor(self):
         self.state.check('actions', 'install', 'ok')
+
+        for nic in j.sal.nettools.getNics():
+            if not nic.startswith('zt'):
+                continue
+            if not j.sal.nettools.isNicConnected(nic):
+                hostname = self._node_sal.client.info.os()['hostname']
+                node_id = self._node_sal.name
+                data = {
+                    'attributes': {},
+                    'resource': hostname,
+                    'text': 'network interface %s is down' % nic,
+                    'environment': 'Production',
+                    'severity': 'critical',
+                    'event': 'Network',
+                    'tags': ["node:%s" % hostname, "node_id:%s" % node_id, "interface:%s" % nic],
+                    'service': [self.template_uid.name]
+                }
+                send_alert(self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'), data)
 
         # make sure the bridges are installed
         for service in self.api.services.find(template_uid=BRIDGE_TEMPLATE_UID):
@@ -128,11 +140,7 @@ class Node(TemplateBase):
         self.state.set('actions', 'install', 'ok')
 
     def reboot(self):
-        self._stop_all_containers()
-        self._stop_all_vms()
-
         self.logger.info('Rebooting node %s' % self.name)
-        self.state.set('status', 'rebooting', 'ok')
         self._node_sal.reboot()
 
     def zdb_path(self, disktype, size, name):
@@ -172,11 +180,12 @@ class Node(TemplateBase):
         # all storage pool path of type disktypes and with more then size storage available
         storagepools = list(filter(usable_storagepool, node_sal.storagepools.list()))
         if not storagepools:
-            raise ZDBPathNotFound("all storagepools are already used by a zerodb")
+            raise ZDBPathNotFound("Could not find any usable  storage pool. Not enough space for disk type %s" % disktype)
+
+        storagepools.sort(key=lambda sp: sp.size - sp.total_quota(), reverse=True)
 
         if disktype == 'hdd':
             # sort less used pool first
-            storagepools.sort(key=lambda sp: sp.size - sp.total_quota(), reverse=True)
             fs_paths = []
             for sp in storagepools:
                 try:
@@ -199,11 +208,6 @@ class Node(TemplateBase):
             return free_path[0]
 
         if disktype == 'ssd':
-            # all storage pool path of type disktypes and with more then size storage available
-            storagepools = list(filter(usable_storagepool, node_sal.storagepools.list()))
-            if not storagepools:
-                raise ZDBPathNotFound("Could not find any usable  storage pool. Not enough space for disk type %s" % disktype)
-
             fs = storagepools[0].create('zdb_{}'.format(name), size * GiB)
             return fs.path
 
@@ -248,6 +252,8 @@ class Node(TemplateBase):
                 return False
             if info['type'] not in disktypes:
                 return False
+            if not info['running']:
+                return False
             return True
 
         zdbinfos = list(filter(usable_zdb, self._list_zdbs_info()))
@@ -257,7 +263,7 @@ class Node(TemplateBase):
 
         # sort result by free size, first item of the list is the the one with bigger free size
         for zdbinfo in sorted(zdbinfos, key=lambda r: r['free'], reverse=True):
-            zdb = self.api.services.get(template_name=ZDB_TEMPLATE_UID, name=zdbinfo['service_name'])
+            zdb = self.api.services.get(template_uid=ZDB_TEMPLATE_UID, name=zdbinfo['service_name'])
             namespaces = [ns['name'] for ns in zdb.schedule_action('namespace_list').wait(die=True).result]
             if namespace_name not in namespaces:
                 zdb.schedule_action('namespace_create', namespace).wait(die=True)
@@ -339,6 +345,11 @@ def _validate_network(network):
     vlan = network.get('vlan')
     if not isinstance(vlan, int):
         raise ValueError('Network should have vlan configured')
+
+
+def send_alert(alertas, alert):
+    for alerta in alertas:
+        alerta.schedule_action('send_alert', args={'data': alert})
 
 
 class ZDBPathNotFound(Exception):

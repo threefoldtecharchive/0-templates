@@ -59,7 +59,7 @@ class EtcdCluster(TemplateBase):
             except StateCheckError:
                 self.state.delete('status', 'running')
                 return
-        self.state.set('status', 'runnning', 'ok')
+        self.state.set('status', 'running', 'ok')
 
     def _ensure_etcds_connections(self):
         try:
@@ -100,8 +100,8 @@ class EtcdCluster(TemplateBase):
         for etcd, node in self._deploy_etcds(required_nr_etcds):
             deployed_etcds.append(etcd)
             self.data['etcds'].append({'name': etcd.name,
-                                        'url': node['robot_address'],
-                                        'node': node['node_id']})
+                                       'url': node['robot_address'],
+                                       'node': node['node_id']})
             deployed_nr_etcd = len(deployed_etcds)
             self.logger.info('{} etcds deployed, remaining {}'.format(deployed_nr_etcd, required_nr_etcds - deployed_nr_etcd))
             self.save()
@@ -122,26 +122,26 @@ class EtcdCluster(TemplateBase):
                 node = nodes[i % len(nodes)]
                 self.logger.info("try to install etcd on node %s" % node['node_id'])
                 try:
-                   etcds.append(self._install_etcd(node))
-                   nr_deployed_etcds += 1
+                    etcds.append(self._install_etcd(node))
+                    nr_deployed_etcds += 1
                 except:
                     nodes.remove(node)
         return etcds
 
-            # gls = set()
-            # for i in range(required_etcds - nr_deployed_etcds):
-            #     node = nodes[i % len(nodes)]
-            #     self.logger.info("try to install etcd on node %s" % node['node_id'])
-            #     gls.add(gevent.spawn(self._install_etcd, node=node))
+        # gls = set()
+        # for i in range(required_etcds - nr_deployed_etcds):
+        #     node = nodes[i % len(nodes)]
+        #     self.logger.info("try to install etcd on node %s" % node['node_id'])
+        #     gls.add(gevent.spawn(self._install_etcd, node=node))
 
-            # for g in gevent.iwait(gls):
-            #     if g.exception and g.exception.node in nodes:
-            #         self.logger.error("we could not deploy on node %s, remove it from the possible node to use", node['node_id'])
-            #         nodes.remove(g.exception.node)
-            #     else:
-            #         etcd, node = g.value
-            #         nr_deployed_etcds += 1
-            #         yield (etcd, node)
+        # for g in gevent.iwait(gls):
+        #     if g.exception and g.exception.node in nodes:
+        #         self.logger.error("we could not deploy on node %s, remove it from the possible node to use", node['node_id'])
+        #         nodes.remove(g.exception.node)
+        #     else:
+        #         etcd, node = g.value
+        #         nr_deployed_etcds += 1
+        #         yield (etcd, node)
 
     def _create_zt_clients(self, nics, node_url):
         result = deepcopy(nics)
@@ -227,6 +227,32 @@ class EtcdCluster(TemplateBase):
         self.data['clusterConnections'] = None
 
         self.state.delete('actions', 'install')
+        self.state.delete('status', 'running')
+
+    def start(self):
+        tasks = []
+        for etcd in self.data['etcds']:
+            robot = self.api.robots.get(etcd['node'], etcd['url'])
+            etcd = robot.services.get(template_uid=ETCD_TEMPLATE_UID, name=etcd['name'])
+            tasks.append(etcd.schedule_action('start'))
+
+        for task in tasks:
+            task.wait(die=True)
+
+        self.state.set('actions', 'start', 'ok')
+        self.state.set('status', 'running', 'ok')
+
+    def stop(self):
+        tasks = []
+        for etcd in self.data['etcds']:
+            robot = self.api.robots.get(etcd['node'], etcd['url'])
+            etcd = robot.services.get(template_uid=ETCD_TEMPLATE_UID, name=etcd['name'])
+            tasks.append(etcd.schedule_action('stop'))
+
+        for task in tasks:
+            task.wait(die=True)
+
+        self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
 
     def connection_info(self):

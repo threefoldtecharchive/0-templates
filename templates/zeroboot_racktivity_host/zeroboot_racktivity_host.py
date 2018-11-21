@@ -5,6 +5,7 @@ from jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 
+
 class ZerobootRacktivityHost(TemplateBase):
 
     version = '0.0.1'
@@ -15,6 +16,7 @@ class ZerobootRacktivityHost(TemplateBase):
         self.__network = None
         self.__host = None
         self.__zboot = None
+        self.recurring_action('_alert', 15)
 
     @property
     def _zeroboot(self):
@@ -54,7 +56,7 @@ class ZerobootRacktivityHost(TemplateBase):
             ZerobootClient.Network -- Zeroboot network
         """
         if not self.__network:
-            self.__network =  self._zeroboot.networks.get(self.data['ip'])
+            self.__network = self._zeroboot.networks.get(self.data['ip'])
 
         return self.__network
 
@@ -66,9 +68,9 @@ class ZerobootRacktivityHost(TemplateBase):
             ZerobootClient.Host -- Zeroboot Host
         """
         if not self.__host:
-             self.__host = self._network.hosts.get(self.data['hostname'])
+            self.__host = self._network.hosts.get(self.data['hostname'])
 
-        return  self.__host
+        return self.__host
 
     def validate(self):
         for key in ['zerobootClient', 'racktivities', 'mac', 'ip', 'hostname']:
@@ -180,7 +182,7 @@ class ZerobootRacktivityHost(TemplateBase):
             return statuses[0]
 
         match = True
-        comp =  statuses[0]
+        comp = statuses[0]
         for s in statuses:
             if comp != s:
                 match = False
@@ -202,7 +204,7 @@ class ZerobootRacktivityHost(TemplateBase):
             statuses = self._list_power_status()
 
             match = True
-            comp =  statuses[0]
+            comp = statuses[0]
             for s in statuses:
                 if comp != s:
                     match = False
@@ -225,7 +227,7 @@ class ZerobootRacktivityHost(TemplateBase):
             state = self._zeroboot.port_info(r['port'], r['client'], r['powermodule'])[1]
             if state is None:
                 raise RuntimeError("Racktivity client (%s) returned invalid power state for host %s" %
-                    (r['client'].config.instance, self._host))
+                                   (r['client'].config.instance, self._host))
 
             result.append(state)
 
@@ -245,6 +247,32 @@ class ZerobootRacktivityHost(TemplateBase):
             else:
                 self.logger.debug('powering off host to match internally saved power state')
                 self.power_off()
+
+    def _alert(self):
+        try:
+            # only run this action when service is installed
+            self.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            return
+
+        if not self.data['powerState']:
+            return
+
+        if j.sal.nettools.pingMachine(ip=self.data['ip'], pingtimeout=10):
+            return
+
+        data = {
+            'attributes': {},
+            'resource': self.guid,
+            'text': 'Node is not reachable {}'.format(self.name),
+            'environment': 'Production',
+            'severity': 'critical',
+            'event': 'Hardware',
+            'tags': ["node:%s" % self.data['hostname']],
+            'service': [self.template_uid.name]
+        }
+        for alerta in self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'):
+            alerta.schedule_action('send_alert', args={'data': data})
 
     def configure_ipxe_boot(self, lkrn_url):
         """ Configure the IPXE boot settings of the host
