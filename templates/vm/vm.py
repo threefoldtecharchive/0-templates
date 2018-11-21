@@ -100,6 +100,7 @@ class Vm(TemplateBase):
         for disk in self.data['disks']:
             vdisk = self.api.services.get(template_uid=VDISK_TEMPLATE_UID, name=disk['name'])
             disk['url'] = vdisk.schedule_action('private_url').wait(die=True).result
+            self.data['info'] = None # force relaod if info action data
 
     def install(self):
         self.logger.info('Installing vm %s' % self.name)
@@ -122,6 +123,7 @@ class Vm(TemplateBase):
 
         self._release_ports()
 
+        self.data['info'] = None # force relaod if info action data
         self.state.delete('actions', 'install')
         self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
@@ -236,6 +238,8 @@ class Vm(TemplateBase):
         self.data['ports'].append(forward)
 
         node_sal.client.kvm.add_portfoward(self._vm_sal.uuid, forward['source'], forward['target'])
+
+        self.data['info'] = None # force relaod if info action data
         return forward
 
     def remove_portforward(self, name):
@@ -243,6 +247,7 @@ class Vm(TemplateBase):
             if forward['name'] == name:
                 self._node_sal.client.kvm.remove_portfoward(self._vm_sal.uuid, str(forward['source']), forward['target'])
                 self.data['ports'].remove(forward)
+                self.data['info'] = None # force relaod if info action data
                 return
 
     def _populate_port_forwards(self, ports):
