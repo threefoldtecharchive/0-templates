@@ -6,6 +6,7 @@ from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry
 from zerorobot.template.state import StateCheckError
 
+from JumpscaleLib.sal_zos.globals import TIMEOUT_DEPLOY
 NODE_CLIENT = 'local'
 VDISK_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vdisk/0.0.1'
 PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
@@ -21,6 +22,7 @@ class Vm(TemplateBase):
 
         self.add_delete_callback(self.uninstall)
         self.recurring_action('_monitor', 30)  # every 30 seconds
+        self.recurring_action('_load_info', 60*60)  # every hour
 
     def validate(self):
         if not (self.data['flist'] or self.data['ipxeUrl']):
@@ -175,7 +177,12 @@ class Vm(TemplateBase):
         self.state.check('actions', 'install', 'ok')
         self._vm_sal.enable_vnc()
 
-    def info(self, timeout=300):
+    def info(self, timeout=TIMEOUT_DEPLOY):
+        if not self.data.get('info'):
+            self._load_info(timeout)
+        return self.data['info']
+
+    def _load_info(self, timeout):
         self._update_vdisk_url()
         info = self._vm_sal.info or {}
         nics = copy.deepcopy(self.data['nics'])
@@ -192,7 +199,7 @@ class Vm(TemplateBase):
                     self.logger.warning('Failed to retreive zt ip: %s', str(e))
 
         node_sal = self._node_sal
-        return {
+        self.data['info'] = {
             'vnc': info.get('vnc'),
             'status': info.get('state', 'halted'),
             'disks': self.data['disks'],
@@ -205,6 +212,7 @@ class Vm(TemplateBase):
                 'management_addr': node_sal.management_address,
             }
         }
+        return self.data['info']
 
     def disable_vnc(self):
         self.logger.info('Disable vnc for vm %s' % self.name)

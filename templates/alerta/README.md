@@ -17,7 +17,23 @@ This template is responsible for reporting alerts to the alerta server.
 - `send_alert`: send an alert
 - `process_healthcheck`: process the healthcheck result and update the alerta server with the relevant information.
 
+### Usage example via the 0-robot DSL
+
+
+```python
+
+robot = j.clients.zrobot.robots['main']
+args = {
+    'url': 'http://{address}/api',
+    'apiKey': '{apikey}',
+    'envName': '{envname}'
+}
+alerta = robot.services.create('github.com/threefoldtech/0-templates/alerta/0.0.1', 'alerta', data=args)
+alerta.schedule_action('process_healthcheck')
+```
+
 The alerta service is used by other services to report to alerta(for example, healthcheck results). Below is an example yaml using the node service:
+
 
 ```yaml
 services:
