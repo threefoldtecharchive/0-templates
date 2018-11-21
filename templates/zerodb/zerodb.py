@@ -55,7 +55,6 @@ class Zerodb(TemplateBase):
             try:
                 self._deploy()
             except Exception:
-                self.logger.info("************* failed to deploy")
                 self.state.delete('status', 'running')
                 data['text'] = 'Failed to deploy zerodb {}'.format(self.name)
                 send_alert(self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'), data)
