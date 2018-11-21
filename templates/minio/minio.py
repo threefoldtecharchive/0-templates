@@ -27,6 +27,7 @@ class Minio(TemplateBase):
         self._healer = Healer(self)
         self.add_delete_callback(self.uninstall)
         self.recurring_action('_monitor', 30)  # every 30 seconds
+        self.recurring_action('check_and_repair', 43200)  # every 12 hours
 
     def validate(self):
         self.state.delete('status', 'running')
