@@ -70,8 +70,8 @@ class Node(TemplateBase):
     def _network_monitor(self):
         self.state.check('actions', 'install', 'ok')
 
-        for nic in j.sal.nettols.getNics():
-            if not nic.starswith('zt'):
+        for nic in j.sal.nettools.getNics():
+            if not nic.startswith('zt'):
                 continue
             if not j.sal.nettools.isNicConnected(nic):
                 hostname = self._node_sal.client.info.os()['hostname']
