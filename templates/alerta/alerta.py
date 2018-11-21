@@ -63,8 +63,6 @@ class Alerta(TemplateBase):
         :param data: dict representing the new alert
         :return:
         """
-        self.logger.info("******** sending alert")
-        self.logger.info(str(data))
         resp = requests.post(self.data['url'] + "/alert", json=data, headers=self.headers)
         if resp.status_code != 201:
             self.logger.error("Couldn't sent alert, error code was %s, message: %s" % (resp.status_code, resp.text))
