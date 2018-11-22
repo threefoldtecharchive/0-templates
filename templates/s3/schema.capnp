@@ -16,6 +16,7 @@ struct Schema {
     nsPassword @12: Text; # Namespace password
     minioBlockSize @13 :UInt32=1048576; # minio data block size in bytes
     nsName @14 :Text; # Namespace name prefix that will be used for naming all zdb reservations. Should be unique between different S3 deployments.
+    deletableNamespaces @15 :List(Namespace);
 
     enum StorageType {
      hdd @0;
