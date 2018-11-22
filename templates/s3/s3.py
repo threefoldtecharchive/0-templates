@@ -31,6 +31,7 @@ class S3(TemplateBase):
         self.recurring_action('_monitor_minio', 300)
         self.recurring_action('_ensure_namespaces_connections', 300)
         self.recurring_action('_update_url', 300)
+        self.recurring_action('_remove_deletable_namespaces', 86400) # run once a day
 
         self._farm = j.sal_zos.farm.get(self.data['farmerIyoOrg'])
 
@@ -303,14 +304,31 @@ class S3(TemplateBase):
             address = namespace_connection_info(ns)
             ns.schedule_action('uninstall').wait(die=True)
             ns.delete()
-        except:
+        except ServiceNotFoundError:
             pass
+        except:
+            self.data['deletableNamespaces'].append(namespace)
 
         if namespace in self.data['namespaces']:
             self.data['namespaces'].remove(namespace)
 
         if address:
             self.state.delete('data_shards', address)
+
+    def _remove_deletable_namespaces(self):
+        namespaces = self.data['deletableNamespaces'].copy()
+        for namespace in namespaces:
+            self.logger.info("deleting namespace %s on node %s", namespace['node'], namespace['url'])
+            robot = self.api.robots.get(namespace['node'], namespace['url'])
+            try:
+                ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
+                ns.schedule_action('uninstall').wait(die=True)
+                ns.delete()
+                self.data['deletableNamespaces'].remove(namespace)
+            except ServiceNotFoundError:
+                self.data['deletableNamespaces'].remove(namespace)
+            except:
+                pass
 
     def _update_namespaces(self, namespaces):
         """
