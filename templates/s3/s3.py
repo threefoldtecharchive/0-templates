@@ -402,6 +402,12 @@ class S3(TemplateBase):
         Redeploys the minio vm, the tlog and minio
         """
         self.state.check('actions', 'install', 'ok')
+
+        #make sure we reset error stats
+        self.state.delete('data_shards')
+        self.state.delete('tlog_shards')
+        self.state.delete('vm')
+
         try:
             self._vm().schedule_action('uninstall').wait(die=True)
         except ServiceNotFoundError:
