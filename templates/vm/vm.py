@@ -180,7 +180,7 @@ class Vm(TemplateBase):
         self._vm_sal.enable_vnc()
 
     def info(self, timeout=TIMEOUT_DEPLOY):
-        if not self.data.get('info'):
+        if not self.data.get('info') or not self.data['info'].get('nics'):
             self._load_info(timeout)
         return self.data['info']
 
