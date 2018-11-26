@@ -497,12 +497,16 @@ class S3(TemplateBase):
     def _deploy_minio_tlog_namespace(self):
         self.logger.info("create namespaces to be used as a tlog for minio")
 
-        # Check if namespaces have already been created in a previous install attempt
-        if self.data.get('tlog') and self.data['tlog']['node'] and self.data['tlog']['url']:
-            robot = self.api.robots.get(self.data['tlog']['node'], self.data['tlog']['url'])
-            namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['tlog']['name'])
-            namespace.schedule_action('install').wait(die=True)
-            return namespace
+        namespace = None
+        try:
+            # Check if namespaces have already been created in a previous install attempt
+            if self.data.get('tlog') and self.data['tlog']['node'] and self.data['tlog']['url']:
+                robot = self.api.robots.get(self.data['tlog']['node'], self.data['tlog']['url'])
+                namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['tlog']['name'])
+                namespace.schedule_action('install').wait(die=True)
+                return namespace
+        except Exception as e:
+            self.logger.error("failed to reuse namespace %s: %s", namespace, e)
 
         tlog_namespace = None
         for namespace, node in self._deploy_namespaces(nr_namepaces=1,
