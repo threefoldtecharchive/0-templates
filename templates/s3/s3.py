@@ -571,6 +571,7 @@ class S3(TemplateBase):
                 vm.schedule_action('uninstall').wait(die=True)
                 vm.delete(wait=True, timeout=60, die=False)
             else:
+                self.state.set('vm', 'running', 'ok')
                 return vm
 
         raise RuntimeError("could not deploy vm for minio")
