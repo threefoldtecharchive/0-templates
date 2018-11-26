@@ -302,7 +302,6 @@ class S3(TemplateBase):
         try:
             ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
             address = namespace_connection_info(ns)
-            ns.schedule_action('uninstall').wait(die=True)
             ns.delete()
         except ServiceNotFoundError:
             pass
@@ -322,7 +321,6 @@ class S3(TemplateBase):
             robot = self.api.robots.get(namespace['node'], namespace['url'])
             try:
                 ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
-                ns.schedule_action('uninstall').wait(die=True)
                 ns.delete()
                 self.data['deletableNamespaces'].remove(namespace)
             except ServiceNotFoundError:
