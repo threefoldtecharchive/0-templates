@@ -1,5 +1,6 @@
 
 from jumpscale import j
+from zerorobot import config
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry, timeout
 from zerorobot.template.state import StateCheckError
@@ -102,6 +103,8 @@ class Node(TemplateBase):
         """
         make sure the node_capacity service is installed
         """
+        if config.SERVICE_LOADED:
+            config.SERVICE_LOADED.wait()
         while True:
             try:
                 self.state.check('actions', 'install', 'ok')
@@ -117,6 +120,8 @@ class Node(TemplateBase):
         """
         make sure the node_port_manager service is installed
         """
+        if config.SERVICE_LOADED:
+            config.SERVICE_LOADED.wait()
         while True:
             try:
                 self.state.check('actions', 'install', 'ok')
