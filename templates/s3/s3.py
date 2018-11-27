@@ -36,7 +36,6 @@ class S3(TemplateBase):
         self._farm = j.sal_zos.farm.get(self.data['farmerIyoOrg'])
 
         self._robots = {}
-        self.namespaces_dict = {}
 
     def validate(self):
         if self.data['parityShards'] > self.data['dataShards']:
@@ -93,19 +92,13 @@ class S3(TemplateBase):
         return self.data['minioUrls']
 
     def _get_namespace_by_address(self, address):
-        if address in self.namespaces_dict:
-            return self.namespaces_dict[address]
-
-        for namespace in self.data['namespaces']:
-            robot = self.api.robots.get(namespace['node'], namespace['url'])
-            ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
-            connection_info = namespace_connection_info(ns)
-
-            if connection_info == address:
-                self.namespaces_dict[address] = namespace
-                return namespace
-        else:
+        m = list(filter(lambda ns: ns['address'] == address, self.data['namespaces']))
+        if len(m) == 0:
             raise ValueError("Can't find a namespace with address: {}".format(address))
+
+        info = m[0]
+        robot = self.api.robots.get(info['node'], info['url'])
+        return robot.services.get(template_uid=NS_TEMPLATE_UID, name=info['name'])
 
     def _ensure_namespaces_connections(self):
         try:
@@ -298,21 +291,15 @@ class S3(TemplateBase):
     def _delete_namespace(self, namespace):
         self.logger.info("deleting namespace %s on node %s", namespace['node'], namespace['url'])
         robot = self.api.robots.get(namespace['node'], namespace['url'])
-        address = None
+
         try:
             ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
-            address = namespace_connection_info(ns)
             ns.delete()
         except ServiceNotFoundError:
             pass
-        except:
-            self.data['deletableNamespaces'].append(namespace)
-
-        if namespace in self.data['namespaces']:
-            self.data['namespaces'].remove(namespace)
-
-        if address:
-            self.state.delete('data_shards', address)
+        except Exception:
+            if namespace not in self.data['deletableNamespaces']:
+                self.data['deletableNamespaces'].append(namespace)
 
     def _remove_deletable_namespaces(self):
         namespaces = self.data['deletableNamespaces'].copy()
@@ -458,7 +445,8 @@ class S3(TemplateBase):
             deployed_namespaces.append(namespace)
             self.data['namespaces'].append({'name': namespace.name,
                                             'url': node['robot_address'],
-                                            'node': node['node_id']})
+                                            'node': node['node_id'],
+                                            'address': namespace_connection_info(namespace)})
 
             deployed_nr_namespaces = len(deployed_namespaces)
             self.logger.info("%d namespaces deployed, remaining %s", deployed_nr_namespaces, required_nr_namespaces - deployed_nr_namespaces)
@@ -489,6 +477,9 @@ class S3(TemplateBase):
         # if the namespace still unreachable we will delete it and call install again
         # to ensure all the required namespaces
         self._delete_namespace(namespace)
+        if namespace in self.data['namespaces']:
+            self.data['namespaces'].remove(namespace)
+        self.state.delete('data_shards', namespace['address'])
         self.install()
         self._minio().schedule_action('check_and_repair').wait(die=True)
 
@@ -516,7 +507,8 @@ class S3(TemplateBase):
             tlog_namespace = namespace
             self.data['tlog'] = {'name': tlog_namespace.name,
                                  'url': node['robot_address'],
-                                 'node': node['node_id']}
+                                 'node': node['node_id'],
+                                 'address': namespace_connection_info(namespace)}
 
         if not tlog_namespace:
             raise RuntimeError("could not deploy tlog namespace for minio")
