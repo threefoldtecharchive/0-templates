@@ -106,13 +106,21 @@ class S3(TemplateBase):
 
         self.logger.info("verify data backend namespace connections")
 
-        # gather all the namespace services
-        namespaces = []
-        for namespace in self.data['namespaces']:
-            robot = self.api.robots.get(namespace['node'], namespace['url'])
-            namespaces.append(robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name']))
+        def check_namespace(ns):
+            try:
+                address = namespace_connection_info()
+                ns['address'] = address
+            except Exception as e:
+                self.logger.error('can not get namespace %s address: %s, assume error.', ns['name'], e)
+                self.state.set('data_shards', ns['address'], 'error')
 
-        namespaces_connection = sorted(namespaces_connection_info(namespaces))
+        namespaces = self.data['namespaces']
+
+        group = gevent.pool.Group()
+        group.map(check_namespace, namespaces)
+        group.join()
+
+        namespaces_connection = sorted(map(lambda ns: ns['address'], namespaces))
         if not self.data.get('current_namespaces_connections'):
             self.data['current_namespaces_connections'] = sorted(namespaces_connection)
 
@@ -130,17 +138,21 @@ class S3(TemplateBase):
         tlog = self.data.get('tlog', {})
         if tlog.get('node') and tlog.get('url'):
             robot = self.api.robots.get(self.data['tlog']['node'], self.data['tlog']['url'])
-            namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['tlog']['name'])
 
-            connection_info = namespace_connection_info(namespace)
-            if tlog.get('address') and tlog['address'] != connection_info:
-                self.logger.info("tlog namespace connection in service data is not correct, updating minio configuration")
-                t = minio.schedule_action('update_tlog', args={'namespace': self._tlog_namespace,
-                                                               'address': connection_info})
-                t.wait(die=True)
-                self.data['tlog']['address'] = connection_info
-            else:
-                self.logger.info("tlog namespace connection in service data is in sync with reality")
+            try:
+                namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['tlog']['name'])
+                connection_info = namespace_connection_info(namespace)
+                if tlog.get('address') and tlog['address'] != connection_info:
+                    self.logger.info("tlog namespace connection in service data is not correct, updating minio configuration")
+                    t = minio.schedule_action('update_tlog', args={'namespace': self._tlog_namespace,
+                                                                   'address': connection_info})
+                    t.wait(die=True)
+                    self.data['tlog']['address'] = connection_info
+                else:
+                    self.logger.info("tlog namespace connection in service data is in sync with reality")
+            except Exception as e:
+                self.logger.error("checking tlog namespace failed with error: %s. assume tlog down", e)
+                self.state.set('tlog_shards', tlog['address'], 'error')
 
         self.logger.info("verify master namespace connections")
         master = self.data.get('master', {})
@@ -148,15 +160,20 @@ class S3(TemplateBase):
             robot = self.api.robots.get(master['node'], master['url'])
             namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=master['name'])
 
-            connection_info = namespace_connection_info(namespace)
-            if master.get('address') and master != connection_info:
-                self.logger.info("master namespace connection in service data is not correct, updating minio configuration")
-                t = minio.schedule_action('update_master', args={'namespace': self._tlog_namespace,
-                                                                 'address': connection_info})
-                t.wait(die=True)
-                self.data['master']['address'] = connection_info
-            else:
-                self.logger.info("master namespace connection in service data is in sync with reality")
+            try:
+
+                connection_info = namespace_connection_info(namespace)
+                if master.get('address') and master != connection_info:
+                    self.logger.info("master namespace connection in service data is not correct, updating minio configuration")
+                    t = minio.schedule_action('update_master', args={'namespace': self._tlog_namespace,
+                                                                     'address': connection_info})
+                    t.wait(die=True)
+                    self.data['master']['address'] = connection_info
+                else:
+                    self.logger.info("master namespace connection in service data is in sync with reality")
+            except Exception as e:
+                self.logger.error("checking master tlog namespace failed with error: %s.", e)
+                # nothing to do, it's responsibility of the active to report and fix this
 
     def _monitor_vm(self):
         try:
