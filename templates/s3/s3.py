@@ -458,10 +458,10 @@ class S3(TemplateBase):
     def _test_namespace_ok(self, namespace):
         retries = 3
         # First we will Try to wait and see if the zdb will be self healed or not
-        robot = self.api.robots.get(namespace['node'], namespace['url'])
-        ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
         while retries:
             try:
+                robot = self.api.robots.get(namespace['node'], namespace['url'])
+                ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
                 namespace_connection_info(ns)
                 return True
             except Exception:
