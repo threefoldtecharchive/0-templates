@@ -96,9 +96,7 @@ class S3(TemplateBase):
         if len(m) == 0:
             raise ValueError("Can't find a namespace with address: {}".format(address))
 
-        info = m[0]
-        robot = self.api.robots.get(info['node'], info['url'])
-        return robot.services.get(template_uid=NS_TEMPLATE_UID, name=info['name'])
+        return m[0]
 
     def _ensure_namespaces_connections(self):
         try:
@@ -460,18 +458,21 @@ class S3(TemplateBase):
     def _test_namespace_ok(self, namespace):
         retries = 3
         # First we will Try to wait and see if the zdb will be self healed or not
+        robot = self.api.robots.get(namespace['node'], namespace['url'])
+        ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
         while retries:
             try:
-                namespace_connection_info(namespace)
+                namespace_connection_info(ns)
                 return True
-            except:
-                gevent.sleep(10)
+            except Exception:
+                gevent.sleep(3)
             retries -= 1
         return False
 
     def _handle_data_shard_failure(self, connection_info):
         namespace = self._get_namespace_by_address(connection_info)
         if self._test_namespace_ok(namespace):
+            self.state.delete('data_shards', namespace['address'])
             return
 
         # if the namespace still unreachable we will delete it and call install again
