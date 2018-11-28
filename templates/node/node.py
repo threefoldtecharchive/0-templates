@@ -1,5 +1,6 @@
 
 from jumpscale import j
+from zerorobot import config
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry, timeout
 from zerorobot.template.state import StateCheckError
@@ -37,9 +38,9 @@ class Node(TemplateBase):
         self.gl_mgr.add("_port_manager", self._port_manager)
 
     def validate(self):
-        service = self.api.services.find(template_name='node')
-        if service and service[0].guid != self.guid:
-            raise Exception("The node service already exist (should one per node)")
+        nodes = self.api.services.find(template_name='node')
+        if nodes and nodes[0].guid != self.guid:
+            raise RuntimeError('Another node service exists. Only one node service per node is allowed')
         self.state.delete('disks', 'mounted')
 
         network = self.data.get('network')
@@ -70,6 +71,39 @@ class Node(TemplateBase):
     def _network_monitor(self):
         self.state.check('actions', 'install', 'ok')
 
+        self.logger.info("network monitor")
+
+        self.logger.info("verify connectivity of management interface")
+        mgmt_addr = self._node_sal.management_address
+        mgmt_nic = None
+        for nic in self._node_sal.client.info.nic():
+            for addr in nic.get('addrs'):
+                addr = addr.get('addr')
+                if not addr:
+                    continue
+                nw = netaddr.IPNetwork(addr)
+                if str(nw.ip) == mgmt_addr:
+                    mgmt_nic = nic
+                    break
+
+        self.logger.info(mgmt_nic)
+        if not mgmt_nic or 'up' not in mgmt_nic.get('flags', []) or mgmt_nic.get('speed') <= 0:
+
+            self.logger.error("management interface is not healthy")
+            hostname = self._node_sal.client.info.os()['hostname']
+            node_id = self._node_sal.name
+            data = {
+                'attributes': {},
+                'resource': hostname,
+                'text': 'network interface %s is down' % mgmt_nic['name'],
+                'environment': 'Production',
+                'severity': 'critical',
+                'event': 'Network',
+                'tags': ["node:%s" % hostname, "node_id:%s" % node_id, "interface:%s" % mgmt_nic['name']],
+                'service': [self.template_uid.name]
+            }
+            send_alert(self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'), data)
+
         # make sure the bridges are installed
         for service in self.api.services.find(template_uid=BRIDGE_TEMPLATE_UID):
             self.logger.info("configuring bridge %s" % service.name)
@@ -84,6 +118,8 @@ class Node(TemplateBase):
         """
         make sure the node_capacity service is installed
         """
+        if config.SERVICE_LOADED:
+            config.SERVICE_LOADED.wait()
         while True:
             try:
                 self.state.check('actions', 'install', 'ok')
@@ -99,6 +135,8 @@ class Node(TemplateBase):
         """
         make sure the node_port_manager service is installed
         """
+        if config.SERVICE_LOADED:
+            config.SERVICE_LOADED.wait()
         while True:
             try:
                 self.state.check('actions', 'install', 'ok')
@@ -147,7 +185,12 @@ class Node(TemplateBase):
         }
 
         # get all usable filesystem path for this type of disk and amount of storage
+        reserved = node_sal.find_persistance()
+
         def usable_storagepool(sp):
+            if sp.name == reserved.name:
+                return False
+
             if sp.type.value not in disks_types_map[disktype]:
                 return False
             if (sp.size - sp.total_quota() / GiB) <= size:
@@ -157,11 +200,12 @@ class Node(TemplateBase):
         # all storage pool path of type disktypes and with more then size storage available
         storagepools = list(filter(usable_storagepool, node_sal.storagepools.list()))
         if not storagepools:
-            raise ZDBPathNotFound("all storagepools are already used by a zerodb")
+            raise ZDBPathNotFound("Could not find any usable  storage pool. Not enough space for disk type %s" % disktype)
+
+        storagepools.sort(key=lambda sp: sp.size - sp.total_quota(), reverse=True)
 
         if disktype == 'hdd':
             # sort less used pool first
-            storagepools.sort(key=lambda sp: sp.size - sp.total_quota(), reverse=True)
             fs_paths = []
             for sp in storagepools:
                 try:
@@ -184,11 +228,6 @@ class Node(TemplateBase):
             return free_path[0]
 
         if disktype == 'ssd':
-            # all storage pool path of type disktypes and with more then size storage available
-            storagepools = list(filter(usable_storagepool, node_sal.storagepools.list()))
-            if not storagepools:
-                raise ZDBPathNotFound("Could not find any usable  storage pool. Not enough space for disk type %s" % disktype)
-
             fs = storagepools[0].create('zdb_{}'.format(name), size * GiB)
             return fs.path
 
@@ -326,6 +365,11 @@ def _validate_network(network):
     vlan = network.get('vlan')
     if not isinstance(vlan, int):
         raise ValueError('Network should have vlan configured')
+
+
+def send_alert(alertas, alert):
+    for alerta in alertas:
+        alerta.schedule_action('send_alert', args={'data': alert})
 
 
 class ZDBPathNotFound(Exception):

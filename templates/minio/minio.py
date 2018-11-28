@@ -27,6 +27,7 @@ class Minio(TemplateBase):
         self._healer = Healer(self)
         self.add_delete_callback(self.uninstall)
         self.recurring_action('_monitor', 30)  # every 30 seconds
+        self.recurring_action('check_and_repair', 43200)  # every 12 hours
 
     def validate(self):
         self.state.delete('status', 'running')
@@ -242,4 +243,6 @@ def _health_monitoring(state, level, msg, flag):
             state.set('data_shards', msg['shard'], SERVICE_STATE_ERROR)
         if 'tlog' in msg and not msg.get('master', False):  # we check only the minio owns tlog server, not it's master
             state.set('tlog_shards', msg['tlog'], SERVICE_STATE_ERROR)
+        if 'subsystem' in msg and msg['subsystem'] == 'disk':
+            state.set('vm', 'disk', 'error')
 

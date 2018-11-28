@@ -44,12 +44,20 @@ class Alerta(TemplateBase):
                 to_send_alert = True
             if to_send_alert:
                 self.logger.info("Sending alert with status {severity} ({uid}) to alerta server".format(severity=message['status'],uid=uid))
+                status = message['status'].lower()
+                if status == 'error':
+                    severity = 'critical'
+                elif status in ['warning', 'ok']:
+                    severity = status
+                else:
+                    severity = 'unknown'
+
                 report_data = {
                     'attributes': {},
                     'resource': uid,
                     'text': message['text'],
                     'environment': envname,
-                    'severity': message['status'],
+                    'severity': severity,
                     'event': category,
                     'tags': [],
                     'service': [resource]

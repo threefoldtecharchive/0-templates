@@ -15,6 +15,11 @@ class NodePortManager(TemplateBase):
         self.node_sal = j.clients.zos.get(NODE_CLIENT)
         self.recurring_action('_cleanup', 30)  # every 30 seconds
 
+    def validate(self):
+        services = self.api.services.find(template_name='node_port_manager')
+        if services and services[0].guid != self.guid:
+            raise RuntimeError('Another node_port_manager service exists. Only one service per node is allowed')
+
     def _cleanup(self):
         """
         recurring action that remove reservation of port

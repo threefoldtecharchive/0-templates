@@ -15,7 +15,7 @@ struct Schema {
     ztIdentity @9: Text; # VM zerotier ID
     ipxeUrl @10: Text; # ipxe url for zero-os vm
     mounts @11: List(Mount); # list of mounts to mount on the vm
-    kernelArgs @12 :List(Arg); # list of vm kernel args 
+    kernelArgs @12 :List(Arg); # list of vm kernel args
 
     struct Arg {
         name @0 :Text;
@@ -53,6 +53,7 @@ struct Schema {
       hwaddr @2: Text;
       name @3: Text;
       ztClient @4: Text;
+      ip @5:Text; # zerotier ip
     }
 
     enum NicType {

@@ -166,7 +166,7 @@ class S3Redundant(TemplateBase):
         urls = self._active_s3().schedule_action('url').wait(die=True).result
         try:
             reverse_proxy = self.api.services.get(template_uid=REVERSE_PROXY_UID, name=self.data['reverseProxy'])
-            reverse_proxy.schedule_action('update_servers', args={'servers': [urls['public']]})
+            reverse_proxy.schedule_action('update_servers', args={'servers': [urls['storage']]})
         except ServiceNotFoundError:
             self.logger.warning('Failed to find  and update reverse_proxy {}'.format(self.data['reverseProxy']))
 
@@ -223,11 +223,13 @@ class S3Redundant(TemplateBase):
 
     def urls(self):
         self.state.check('actions', 'install', 'ok')
-        active_urls = self._active_s3().schedule_action('url').wait(die=True).result
-        passive_urls = self._passive_s3().schedule_action('url').wait(die=True).result
+        active_task = self._active_s3().schedule_action('url')
+        passive_task = self._passive_s3().schedule_action('url')
+        for task in [active_task, passive_task]:
+            task.wait(die=True)
         return {
-            'active_urls': active_urls,
-            'passive_urls': passive_urls,
+            'active_urls': active_task.result,
+            'passive_urls': passive_task.result,
         }
 
     def start_active(self):
@@ -265,4 +267,3 @@ class S3Redundant(TemplateBase):
         except StateCheckError:
             return
         self._update_reverse_proxy_servers()
-

@@ -3,6 +3,7 @@ from jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 
+
 class ZerobootIpmiHost(TemplateBase):
 
     version = '0.0.1'
@@ -14,6 +15,8 @@ class ZerobootIpmiHost(TemplateBase):
         self.___network = None
         self.__ipmi = None
         self.__host = None
+
+        self.recurring_action('_alert', 15)
 
     @property
     def _zeroboot(self):
@@ -171,6 +174,32 @@ class ZerobootIpmiHost(TemplateBase):
             else:
                 self.logger.debug('powering off host to match internally saved power state')
                 self.power_off()
+
+    def _alert(self):
+        try:
+            # only run this action when service is installed
+            self.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            return
+
+        if not self.data['powerState']:
+            return
+
+        if j.sal.nettools.pingMachine(ip=self.data['ip'], pingtimeout=10):
+            return
+
+        data = {
+            'attributes': {},
+            'resource': self.guid,
+            'text': 'Node is not reachable {}'.format(self.name),
+            'environment': 'Production',
+            'severity': 'critical',
+            'event': 'Hardware',
+            'tags': ["node:%s" % self.data['hostname']],
+            'service': [self.template_uid.name]
+        }
+        for alerta in self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'):
+            alerta.schedule_action('send_alert', args={'data': data})
 
     def configure_ipxe_boot(self, lkrn_url):
         """ Configure the IPXE boot settings of the host
