@@ -106,18 +106,20 @@ class S3(TemplateBase):
 
         self.logger.info("verify data backend namespace connections")
 
-        def check_namespace(ns):
+        def update_namespace(namespace):
             try:
-                address = namespace_connection_info()
+                robot = self.api.robots.get(namespace['node'], namespace['url'])
+                ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
+                address = namespace_connection_info(ns)
                 ns['address'] = address
             except Exception as e:
                 self.logger.error('can not get namespace %s address: %s, assume error.', ns['name'], e)
-                self.state.set('data_shards', ns['address'], 'error')
+                self.state.set('data_shards', namespace['address'], 'error')
 
         namespaces = self.data['namespaces']
 
         group = gevent.pool.Group()
-        group.map(check_namespace, namespaces)
+        group.map(update_namespace, namespaces)
         group.join()
 
         namespaces_connection = sorted(map(lambda ns: ns['address'], namespaces))
@@ -161,7 +163,6 @@ class S3(TemplateBase):
             namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=master['name'])
 
             try:
-
                 connection_info = namespace_connection_info(namespace)
                 if master.get('address') and master != connection_info:
                     self.logger.info("master namespace connection in service data is not correct, updating minio configuration")
@@ -472,8 +473,7 @@ class S3(TemplateBase):
 
         return deployed_namespaces
 
-    def _test_namespace_ok(self, namespace):
-        retries = 3
+    def _test_namespace_ok(self, namespace, retries=3):
         # First we will Try to wait and see if the zdb will be self healed or not
         while retries:
             try:
