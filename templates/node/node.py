@@ -71,23 +71,38 @@ class Node(TemplateBase):
     def _network_monitor(self):
         self.state.check('actions', 'install', 'ok')
 
-        for nic in j.sal.nettools.getNics():
-            if not nic.startswith('zt'):
-                continue
-            if not j.sal.nettools.isNicConnected(nic):
-                hostname = self._node_sal.client.info.os()['hostname']
-                node_id = self._node_sal.name
-                data = {
-                    'attributes': {},
-                    'resource': hostname,
-                    'text': 'network interface %s is down' % nic,
-                    'environment': 'Production',
-                    'severity': 'critical',
-                    'event': 'Network',
-                    'tags': ["node:%s" % hostname, "node_id:%s" % node_id, "interface:%s" % nic],
-                    'service': [self.template_uid.name]
-                }
-                send_alert(self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'), data)
+        self.logger.info("network monitor")
+
+        self.logger.info("verify connectivity of management interface")
+        mgmt_addr = self._node_sal.management_address
+        mgmt_nic = None
+        for nic in self._node_sal.client.info.nic():
+            for addr in nic.get('addrs'):
+                addr = addr.get('addr')
+                if not addr:
+                    continue
+                nw = netaddr.IPNetwork(addr)
+                if str(nw.ip) == mgmt_addr:
+                    mgmt_nic = nic
+                    break
+
+        self.logger.info(mgmt_nic)
+        if not mgmt_nic or 'up' not in mgmt_nic.get('flags', []) or mgmt_nic.get('speed') <= 0:
+
+            self.logger.error("management interface is not healthy")
+            hostname = self._node_sal.client.info.os()['hostname']
+            node_id = self._node_sal.name
+            data = {
+                'attributes': {},
+                'resource': hostname,
+                'text': 'network interface %s is down' % mgmt_nic['name'],
+                'environment': 'Production',
+                'severity': 'critical',
+                'event': 'Network',
+                'tags': ["node:%s" % hostname, "node_id:%s" % node_id, "interface:%s" % mgmt_nic['name']],
+                'service': [self.template_uid.name]
+            }
+            send_alert(self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'), data)
 
         # make sure the bridges are installed
         for service in self.api.services.find(template_uid=BRIDGE_TEMPLATE_UID):
