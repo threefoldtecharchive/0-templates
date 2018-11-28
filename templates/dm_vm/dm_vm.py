@@ -11,6 +11,7 @@ ZT_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerotier_client/0.0.1'
 BASEFLIST = 'https://hub.grid.tf/tf-bootable/{}.flist'
 ZEROOSFLIST = 'https://hub.grid.tf/tf-autobuilder/zero-os-development.flist'
 
+from JumpscaleLib.sal_zos.globals import TIMEOUT_DEPLOY
 
 class DmVm(TemplateBase):
 
@@ -95,7 +96,8 @@ class DmVm(TemplateBase):
 
         vm_disks = []
         for disk in self.data['disks']:
-            vdisk = self._node_api.services.find_or_create(VDISK_TEMPLATE_UID, '_'.join([self.guid, disk['label']]), data=disk)
+            vdisk = self._node_api.services.find_or_create(
+                VDISK_TEMPLATE_UID, '_'.join([self.guid, disk['label']]), data=disk)
             vdisk.schedule_action('install').wait(die=True)
             vm_disks.append({
                 'name': vdisk.name,
@@ -170,7 +172,8 @@ class DmVm(TemplateBase):
             except ServiceNotFoundError:
                 pass
             except:
-                self.logger.warning('Error occured while uninstalling vdisk {}'.format('_'.join([self.guid, disk['label']])))
+                self.logger.warning('Error occured while uninstalling vdisk {}'.format(
+                    '_'.join([self.guid, disk['label']])))
                 # @todo Add vdisk service to robot deletables
 
         try:
@@ -187,7 +190,7 @@ class DmVm(TemplateBase):
         self.state.delete('actions', 'install')
         self.state.delete('status', 'running')
 
-    def info(self, timeout=None):
+    def info(self, timeout=TIMEOUT_DEPLOY):
         self.state.check('actions', 'install', 'ok')
         info = self._node_vm.schedule_action('info', args={'timeout': timeout}).wait(die=True).result
         nics = info.pop('nics')
@@ -245,7 +248,8 @@ class DmVm(TemplateBase):
     def add_portforward(self, name, target, source=None):
         for forward in list(self.data['ports']):
             if forward['name'] == name and (forward['target'] != target or source and source != forward['source']):
-                raise RuntimeError("port forward with name {} already exist for a different target or a different source".format(name))
+                raise RuntimeError(
+                    "port forward with name {} already exist for a different target or a different source".format(name))
             elif forward['name'] == name:
                 return
 

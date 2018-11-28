@@ -294,7 +294,7 @@ class S3(TemplateBase):
                 to_exclude.append(master_tlog_node_id)
 
             if to_exclude and len(nodes) - len(to_exclude) > 1:
-                nodes = list(filter(lambda n: n['node_id'] not in to_exclude))
+                nodes = list(filter(lambda n: n['node_id'] not in to_exclude, nodes))
 
             vm = self._deploy_minio_vm(nodes)
             self.logger.info("minio vm deployed")
