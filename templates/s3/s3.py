@@ -264,12 +264,19 @@ class S3(TemplateBase):
 
         def deploy_tlog_namespace(nodes):
             # prevent installing the tlog namespace on the same node as the vm vdisk
+            to_exclude = []
             try:
-                if len(nodes) > 1:
-                    vm = self._vm()
-                    nodes = list(filter(lambda n: n['node_id'] != vm.data['nodeId']))
+                vm = self._vm()
+                to_exclude.append(vm.data['nodeId'])
             except ServiceNotFoundError:
                 pass
+
+            master_tlog_node_id = self.data.get('master', {}).get('node')
+            if master_tlog_node_id:
+                to_exclude.append(master_tlog_node_id)
+
+            if len(nodes) - len(to_exclude) > 1:
+                nodes = list(filter(lambda n: n['node_id'] not in to_exclude))
 
             namespace = self._deploy_minio_tlog_namespace(nodes)
             self.logger.info("tlog backend namespaces deployed")
@@ -277,9 +284,17 @@ class S3(TemplateBase):
 
         def deploy_vm(nodes):
             # prevent installing the vm on the same node as the tlog
-            vm_node_id = self.data.get('tlog', {}).get('node')
-            if vm_node_id and len(nodes) > 1:
-                nodes = list(filter(lambda n: n['node_id'] != vm_node_id))
+            to_exclude = []
+            tlog_node_id = self.data.get('tlog', {}).get('node')
+            if tlog_node_id:
+                to_exclude.append(tlog_node_id)
+
+            master_tlog_node_id = self.data.get('master', {}).get('node')
+            if master_tlog_node_id:
+                to_exclude.append(master_tlog_node_id)
+
+            if to_exclude and len(nodes) - len(to_exclude) > 1:
+                nodes = list(filter(lambda n: n['node_id'] not in to_exclude))
 
             vm = self._deploy_minio_vm(nodes)
             self.logger.info("minio vm deployed")
