@@ -31,7 +31,7 @@ class S3(TemplateBase):
         self.recurring_action('_monitor_minio', 300)
         self.recurring_action('_ensure_namespaces_connections', 300)
         self.recurring_action('_update_url', 300)
-        self.recurring_action('_remove_deletable_namespaces', 86400) # run once a day
+        self.recurring_action('_remove_deletable_namespaces', 86400)  # run once a day
 
         self._farm = j.sal_zos.farm.get(self.data['farmerIyoOrg'])
 
@@ -243,6 +243,8 @@ class S3(TemplateBase):
         return vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
 
     def install(self):
+        nodes = list(self._nodes)
+
         def get_master_info():
             robot = self.api.robots.get(self.data['master']['node'], self.data['master']['url'])
             namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['master']['name'])
@@ -254,39 +256,55 @@ class S3(TemplateBase):
                 'namespace': self._tlog_namespace,
             }
 
-        def deploy_data_namespaces():
-            namespaces = self._deploy_minio_backend_namespaces()
+        def deploy_data_namespaces(nodes):
+            namespaces = self._deploy_minio_backend_namespaces(nodes)
             self.logger.info("data backend namespaces deployed")
             namespaces_connections = namespaces_connection_info(namespaces)
             return namespaces_connections
 
-        def deploy_tlog_namespace():
-            namespace = self._deploy_minio_tlog_namespace()
+        def deploy_tlog_namespace(nodes):
+            # prevent installing the tlog namespace on the same node as the vm vdisk
+            try:
+                if len(nodes) > 1:
+                    vm = self._vm()
+                    nodes = list(filter(lambda n: n['node_id'] != vm.data['nodeId']))
+            except ServiceNotFoundError:
+                pass
+
+            namespace = self._deploy_minio_tlog_namespace(nodes)
             self.logger.info("tlog backend namespaces deployed")
             return namespace_connection_info(namespace)
 
-        def deploy_vm():
-            self._deploy_minio_vm()
+        def deploy_vm(nodes):
+            # prevent installing the vm on the same node as the tlog
+            vm_node_id = self.data.get('tlog', {}).get('node')
+            if vm_node_id and len(nodes) > 1:
+                nodes = list(filter(lambda n: n['node_id'] != vm_node_id))
+
+            vm = self._deploy_minio_vm(nodes)
             self.logger.info("minio vm deployed")
+            return vm
 
         # deploy all namespaces and vm concurrently
-        ns_data_gl = gevent.spawn(deploy_data_namespaces)
-        ns_tlog_gl = gevent.spawn(deploy_tlog_namespace)
-        vm_gl = gevent.spawn(deploy_vm)
-        tasks = [ns_data_gl, ns_tlog_gl, vm_gl]
+        ns_data_gl = gevent.spawn(deploy_data_namespaces, nodes)
+        vm_gl = gevent.spawn(deploy_vm, nodes)
+        tasks = [ns_data_gl, vm_gl]
 
         master = {'namespace': '', 'address': ''}
         if self.data['master'].get('name'):
             master_gl = gevent.spawn(get_master_info)
             tasks.append(master_gl)
 
-        self.logger.info("wait for all namespaces and vm to be installed")
+        self.logger.info("wait for data namespaces and vm to be installed")
         gevent.wait(tasks)
 
         if ns_data_gl.exception:
             raise ns_data_gl.exception
         namespaces_connections = ns_data_gl.value
         self.data['current_namespaces_connections'] = sorted(namespaces_connections)
+
+        ns_tlog_gl = gevent.spawn(deploy_tlog_namespace, nodes)
+        ns_tlog_gl.join()
 
         if ns_tlog_gl.exception:
             raise ns_tlog_gl.exception
@@ -404,7 +422,7 @@ class S3(TemplateBase):
         """
         self.state.check('actions', 'install', 'ok')
 
-        #make sure we reset error stats
+        # make sure we reset error stats
         self.state.delete('data_shards')
         self.state.delete('tlog_shards')
         self.state.delete('vm')
@@ -433,7 +451,7 @@ class S3(TemplateBase):
 
         return self.api.robots.get("%s_vm" % mgmt_ip, 'http://{}:6600'.format(mgmt_ip)), mgmt_ip
 
-    def _deploy_minio_backend_namespaces(self):
+    def _deploy_minio_backend_namespaces(self, nodes):
         self.logger.info("create namespaces to be used as a backend for minio")
 
         self.logger.info("compute how much zerodb are required")
@@ -457,7 +475,7 @@ class S3(TemplateBase):
                                                        size=namespace_size,
                                                        storage_type=self.data['storageType'],
                                                        password=self.data['nsPassword'],
-                                                       nodes=self._nodes):
+                                                       nodes=nodes):
             deployed_namespaces.append(namespace)
             self.data['namespaces'].append({'name': namespace.name,
                                             'url': node['robot_address'],
@@ -501,7 +519,7 @@ class S3(TemplateBase):
         self.install()
         self._minio().schedule_action('check_and_repair').wait(die=True)
 
-    def _deploy_minio_tlog_namespace(self):
+    def _deploy_minio_tlog_namespace(self, nodes):
         self.logger.info("create namespaces to be used as a tlog for minio")
 
         namespace = None
@@ -521,7 +539,7 @@ class S3(TemplateBase):
                                                        size=10,  # TODO: compute how much is needed
                                                        storage_type='ssd',
                                                        password=self.data['nsPassword'],
-                                                       nodes=self._nodes):
+                                                       nodes=nodes):
             tlog_namespace = namespace
             self.data['tlog'] = {'name': tlog_namespace.name,
                                  'url': node['robot_address'],
@@ -536,9 +554,9 @@ class S3(TemplateBase):
 
         return tlog_namespace
 
-    def _deploy_minio_vm(self):
+    def _deploy_minio_vm(self, nodes):
         self.logger.info("create the zero-os vm on which we will create the minio container")
-        nodes = sort_by_less_used(self._nodes, 'sru')
+        nodes = sort_by_less_used(nodes, 'sru')
         mgmt_nic = {
             'id': self.data['mgmtNic']['id'],
             'ztClient': self.data['mgmtNic']['ztClient'],
@@ -688,7 +706,6 @@ class S3(TemplateBase):
             if shard_state == 'error':
                 self.state.set('tlog_shards', connection_info, SERVICE_STATE_ERROR)
 
-
         pool.join()
 
     def _deploy_minio(self, namespaces_connections, tlog_connection, master):
@@ -789,8 +806,6 @@ def sort_by_less_used(nodes, storage_key):
     def key(node):
         return node['total_resources'][storage_key] - node['used_resources'][storage_key]
     return sorted(nodes, key=key, reverse=True)
-
-
 
 
 class NamespaceDeployError(RuntimeError):
