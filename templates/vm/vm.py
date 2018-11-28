@@ -193,7 +193,7 @@ class Vm(TemplateBase):
         for nic in self.data['nics']:
             if nic['type'] == 'zerotier' and nic.get('ztClient') and self.data.get('ztIdentity') and not nic.get('ip'):
                 ztAddress = self.data['ztIdentity'].split(':')[0]
-                self.logger.inf('ztAddress : {}'.format(ztAddress))
+                self.logger.info('ztAddress : {}'.format(ztAddress))
                 zclient = j.clients.zerotier.get(nic['ztClient'])
                 try:
                     network = zclient.network_get(nic['id'])
