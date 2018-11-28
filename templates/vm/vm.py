@@ -97,6 +97,7 @@ class Vm(TemplateBase):
         return self.data['ztIdentity']
 
     def _update_vdisk_url(self):
+        self.logger.info('update the vdisk url')
         for disk in self.data['disks']:
             vdisk = self.api.services.get(template_uid=VDISK_TEMPLATE_UID, name=disk['name'])
             disk['url'] = vdisk.schedule_action('private_url').wait(die=True).result
@@ -180,26 +181,34 @@ class Vm(TemplateBase):
         self._vm_sal.enable_vnc()
 
     def info(self, timeout=TIMEOUT_DEPLOY):
+        self.logger.info('get vm info')
         if not self.data.get('info') or not self.data['info'].get('nics'):
             self._load_info(timeout)
         return self.data['info']
 
     def _load_info(self, timeout):
+        self.logger.info('load the vm info')
         self._update_vdisk_url()
         info = self._vm_sal.info or {}
         nics = copy.deepcopy(self.data['nics'])
+        self.logger.info('vm nics : {}'.format(nics))
         for nic in nics:
             if nic['type'] == 'zerotier' and nic.get('ztClient') and self.data.get('ztIdentity'):
+                self.logger.info('get the vm zerotier data')
                 ztAddress = self.data['ztIdentity'].split(':')[0]
+                self.logger.inf('ztAddress : {}'.format(ztAddress))
                 zclient = j.clients.zerotier.get(nic['ztClient'])
                 try:
                     network = zclient.network_get(nic['id'])
+                    self.logger.info('network : {}'.format(network))
                     member = network.member_get(address=ztAddress)
+                    self.logger.info('member : {}'.format(member))
                     member.timeout = timeout
+                    self.logger.info('get private ip timeout : {}'.format(timeout))
                     nic['ip'] = member.get_private_ip(timeout)
                 except (RuntimeError, ValueError) as e:
                     self.logger.warning('Failed to retreive zt ip: %s', str(e))
-
+        self.logger.info('construct the vm data dict')
         node_sal = self._node_sal
         self.data['info'] = {
             'vnc': info.get('vnc'),
