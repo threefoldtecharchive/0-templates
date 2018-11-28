@@ -38,7 +38,8 @@ class Zerodb(TemplateBase):
         ).get()
 
         if disk.state != "SUCCESS":
-            self.state.delete('status', 'running')
+            return False
+        return True
 
     def _monitor(self):
         self.logger.info('Monitor zerodb %s' % self.name)
@@ -69,18 +70,24 @@ class Zerodb(TemplateBase):
                 send_alert(self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'), data)
                 return
 
-            if self._zerodb_sal.is_running():
-                self.state.set('status', 'running', 'ok')
-                self._monitor_disk()
+            running = self._zerodb_sal.is_running()
+            disk_writing = self._monitor_disk()
+            if running and disk_writing:
+                self.state.set('status', 'running', 'ok')  
             else:
                 self.state.delete('status', 'running')
-                data['text'] = 'Failed to start zerodb {}'.format(self.name)
+                if not running:
+                    data['text'] = 'Failed to start zerodb {}'.format(self.name)
+                else:
+                    data['text'] = 'Failed to write on disk {}'.format(self.data["path"])
                 send_alert(self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'), data)
 
         else:
-            self.state.set('status', 'running', 'ok')
-            self._monitor_disk()
-
+            if self._monitor_disk():
+                self.state.set('status', 'running', 'ok')
+            else:
+                self.state.delete('status', 'running')
+            
     def install(self):
         self.logger.info('Installing zerodb %s' % self.name)
 
