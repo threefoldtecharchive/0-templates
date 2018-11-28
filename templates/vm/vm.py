@@ -180,16 +180,14 @@ class Vm(TemplateBase):
         self._vm_sal.enable_vnc()
 
     def info(self, timeout=TIMEOUT_DEPLOY):
-        if not self.data.get('info') or not self.data['info'].get('nics'):
-            self._load_info(timeout)
+        self._load_info(timeout)
         return self.data['info']
 
     def _load_info(self, timeout):
         self._update_vdisk_url()
         info = self._vm_sal.info or {}
-        nics = copy.deepcopy(self.data['nics'])
-        for nic in nics:
-            if nic['type'] == 'zerotier' and nic.get('ztClient') and self.data.get('ztIdentity'):
+        for nic in self.data['nics']:
+            if nic['type'] == 'zerotier' and nic.get('ztClient') and self.data.get('ztIdentity') and not nic.get('ip'):
                 ztAddress = self.data['ztIdentity'].split(':')[0]
                 zclient = j.clients.zerotier.get(nic['ztClient'])
                 try:
@@ -205,7 +203,7 @@ class Vm(TemplateBase):
             'vnc': info.get('vnc'),
             'status': info.get('state', 'halted'),
             'disks': self.data['disks'],
-            'nics': nics,
+            'nics': self.data['nics'],
             'ztIdentity': self.data['ztIdentity'],
             'ports': {p['source']: p['target'] for p in self.data['ports']},
             'host': {
