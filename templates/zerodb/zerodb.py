@@ -18,7 +18,7 @@ class Zerodb(TemplateBase):
         super().__init__(name=name, guid=guid, data=data)
         # hardcoded local instance, this service is only intended to be install by the node robot
         self._node_sal = j.clients.zos.get(NODE_CLIENT)
-        self.recurring_action('_monitor', 10)  # every 10 seconds
+        self.recurring_action('_monitor', 30)  # every 30 seconds
 
     @property
     def _zerodb_sal(self):
@@ -30,6 +30,15 @@ class Zerodb(TemplateBase):
         zerodb_sal = self._zerodb_sal
         zerodb_sal.deploy()
         self.data['ztIdentity'] = zerodb_sal.zt_identity
+
+    def _monitor_disk(self):
+        self.logger.info('Monitor zerodb disk %s' % self.name)
+        disk = self._node_sal.client.system(
+            "dd if=/dev/urandom bs=1k count=1 of={}/monitor".format(self.data["path"])
+        ).get()
+
+        if disk.state != "SUCCESS":
+            self.state.delete('status', 'running')
 
     def _monitor(self):
         self.logger.info('Monitor zerodb %s' % self.name)
@@ -46,6 +55,7 @@ class Zerodb(TemplateBase):
             self._deploy()
             if self._zerodb_sal.is_running():
                 self.state.set('status', 'running', 'ok')
+                self._monitor_disk()
             else:
                 self.state.delete('status', 'running')
                 data = {
@@ -63,6 +73,7 @@ class Zerodb(TemplateBase):
                     alerta.schedule_action('send_alert', args={'data': data})
         else:
             self.state.set('status', 'running', 'ok')
+            self._monitor_disk()
 
     def install(self):
         self.logger.info('Installing zerodb %s' % self.name)
