@@ -111,9 +111,9 @@ class S3(TemplateBase):
                 robot = self.api.robots.get(namespace['node'], namespace['url'])
                 ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
                 address = namespace_connection_info(ns)
-                ns['address'] = address
+                namespace['address'] = address
             except Exception as e:
-                self.logger.error('can not get namespace %s address: %s, assume error.', ns['name'], e)
+                self.logger.error('can not get namespace %s address: %s, assume error.', namespace['name'], e)
                 self.state.set('data_shards', namespace['address'], 'error')
 
         namespaces = self.data['namespaces']
