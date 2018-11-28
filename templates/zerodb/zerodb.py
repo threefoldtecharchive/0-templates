@@ -52,8 +52,7 @@ class Zerodb(TemplateBase):
         node = self.api.services.get(template_account='threefoldtech', template_name='node')
         node.state.check('disks', 'mounted', 'ok')
 
-        if not self._zerodb_sal.is_running():
-            data = {
+        data = {
                 'attributes': {},
                 'resource': self.guid,
                 'environment': 'Production',
@@ -62,6 +61,8 @@ class Zerodb(TemplateBase):
                 'tags': [],
                 'service': ['zerodb']
             }
+
+        if not self._zerodb_sal.is_running():
             try:
                 self._deploy()
             except Exception:
@@ -87,6 +88,8 @@ class Zerodb(TemplateBase):
                 self.state.set('status', 'running', 'ok')
             else:
                 self.state.delete('status', 'running')
+                data['text'] = 'Failed to write on disk {}'.format(self.data["path"])
+                send_alert(self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'), data)
             
     def install(self):
         self.logger.info('Installing zerodb %s' % self.name)
