@@ -9,7 +9,7 @@ struct Schema {
     storageSize @5: UInt64; # total s3 storage size in GB
     namespaces @6: List(Namespace); # namespace services created for s3. This is set by the template.
     tlog @7: Namespace;
-    master @8 :Namespace;
+    master @8: Namespace;
     minioLogin @9: Text; # minio login
     minioPassword @10: Text; # minio password
     minioUrls @11: Urls; # url to access minio on. This is set by the template.
