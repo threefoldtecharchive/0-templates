@@ -276,7 +276,7 @@ class S3(TemplateBase):
                 to_exclude.append(master_tlog_node_id)
 
             if len(nodes) - len(to_exclude) > 1:
-                nodes = list(filter(lambda n: n['node_id'] not in to_exclude))
+                nodes = list(filter(lambda n: n['node_id'] not in to_exclude, nodes))
 
             namespace = self._deploy_minio_tlog_namespace(nodes)
             self.logger.info("tlog backend namespaces deployed")
