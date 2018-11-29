@@ -6,6 +6,7 @@ from zerorobot.template.state import StateCheckError, StateCategoryNotExistsErro
 
 S3_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/s3/0.0.1'
 REVERSE_PROXY_UID = 'github.com/threefoldtech/0-templates/reverse_proxy/0.0.1'
+VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/dm_vm/0.0.1'
 
 
 class S3Redundant(TemplateBase):
@@ -181,6 +182,8 @@ class S3Redundant(TemplateBase):
             self.data['activeS3'] = active_s3.name
         active_s3.schedule_action('install').wait(die=True)
         self.logger.info('Installed s3 {}'.format(active_s3.name))
+        active_dmvm = self.api.service.get(template_uid=VM_TEMPLATE_UID, name=active_s3.guid)
+
 
         if self.data['passiveS3']:
             passive_s3 = self._passive_s3()
@@ -190,6 +193,7 @@ class S3Redundant(TemplateBase):
             passive_data = dict(active_data)
             passive_data['master'] = active_tlog
             passive_data['namespaces'] = namespaces
+            passive_data['excludeNodesVM'] = [active_dmvm.data['nodeId']]
             passive_s3 = self.api.services.create(S3_TEMPLATE_UID, data=passive_data)
             self.data['passiveS3'] = passive_s3.name
         passive_s3.schedule_action('install').wait(die=True)

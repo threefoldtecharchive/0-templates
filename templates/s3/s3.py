@@ -284,7 +284,7 @@ class S3(TemplateBase):
 
         def deploy_vm(nodes):
             # prevent installing the vm on the same node as the tlog
-            to_exclude = []
+            to_exclude = self.data.get('excludeNodesVM', [])
             tlog_node_id = self.data.get('tlog', {}).get('node')
             if tlog_node_id:
                 to_exclude.append(tlog_node_id)
