@@ -268,6 +268,7 @@ class S3(TemplateBase):
             try:
                 vm = self._vm()
                 to_exclude.append(vm.data['nodeId'])
+                to_exclude.extend(self.data['excludeNodesVM'])
             except ServiceNotFoundError:
                 pass
 
