@@ -36,7 +36,7 @@ class Zerodb(TemplateBase):
         self.logger.info('Monitor zerodb disk %s' % self.name)
         text_file= BytesIO(b'the string to test write on disk ...')   
         try:
-            self._node_sal.client.upload('{}/_monitor_write_disk_test'.format(self.data["path"]), text_file)
+            self._node_sal.client.filesystem.upload('{}/_monitor_write_disk_test'.format(self.data["path"]), text_file)
             return True
         except Exception:
             return False
