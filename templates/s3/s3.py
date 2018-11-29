@@ -443,7 +443,7 @@ class S3(TemplateBase):
         self.state.delete('vm')
 
         try:
-            self._vm().delete()
+            self._vm().schedule_action('uninstall').wait(die=True)
         except ServiceNotFoundError:
             pass
 
