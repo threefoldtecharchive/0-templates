@@ -182,7 +182,7 @@ class S3Redundant(TemplateBase):
             self.data['activeS3'] = active_s3.name
         active_s3.schedule_action('install').wait(die=True)
         self.logger.info('Installed s3 {}'.format(active_s3.name))
-        active_dmvm = self.api.service.get(template_uid=VM_TEMPLATE_UID, name=active_s3.guid)
+        active_dmvm = self.api.services.get(template_uid=VM_TEMPLATE_UID, name=active_s3.guid)
 
 
         if self.data['passiveS3']:
