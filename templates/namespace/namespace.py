@@ -53,7 +53,7 @@ class Namespace(TemplateBase):
             # no op is already installed
             self.state.check('actions', 'install', 'ok')
         except StateCheckError:
-            pass
+            return
 
         node = self.api.services.get(template_account='threefoldtech', template_name='node')
         kwargs = {
