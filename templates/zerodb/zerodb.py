@@ -1,4 +1,5 @@
 from jumpscale import j
+from io import BytesIO
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry
@@ -33,13 +34,12 @@ class Zerodb(TemplateBase):
 
     def _monitor_disk(self):
         self.logger.info('Monitor zerodb disk %s' % self.name)
-        disk = self._node_sal.client.system(
-            "dd if=/dev/urandom bs=1k count=1 of={}/monitor".format(self.data["path"])
-        ).get()
-
-        if disk.state != "SUCCESS":
+        text_file= BytesIO(b'the string to test write on disk ...')   
+        try:
+            self._node_sal.client.upload('{}/_monitor_write_disk_test'.format(self.data["path"]), text_file)
+            return True
+        except Exception:
             return False
-        return True
 
     def _monitor(self):
         self.logger.info('Monitor zerodb %s' % self.name)
