@@ -750,7 +750,11 @@ class S3(TemplateBase):
                 minios = vm_robot.services.find(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
                 if minios:
                     minio = minios[0]
-                    minio.schedule_action('update_zerodbs', args={'zerodbs': namespaces_connections}).wait(die=True)
+                    minio.schedule_action('update_all', args={
+                        'zerodbs': namespaces_connections,
+                        'tlog': minio_data['tlog'],
+                        'master': minio_data['master'],
+                    }).wait(die=True)
                 else:
                     minio = vm_robot.services.create(MINIO_TEMPLATE_UID, self.guid, minio_data)
                 break
