@@ -272,9 +272,9 @@ class S3(TemplateBase):
             except ServiceNotFoundError:
                 pass
 
-            master_tlog_node_id = self.data.get('master', {}).get('node')
-            if master_tlog_node_id:
-                to_exclude.append(master_tlog_node_id)
+            if 'master' in self.data and 'node' in self.data['master']:
+                if self.data['master']['node']:
+                    to_exclude.append(self.data['master']['node'])
 
             if len(nodes) - len(to_exclude) > 1:
                 nodes = list(filter(lambda n: n['node_id'] not in to_exclude, nodes))
@@ -286,13 +286,13 @@ class S3(TemplateBase):
         def deploy_vm(nodes):
             # prevent installing the vm on the same node as the tlog
             to_exclude = self.data.get('excludeNodesVM', [])
-            tlog_node_id = self.data.get('tlog', {}).get('node')
-            if tlog_node_id:
-                to_exclude.append(tlog_node_id)
+            if 'tlog' in self.data and 'node' in self.data['tlog']:
+                if self.data['tlog']['node']:
+                    to_exclude.append(self.data['tlog']['node'])
 
-            master_tlog_node_id = self.data.get('master', {}).get('node')
-            if master_tlog_node_id:
-                to_exclude.append(master_tlog_node_id)
+            if 'master' in self.data and 'node' in self.data['master']:
+                if self.data['master']['node']:
+                    to_exclude.append(self.data['master']['node'])
 
             if to_exclude and len(nodes) - len(to_exclude) > 1:
                 nodes = list(filter(lambda n: n['node_id'] not in to_exclude, nodes))
