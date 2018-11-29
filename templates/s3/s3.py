@@ -51,6 +51,11 @@ class S3(TemplateBase):
         if not self.data['nsPassword']:
             self.data['nsPassword'] = j.data.idgenerator.generateXCharID(32)
 
+        if self.data['tlog'] is None:
+            self.data['tlog'] = {}
+        if self.data['master'] is None:
+            self.data['master'] = {}
+
     @property
     def _tlog_namespace(self):
         return '{}_tlog'.format(self.data['nsName'])
@@ -381,7 +386,7 @@ class S3(TemplateBase):
             namespaces.append(self.data['tlog'])
         group.map(self._delete_namespace, namespaces)
         group.join()
-        self.data['tlog'] = None
+        self.data['tlog'] = {}
         self.data['current_namespaces_connections'] = None
 
         try:
@@ -450,7 +455,7 @@ class S3(TemplateBase):
 
         if reset_tlog:
             self._delete_namespace(self.data['tlog'])
-            self.data['tlog'] = None
+            self.data['tlog'] = {}
         self.install()
         self._update_url()
 
