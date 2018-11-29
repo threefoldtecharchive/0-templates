@@ -9,7 +9,7 @@ struct Schema {
     storageSize @5: UInt64; # total s3 storage size in GB
     namespaces @6: List(Namespace); # namespace services created for s3. This is set by the template.
     tlog @7: Namespace;
-    master @8 :Namespace;
+    master @8: Namespace;
     minioLogin @9: Text; # minio login
     minioPassword @10: Text; # minio password
     minioUrls @11: Urls; # url to access minio on. This is set by the template.
@@ -17,6 +17,7 @@ struct Schema {
     minioBlockSize @13 :UInt32=1048576; # minio data block size in bytes
     nsName @14 :Text; # Namespace name prefix that will be used for naming all zdb reservations. Should be unique between different S3 deployments.
     deletableNamespaces @15 :List(Namespace);
+    excludeNodesVM @16 :List(Text); # list of node to avoid using when deploying VM and Vdisk
 
     enum StorageType {
      hdd @0;
