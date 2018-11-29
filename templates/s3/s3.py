@@ -376,7 +376,7 @@ class S3(TemplateBase):
         self.logger.info("Uninstall s3 {}".format(self.name))
         group = gevent.pool.Group()
         namespaces = list(self.data['namespaces'])
-        if self.data['tlog']:
+        if self.data['tlog'].get('node'):
             namespaces.append(self.data['tlog'])
         group.map(self._delete_namespace, namespaces)
         group.join()
