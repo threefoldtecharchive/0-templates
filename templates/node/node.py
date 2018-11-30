@@ -33,7 +33,7 @@ class Node(TemplateBase):
         super().__init__(name=name, guid=guid, data=data)
         self._node_sal = j.clients.zos.get(NODE_CLIENT)
         self.recurring_action('_monitor', 30)  # every 30 seconds
-        self.recurring_action('_network_monitor', 60)  # every 30 seconds
+        self.recurring_action('_network_monitor', 120)  # every 2 minutes
         self.gl_mgr.add("_register", self._register)
         self.gl_mgr.add("_port_manager", self._port_manager)
 
@@ -111,12 +111,12 @@ class Node(TemplateBase):
         # make sure the bridges are installed
         for service in self.api.services.find(template_uid=BRIDGE_TEMPLATE_UID):
             self.logger.info("configuring bridge %s" % service.name)
-            service.schedule_action('install').wait(die=True)
+            service.schedule_action('install')
 
         # make sure the networks are configured
         for service in self.api.services.find(template_uid=NETWORK_TEMPLATE_UID):
             self.logger.info("configuring network %s" % service.name)
-            service.schedule_action('configure').wait(die=True)
+            service.schedule_action('configure')
 
     def _register(self):
         """
