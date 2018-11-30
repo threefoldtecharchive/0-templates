@@ -730,6 +730,7 @@ class S3(TemplateBase):
         pool.join()
 
     def _deploy_minio(self, namespaces_connections, tlog_connection, master):
+        self.logger.info("wait for the minio VM to be reachable")
         vm_robot, _ = self._vm_robot_and_ip()
         self.logger.info("create the minio service on the vm")
         minio_data = {
