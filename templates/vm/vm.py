@@ -22,7 +22,6 @@ class Vm(TemplateBase):
 
         self.add_delete_callback(self.uninstall)
         self.recurring_action('_monitor', 30)  # every 30 seconds
-        self.recurring_action('_load_info', 60*60)  # every hour
 
     def validate(self):
         if not (self.data['flist'] or self.data['ipxeUrl']):
