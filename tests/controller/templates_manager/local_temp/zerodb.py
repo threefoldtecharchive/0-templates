@@ -57,11 +57,11 @@ class ZDBManager:
     def namespace_set(self, data):
         return self.service.schedule_action('namespace_set', args=data)
 
-    def namespace_url(self):
-        return self.service.schedule_action('namespace_url')
+    def namespace_url(self, name):
+        return self.service.schedule_action('namespace_url', args={'name': name})
 
-    def namespace_private_url(self):
-        return self.service.schedule_action('namespace_private_url')
+    def namespace_private_url(self, name):
+        return self.service.schedule_action('namespace_private_url', args={'name': name})
 
     def namespace_delete(self, name):
         return self.service.schedule_action('namespace_delete', args={'name': name})

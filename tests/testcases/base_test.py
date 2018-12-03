@@ -5,6 +5,7 @@ from uuid import uuid4
 from jumpscale import j
 from subprocess import Popen, PIPE, run
 import time, os, hashlib
+from urllib.parse import urlparse
 
 logger = j.logger.get('testsuite.log')
 
@@ -180,3 +181,35 @@ class BaseTest(TestCase):
                 return member_ip
             except (RuntimeError, ValueError) as e:
                 time.sleep(10)
+
+    def get_namespace_disk_type(self, url):
+        ip = url[6 : url.find(":", 7)]
+        conts = self.node.containers.list()
+        for con in conts:
+            if con.default_ip().ip.format() == ip:
+                cont = con
+                break
+        zdb_ser_name = cont.name[7 :]
+        disk_name = cont.client.info.disk()[0]['device']
+        d_type = self.node.disks.get_device(disk_name).disk.type.value
+        if d_type == 'ARCHIVE':
+            d_type = 'hdd'
+        elif d_type == 'NVME':
+            d_type = 'ssd'
+        return d_type.lower(), zdb_ser_name
+
+    def robot_god_token(self, robot):
+        """
+        try to retreive the god token from the node 0-robot
+        of a node
+        """
+        try:
+            u = urlparse(robot._client.config.data['url'])
+            node = j.clients.zos.get('godtoken', data={'host': u.hostname})
+            zcont = node.containers.get('zrobot')
+            resp = zcont.client.system('zrobot godtoken get').get()
+            token = resp.stdout.split(':', 1)[1].strip()
+            robot._client.god_token_set(token)
+        finally:
+            j.clients.zos.delete('godtoken')
+        return robot
