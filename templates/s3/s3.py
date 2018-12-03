@@ -13,6 +13,7 @@ from JumpscaleLib.sal_zos.globals import TIMEOUT_DEPLOY
 from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
                                       SERVICE_STATE_SKIPPED, SERVICE_STATE_WARNING,
                                       StateCheckError, StateCategoryNotExistsError)
+from requests.exceptions import HTTPError
 
 VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/dm_vm/0.0.1'
 GATEWAY_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/gateway/0.0.1'
@@ -699,16 +700,23 @@ class S3(TemplateBase):
             self.state.check('actions', 'install', 'ok')
         except StateCheckError:
             return
-        vm_robot, _ = self._vm_robot_and_ip()
-        minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
-        state = minio.state
 
-        try:
-            disk_state = state.get('vm', 'disk')
-            self.state.set('vm', 'disk', disk_state['disk'])
-        except:
-            # probably no state set on the minio disk
-            pass
+        def get_state():
+            retries = 3
+            for _ in range(retries):
+                try:
+                    vm_robot, _ = self._vm_robot_and_ip()
+                    minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
+                    state = minio.state
+                    return state
+
+                except HTTPError as e:
+                    if e.response.status_code == 500:
+                        gevent.sleep(10)
+
+            else:
+                self.state.delete('vm', 'disk')
+                return
 
         def test_namespace(info):
             connection_info, shard_state = info
@@ -719,6 +727,17 @@ class S3(TemplateBase):
                 return
             if shard_state == 'error':
                 self.state.set('data_shards', connection_info, SERVICE_STATE_ERROR)
+
+        state = get_state()
+        if not state:
+            return
+
+        try:
+            disk_state = state.get('vm', 'disk')
+            self.state.set('vm', 'disk', disk_state['disk'])
+        except:
+            # probably no state set on the minio disk
+            pass
 
         pool = gevent.pool.Pool(50)
         pool.map(test_namespace, state.get('data_shards').items())
