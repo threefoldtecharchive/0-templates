@@ -62,7 +62,7 @@ class GWTests(BaseTest):
         self.assertIn("Network with name public_nic already exists", e.exception.args[0])        
 
     @unittest.skip('https://github.com/threefoldtech/0-templates/issues/218')
-    def test003_add_network(self):
+    def test003_add_zerotier_network(self):
         """ZRT-ZOS-023
         *Test case for adding zerotier network to gateway .
         Test Scenario:
@@ -122,7 +122,7 @@ class GWTests(BaseTest):
         self.assertEqual(len(info['networks']), 1)
         self.assertNotEqual(info['networks'][0]['type'], 'zerotier')
 
-    def test005_deploy_getways_with_public_network(self):
+    def test005_deploy_getways_with_same_default_public_network(self):
         """ZRT-ZOS-025
         *Test case for deploying more than one gateway with default public network .
         Test Scenario:
