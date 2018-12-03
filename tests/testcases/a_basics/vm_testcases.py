@@ -96,7 +96,7 @@ class TestVm(BaseTest):
         self.vms.append(vm)
 
         self.log('Get zerotier ip from vm info.')
-        vm_zt_ip = self.get_zt_ip(vm)
+        vm_zt_ip = self.get_vm_zt_ip(vm)
         
         self.log('Check that vm can be accessed by zertier network, should succeed.')
         result = self.ssh_vm_execute_command(vm_ip=vm_zt_ip, cmd='pwd')

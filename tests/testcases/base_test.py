@@ -108,10 +108,10 @@ class BaseTest(TestCase):
     def random_string(self):
         return str(uuid4()).replace('-', '')[:10]
 
-    def get_zt_ip(self, obj):
+    def get_vm_zt_ip(self, vm):
         for _ in range(20):
             try:
-                ip = obj.info().result['nics'][0]['ip']
+                ip = vm.info().result['nics'][0]['ip']
                 self.assertTrue(ip)
                 return ip
             except Exception:
