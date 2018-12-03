@@ -105,37 +105,107 @@ class BridgeTestCases(BaseTest):
         addr = nic[0]['hardwareaddr'] 
         self.assertIn(bridge.default_data['hwaddr'], addr)
 
-    def test004_attach_bridge_to_container(self):
+    @unittest.skip("https://github.com/threefoldtech/0-core/issues/87")
+    def test004_create_bridge_with_invalid_data(self):
         """ ZRT-ZOS-033
-        *Test case for attach bridge to container*
+        *Test case for creating bridge with invalid data*
 
         **Test Scenario:**
         
-        #. Create bridge (B1) with dnsmasq mode, should succeed.
-        #. Create container (C1) and attach bridge (B1) to it, should succeed.
-        #. Check container (C1) nics, bridge (B1) should be attached.
+        #. Create bridge (B1) with invalid mode, should fail.
+        #. Create bridge (B2) with invalid cidr in static mode, should fail.
+        #. Create bridge (B3) with invalid cidr in dnsmask mode, should fail.
+        #. Create bridge (B4) with invalid ip range in dnsmask mode, should fail.
         """
-        self.log('Create bridge (B1) with dnsmasq mode, should succeed')
-        cidr = "20.20.30.1/24"
-        ip_range = ["20.20.30.2", "20.20.30.3"]
+        self.log('Create bridge (B1) with invalid mode, should fail.')
         bridge = self.controller.bridge_manager
-        bridge.install(wait=True, mode='dnsmasq', settings={"cidr": cidr, "start": ip_range[0], "end": ip_range[1]})
-        self.bridges.append(bridge)
+        with self.assertRaises(Exception) as e:
+            mode = self.random_string()
+            bridge.install(wait=True, mode=mode)
+        self.assertIn("mode must be one of 'none','static','dnsmasq'", e.exception.args[0])
+        
+        self.log('Create bridge (B2) with invalid cidr in static mode, should fail')
+        with self.assertRaises(Exception) as e:
+            mode = self.random_string()
+            bridge.install(wait=True, mode='static', settings={'cidr': '10.1.10.2'})
+        self.assertIn("invalid CIDR address: 10.1.10.2", e.exception.args[0])
 
-        self.log('Create container (C1) and attach bridge (B1) to it, should succeed')
-        nic = [{'type': 'bridge', 'id': bridge.default_data['name'], 'config': {'dhcp': True}}]
-        container = self.controller.container_manager(parent=self.controller, service_name=None)
-        container.install(wait=True, nics=nic)
-        self.containers.append(container)
+        with self.assertRaises(Exception) as e:
+            mode = self.random_string()
+            bridge.install(wait=True, mode='static', settings={'cidr': '10.1.10.256/24'})
+        self.assertIn("invalid CIDR address: 10.1.10.256/24", e.exception.args[0])
 
-        self.log("Check container (C1) nics, bridge (B1) should be attached")
-        conts = self.node.containers.list()
-        cont = [c for c in conts if container.data['hostname'] in c.hostname][0]
-        nics = cont.client.info.nic()
-        nic = [nic for nic in nics if nic['name'] == 'eth0']
-        self.assertTrue(nic)
-        addrs = [addr['addr'] for addr in nic[0]['addrs'] if addr['addr'][:addr['addr'].find('/')] in ip_range]
-        self.assertTrue(addrs)
+        with self.assertRaises(Exception) as e:
+            mode = self.random_string()
+            bridge.install(wait=True, mode='static', settings={'cidr': '10.10.25/24'})
+        self.assertIn("invalid CIDR address: 10.10.25/24", e.exception.args[0])
+
+        self.log('Create bridge (B3) with invalid cidr in dnsmask mode, should fail')
+        with self.assertRaises(Exception) as e:
+            mode = self.random_string()
+            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.1.10.2', 'start': '10.10.1.10', 'end': '10.10.1.20'})
+        self.assertIn("invalid CIDR address: 10.1.10.2", e.exception.args[0])
+
+        with self.assertRaises(Exception) as e:
+            mode = self.random_string()
+            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.1.10.256/24', 'start': '10.10.1.10', 'end': '10.10.1.20'})
+        self.assertIn("invalid CIDR address: 10.1.10.256/24", e.exception.args[0])
+
+        with self.assertRaises(Exception) as e:
+            mode = self.random_string()
+            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.25/24', 'start': '10.10.1.10', 'end': '10.10.1.20'})
+        self.assertIn("invalid CIDR address: 10.10.25/24", e.exception.args[0])
+
+        self.log('Create bridge (B4) with invalid ip range in dnsmask mode, should fail')
+        with self.assertRaises(Exception) as e:
+            mode = self.random_string()
+            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24'})
+        self.assertIn("start ip address out of range", e.exception.args[0])
+
+        with self.assertRaises(Exception) as e:
+            mode = self.random_string()
+            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24', 'start': '10.10.5.10', 'end': '10.10.1.20'})
+        self.assertIn("start ip address out of range", e.exception.args[0])
+        
+        with self.assertRaises(Exception) as e:
+            mode = self.random_string()
+            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24', 'start': '10.10.1.10', 'end': '10.1.1.20'})
+        self.assertIn("end ip address out of range", e.exception.args[0])
+        
+        with self.assertRaises(Exception) as e:
+            mode = self.random_string()
+            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24', 'start': '10.10.1.256', 'end': '10.10.1.20'})
+        self.assertIn("invalid IP address: 10.10.1.256", e.exception.args[0])
+    
+        with self.assertRaises(Exception) as e:
+            mode = self.random_string()
+            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24', 'start': '10.10.1.25', 'end': '10.10.1.256'})
+        self.assertIn("invalid IP address: 10.10.1.256", e.exception.args[0])
+
+        with self.assertRaises(Exception) as e:
+            mode = self.random_string()
+            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24', 'start': '10.1.25', 'end': '10.10.1.20'})
+        self.assertIn("invalid IP address: 10.1.25", e.exception.args[0])
+
+        with self.assertRaises(Exception) as e:
+            mode = self.random_string()
+            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24', 'start': '10.10.1.25', 'end': '10.1.20'})
+        self.assertIn("invalid IP address: 10.1.20", e.exception.args[0])
+
+        with self.assertRaises(Exception) as e:
+            mode = self.random_string()
+            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24', 'start': '10.1..25', 'end': '10.10.1.20'})
+        self.assertIn("invalid IP address: 10.1..25", e.exception.args[0])
+
+        with self.assertRaises(Exception) as e:
+            mode = self.random_string()
+            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24', 'start': '10.10.1.25', 'end': '10.1..20'})
+        self.assertIn("invalid IP address: 10.1..20", e.exception.args[0])
+
+        with self.assertRaises(Exception) as e:
+            mode = self.random_string()
+            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24', 'start': '10.10.1.50', 'end': '10.10.1.20'})
+        self.assertIn("mode must be one of 'none','static','dnsmasq'", e.exception.args[0])
 
     @unittest.skip("https://github.com/threefoldtech/0-templates/issues/258")
     def test003_add_remove_list_nics_for_bridge(self):
@@ -185,7 +255,7 @@ class BridgeTestCases(BaseTest):
     
     @parameterized.expand(["True", "False"])
     def test005_create_bridges_with_nat_parameter(self, nat):
-        """ ZRT-ZOS-032
+        """ ZRT-ZOS-035
         *Test case for creating bridge with nat paramter*
 
         **Test Scenario:**
@@ -235,7 +305,7 @@ class BridgeTestCases(BaseTest):
             self.assertEqual(response.state, 'ERROR', response.stderr)
     
     def test006_attach_bridge_to_three_containers(self):
-        """ ZRT-ZOS-033
+        """ ZRT-ZOS-036
         *Test case for attach bridge to three containers*
 
         **Test Scenario:**
