@@ -462,9 +462,9 @@ class S3(TemplateBase):
     def _vm(self):
         return self.api.services.get(template_uid=VM_TEMPLATE_UID, name=self.guid)
 
-    def _vm_robot_and_ip(self):
+    def _vm_robot_and_ip(self, timeout=TIMEOUT_DEPLOY):
         vm = self._vm()
-        vminfo = vm.schedule_action('info', args={'timeout': TIMEOUT_DEPLOY}).wait(die=True).result
+        vminfo = vm.schedule_action('info', args={'timeout': timeout}).wait(die=True).result
         mgmt_ip = vminfo['zerotier'].get('ip')
 
         if not mgmt_ip:
@@ -731,7 +731,7 @@ class S3(TemplateBase):
 
     def _deploy_minio(self, namespaces_connections, tlog_connection, master):
         self.logger.info("wait for the minio VM to be reachable")
-        vm_robot, _ = self._vm_robot_and_ip()
+        vm_robot, _ = self._vm_robot_and_ip(timeout=600)
         self.logger.info("create the minio service on the vm")
         minio_data = {
             'zerodbs': namespaces_connections,
