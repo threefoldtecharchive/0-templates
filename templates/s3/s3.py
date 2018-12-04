@@ -707,7 +707,7 @@ class S3(TemplateBase):
                 try:
                     vm_robot, _ = self._vm_robot_and_ip()
                     minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
-                    state = minio.state
+                    return minio.state
                     return state
 
                 except HTTPError as e:
