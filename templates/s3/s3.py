@@ -714,7 +714,7 @@ class S3(TemplateBase):
             for _ in range(retries):
                 try:
                     vm_robot, _ = self._vm_robot_and_ip()
-                    node = vm_robot.services.get(template_name="node")
+                    node = vm_robot.services.get(name="local")
                     node.schedule_action("info")
                 except HTTPError as e:
                     if e.response.status_code == 500:
@@ -735,7 +735,7 @@ class S3(TemplateBase):
 
         state = get_state()
         check_vm_info()
-        
+
         try:
             disk_state = state.get('vm', 'disk')
             self.state.set('vm', 'disk', disk_state['disk'])
