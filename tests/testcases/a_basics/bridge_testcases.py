@@ -2,6 +2,7 @@ from tests.testcases.base_test import BaseTest
 from nose_parameterized import parameterized
 import unittest
 import time, random
+
 @unittest.skip("https://github.com/threefoldtech/0-templates/issues/260")
 class BridgeTestCases(BaseTest):
     def setUp(self):
@@ -18,6 +19,10 @@ class BridgeTestCases(BaseTest):
             container.uninstall()
         self.containers.clear()
         super().tearDown()
+
+        for vm in self.vms:
+            vm.uninstall()
+        self.vms.clear()
         
     @parameterized.expand(['none', 'static', 'dnsmasq'])
     def test001_create_bridge(self, mode):
@@ -49,6 +54,7 @@ class BridgeTestCases(BaseTest):
         addrs = [addr['addr'] for addr in nic[0]['addrs']][0]
         self.assertIn(bridge.default_data['settings']['cidr'], addrs)
 
+    @unittest.skip("https://github.com/threefoldtech/0-templates/issues/260")
     def test002_uninstall_bridge(self):
         """ ZRT-ZOS-031
         *Test case for uninstalling bridge *
@@ -306,7 +312,7 @@ class BridgeTestCases(BaseTest):
     
     def test006_attach_bridge_to_three_containers(self):
         """ ZRT-ZOS-036
-        *Test case for attach bridge to three containers*
+        *Test case for attaching bridge to three containers*
 
         **Test Scenario:**
         
@@ -357,3 +363,38 @@ class BridgeTestCases(BaseTest):
                 addrs2 = ip_range[0] if addrs == ip_range[1] else ip_range[1]
                 response = cont.client.bash('ping {} -w5'.format(addrs2)).get()
                 self.assertEqual(response.state, 'SUCCESS', response.stderr.strip())
+    
+    @unittest.skip("https://github.com/threefoldtech/jumpscale_prefab/issues/31")
+    def test007_attach_bridge_to_vm(self):
+        """ ZRT-ZOS-037
+        *Test case for attaching bridge to vm*
+
+        **Test Scenario:**
+        
+        #. Create bridge (B1) with dnsmasq mode, should succeed.
+        #. Create VM with bridge (B1), should succeed.
+        #. Check if bridge is attached to vm, should be found.
+
+        """
+        self.log('Create bridge (B1) with dnsmasq mode, should succeed')
+        cidr = "20.20.30.1/24"
+        ip_range = ["20.20.30.2", "20.20.30.3"]
+        bridge = self.controller.bridge_manager
+        bridge.install(wait=True, mode='dnsmasq', settings={"cidr": cidr, "start": ip_range[0], "end": ip_range[1]})
+        self.bridges.append(bridge)
+
+        self.log('Create VM with bridge (B1), should succeed.')
+        nic = [{'type': 'bridge','name': 'bridge_nic', 'id': bridge.default_data['name'], 'config': {'dhcp': True}}, {'type': 'default', 'name': 'defaultnic'}]
+        ssh_config = [{'path': '/root/.ssh/authorized_keys', 'content': self.ssh_key, 'name': 'sshkey'}]
+        vm = self.controller.vm_manager
+        vm.install(wait=True, configs=ssh_config, nics=nic)
+        self.vms.append(vm)
+        source_port = int(vm1.info().result['ports'].popitem()[0])
+
+        vms = self.node.client.kvm.list()
+        vm1 = [v for v in vms if v['name'] == vm.vm_service_name][0]
+        nic = [n for n in vm['params']['nics'] if n['type'] == 'bridge']
+        self.assertTrue(nic)
+
+        result = self.ssh_vm_execute_command(vm_ip=self.node_ip, port=source_port, cmd='ip a')
+        self.assertIn(result, 'bridge_nic')

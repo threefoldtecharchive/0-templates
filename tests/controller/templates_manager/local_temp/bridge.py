@@ -3,7 +3,6 @@ from zerorobot.service_collection import ServiceNotFoundError
 from testconfig import config
 import random
 
-
 class BrigeManager:
     def __init__(self, parent, service_name=None):
         self.bridge_template = 'github.com/threefoldtech/0-templates/bridge/0.0.1'
