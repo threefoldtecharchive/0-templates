@@ -699,16 +699,21 @@ class S3(TemplateBase):
             self.state.check('actions', 'install', 'ok')
         except StateCheckError:
             return
-        vm_robot, _ = self._vm_robot_and_ip()
-        minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
-        state = minio.state
 
-        try:
-            disk_state = state.get('vm', 'disk')
-            self.state.set('vm', 'disk', disk_state['disk'])
-        except:
-            # probably no state set on the minio disk
-            pass
+        def get_state():
+            vm_robot, _ = self._vm_robot_and_ip()
+            minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
+            return minio.state
+
+        def check_vm_info():
+            """
+            checks the vm info and handle disk failure
+            """
+            vm_robot, _ = self._vm_robot_and_ip()
+            _, info = vm_robot._client.api.robot.GetRobotInfo()
+            info = info.json()
+
+            return info['storage_healthy']
 
         def test_namespace(info):
             connection_info, shard_state = info
@@ -719,6 +724,19 @@ class S3(TemplateBase):
                 return
             if shard_state == 'error':
                 self.state.set('data_shards', connection_info, SERVICE_STATE_ERROR)
+
+        if not check_vm_info():
+            self.logger.error("storage is not healthy, will kick start self healing")
+            self.state.set('vm', 'disk', 'error')
+            return
+        state = get_state()
+
+        try:
+            disk_state = state.get('vm', 'disk')
+            self.state.set('vm', 'disk', disk_state['disk'])
+        except:
+            # probably no state set on the minio disk
+            pass
 
         pool = gevent.pool.Pool(50)
         pool.map(test_namespace, state.get('data_shards').items())
