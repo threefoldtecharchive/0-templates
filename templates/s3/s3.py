@@ -708,15 +708,10 @@ class S3(TemplateBase):
                     vm_robot, _ = self._vm_robot_and_ip()
                     minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
                     return minio.state
-                    return state
 
                 except HTTPError as e:
                     if e.response.status_code == 500:
                         gevent.sleep(10)
-
-            else:
-                self.state.delete('vm', 'disk')
-                return
 
         def test_namespace(info):
             connection_info, shard_state = info
@@ -730,6 +725,8 @@ class S3(TemplateBase):
 
         state = get_state()
         if not state:
+            self.logger.error("Failed to get minio state, will delete the vm")
+            self.state.delete('vm', 'disk')
             return
 
         try:
