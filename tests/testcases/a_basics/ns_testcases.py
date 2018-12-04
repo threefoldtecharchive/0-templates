@@ -62,7 +62,7 @@ class NSTestCases(BaseTest):
         **Test Scenario:**
 
         #. Create namespace (NS1) with basic params, should succeed.
-        #. Get the zdb service that namespace (NS1) created on.
+        #. Get the zdb that namespace (NS1) has been created on.
         #. Check that namesapce (NS1) in namespace list, should be found.
         #. Uninstall namespace (NS1). 
         #. Check that namespace (NS1) in namespace list, should not be found.
@@ -71,7 +71,7 @@ class NSTestCases(BaseTest):
         self.ns = self.controller.ns_manager
         self.ns.install(wait=True)
 
-        self.log("Get the zdb service that namespace (NS1) created on.")
+        self.log("Get the zdb that namespace (NS1) has been created on")
         url = self.ns.private_url().result
         d_type, zdb_ser_name = self.get_namespace_disk_type(url)
         robot_name = self.random_string()
