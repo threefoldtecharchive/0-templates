@@ -712,15 +712,16 @@ class S3(TemplateBase):
             """
             retries = 3
             for _ in range(retries):
-                try:
-                    vm_robot, _ = self._vm_robot_and_ip()
-                    node = vm_robot.services.get(name="local")
-                    node.schedule_action("info")
-                except HTTPError as e:
-                    if e.response.status_code == 500:
-                        gevent.sleep(10)
+                vm_robot, _ = self._vm_robot_and_ip()
+                _, info = vm_robot._client.api.robot.GetRobotInfo()
+                info = info.json()
+
+                if info['storage_healthy']:
+                    break
+                else:
+                    gevent.sleep(10)
             else:
-                self.logger.error("Failed to get vm info, will delete the vm")
+                self.logger.error("storage is not healthy, will delete the vm")
                 self.state.delete('vm', 'disk')
 
         def test_namespace(info):
