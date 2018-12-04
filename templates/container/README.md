@@ -19,7 +19,7 @@ This template is responsible for creating a container on zero-os nodes
 
 Mount:
 - `source`: mount source on node
-- `target`: mount target on container 
+- `target`: mount target on container
 
 Env:
 - `name`: name of the environment variable
@@ -31,10 +31,10 @@ Process:
 - `args`: list of the process' command line arguments.
 - `environment`: list of environment variables for the process e.g ['PATH=/usr/bin/local'].
 - `stdin`: data that needs to be passed into the stdin of the started process.
-- `id`: pid of the process
+- `id`: job id used for this process
 
 Nic:
-- `type`: value from enum NicType indicating the nic type. 
+- `type`: value from enum NicType indicating the nic type.
 - `id`: vxlan or vlan id.
 - `config`: a dict of NicConfig.
 - `name`: nic's name.

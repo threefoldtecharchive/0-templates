@@ -8,4 +8,5 @@ struct Schema {
     testIps @4: List(Text); # a list of test ip used by the monitor routine, network assumed broken if not pingable
     mtu @5: Int32; # mtu of backplane optional (default 9000)
     mode @6: Text="ovs"; # optional configuration mode ovs, or native (default ovs)
+    usedInterfaces @7: List(Text); # interfaces that have been configure, this is filled by the template
 }

@@ -89,3 +89,4 @@ class Namespace(TemplateBase):
     def connection_info(self):
         self.state.check('actions', 'install', 'ok')
         return self._zerodb.schedule_action('connection_info').wait(die=True).result
+
