@@ -13,7 +13,6 @@ from JumpscaleLib.sal_zos.globals import TIMEOUT_DEPLOY
 from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
                                       SERVICE_STATE_SKIPPED, SERVICE_STATE_WARNING,
                                       StateCheckError, StateCategoryNotExistsError)
-from requests.exceptions import HTTPError
 
 VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/dm_vm/0.0.1'
 GATEWAY_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/gateway/0.0.1'
@@ -714,10 +713,7 @@ class S3(TemplateBase):
             _, info = vm_robot._client.api.robot.GetRobotInfo()
             info = info.json()
 
-            if info['storage_healthy']:
-                return True
-            else:
-                return False
+            return info['storage_healthy']
 
         def test_namespace(info):
             connection_info, shard_state = info
@@ -729,11 +725,11 @@ class S3(TemplateBase):
             if shard_state == 'error':
                 self.state.set('data_shards', connection_info, SERVICE_STATE_ERROR)
 
-        state = get_state()
         if not check_vm_info():
             self.logger.error("storage is not healthy, will kick start self healing")
             self.state.set('vm', 'disk', 'error')
             return
+        state = get_state()
 
         try:
             disk_state = state.get('vm', 'disk')
