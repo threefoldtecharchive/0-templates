@@ -710,19 +710,14 @@ class S3(TemplateBase):
             """
             checks the vm info and handle disk failure
             """
-            retries = 3
-            for _ in range(retries):
-                vm_robot, _ = self._vm_robot_and_ip()
-                _, info = vm_robot._client.api.robot.GetRobotInfo()
-                info = info.json()
+            vm_robot, _ = self._vm_robot_and_ip()
+            _, info = vm_robot._client.api.robot.GetRobotInfo()
+            info = info.json()
 
-                if info['storage_healthy']:
-                    break
-                else:
-                    gevent.sleep(10)
+            if info['storage_healthy']:
+                return True
             else:
-                self.logger.error("storage is not healthy, will delete the vm")
-                self.state.delete('vm', 'disk')
+                return False
 
         def test_namespace(info):
             connection_info, shard_state = info
@@ -735,7 +730,10 @@ class S3(TemplateBase):
                 self.state.set('data_shards', connection_info, SERVICE_STATE_ERROR)
 
         state = get_state()
-        check_vm_info()
+        if not check_vm_info():
+            self.logger.error("storage is not healthy, will kick start self healing")
+            self.state.set('vm', 'disk', 'error')
+            return
 
         try:
             disk_state = state.get('vm', 'disk')
