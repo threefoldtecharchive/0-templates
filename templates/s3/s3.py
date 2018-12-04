@@ -702,16 +702,26 @@ class S3(TemplateBase):
             return
 
         def get_state():
+            vm_robot, _ = self._vm_robot_and_ip()
+            minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
+            return minio.state
+
+        def check_vm_info():
+            """
+            checks the vm info and handle disk failure
+            """
             retries = 3
             for _ in range(retries):
                 try:
                     vm_robot, _ = self._vm_robot_and_ip()
-                    minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
-                    return minio.state
-
+                    node = vm_robot.services.get(template_name="node")
+                    node.schedule_action("info")
                 except HTTPError as e:
                     if e.response.status_code == 500:
                         gevent.sleep(10)
+            else:
+                self.logger.error("Failed to get vm info, will delete the vm")
+                self.state.delete('vm', 'disk')
 
         def test_namespace(info):
             connection_info, shard_state = info
@@ -724,11 +734,8 @@ class S3(TemplateBase):
                 self.state.set('data_shards', connection_info, SERVICE_STATE_ERROR)
 
         state = get_state()
-        if not state:
-            self.logger.error("Failed to get minio state, will delete the vm")
-            self.state.delete('vm', 'disk')
-            return
-
+        check_vm_info()
+        
         try:
             disk_state = state.get('vm', 'disk')
             self.state.set('vm', 'disk', disk_state['disk'])
