@@ -13,16 +13,14 @@ class BridgeTestCases(BaseTest):
     def tearDown(self):
         for bridge in self.bridges:
             bridge.uninstall()
+            bridge.service.delete()
         self.bridges.clear()
 
         for container in self.containers:
             container.uninstall()
+            container.service.delete()
         self.containers.clear()
         super().tearDown()
-
-        for vm in self.vms:
-            vm.uninstall()
-        self.vms.clear()
         
     @parameterized.expand(['none', 'static', 'dnsmasq'])
     def test001_create_bridge(self, mode):
@@ -39,10 +37,13 @@ class BridgeTestCases(BaseTest):
 
         self.log('Create bridge (B1) with different modes, should succeed')
         bridge = self.controller.bridge_manager
+        cidr = '10.20.{}.1/24'.format(random.randint(1, 255))
         if mode == 'static':
-            bridge.install(wait=True, mode=mode, settings={'cidr': '10.20.30.1/24'})
+            bridge.install(wait=True, mode=mode, settings={'cidr': cidr})
         elif mode == 'dnsmasq':
-            bridge.install(wait=True, mode=mode, settings={"cidr": "10.20.30.1/24", "start": "10.20.30.2", "end": "10.20.30.3"})
+            start = cidr[:cidr.find('/')-1] + '{}'.format(random.randint(2, 20))
+            end = cidr[:cidr.find('/')-1] + '{}'.format(random.randint(21, 40))
+            bridge.install(wait=True, mode=mode, settings={"cidr": cidr, "start": start, "end": end})
         else:
             bridge.install(wait=True)
         self.bridges.append(bridge)
@@ -68,7 +69,7 @@ class BridgeTestCases(BaseTest):
         """
         self.log('Create bridge (B1) with basic params, should succeed')
         bridge = self.controller.bridge_manager
-        bridge.install(wait=True, mode='static', settings={'cidr': '10.20.30.1/24'})
+        bridge.install(wait=True)
 
         self.log('Check that bridge list, should be found')
         bridge_list = self.node.client.bridge.list()
@@ -96,12 +97,12 @@ class BridgeTestCases(BaseTest):
         hw_addr = self.random_string()
         bridge = self.controller.bridge_manager
         with self.assertRaises(Exception) as e:
-            bridge.install(wait=True, hwaddr=hw_addr, mode='static', settings={'cidr': '10.20.30.1/24'})
+            bridge.install(wait=True, hwaddr=hw_addr)
         self.assertIn('hwAddr {} is not valid'.format(hw_addr), e.exception.args[0])
 
         self.log('Create bridge (B2) with specificed hardware address, should succeed')
         hw_addr = '32:64:7d:0b:c7:aa'
-        bridge.install(wait=True, hwaddr=hw_addr, mode='static', settings={'cidr': '10.20.30.1/24'})
+        bridge.install(wait=True, hwaddr=hw_addr)
         self.bridges.append(bridge)
 
         self.log('Check that created bridge hardware address is reflected correctly')
@@ -120,7 +121,6 @@ class BridgeTestCases(BaseTest):
         
         #. Create bridge (B1) with invalid mode, should fail.
         #. Create bridge (B2) with invalid cidr in static mode, should fail.
-        #. Create bridge (B3) with invalid cidr in dnsmask mode, should fail.
         #. Create bridge (B4) with invalid ip range in dnsmask mode, should fail.
         """
         self.log('Create bridge (B1) with invalid mode, should fail.')
@@ -135,83 +135,26 @@ class BridgeTestCases(BaseTest):
             mode = self.random_string()
             bridge.install(wait=True, mode='static', settings={'cidr': '10.1.10.2'})
         self.assertIn("invalid CIDR address: 10.1.10.2", e.exception.args[0])
-
-        with self.assertRaises(Exception) as e:
-            mode = self.random_string()
-            bridge.install(wait=True, mode='static', settings={'cidr': '10.1.10.256/24'})
-        self.assertIn("invalid CIDR address: 10.1.10.256/24", e.exception.args[0])
-
-        with self.assertRaises(Exception) as e:
-            mode = self.random_string()
-            bridge.install(wait=True, mode='static', settings={'cidr': '10.10.25/24'})
-        self.assertIn("invalid CIDR address: 10.10.25/24", e.exception.args[0])
-
-        self.log('Create bridge (B3) with invalid cidr in dnsmask mode, should fail')
-        with self.assertRaises(Exception) as e:
-            mode = self.random_string()
-            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.1.10.2', 'start': '10.10.1.10', 'end': '10.10.1.20'})
-        self.assertIn("invalid CIDR address: 10.1.10.2", e.exception.args[0])
-
-        with self.assertRaises(Exception) as e:
-            mode = self.random_string()
-            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.1.10.256/24', 'start': '10.10.1.10', 'end': '10.10.1.20'})
-        self.assertIn("invalid CIDR address: 10.1.10.256/24", e.exception.args[0])
-
-        with self.assertRaises(Exception) as e:
-            mode = self.random_string()
-            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.25/24', 'start': '10.10.1.10', 'end': '10.10.1.20'})
-        self.assertIn("invalid CIDR address: 10.10.25/24", e.exception.args[0])
+        bridge.service.delete()
 
         self.log('Create bridge (B4) with invalid ip range in dnsmask mode, should fail')
         with self.assertRaises(Exception) as e:
             mode = self.random_string()
             bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24'})
         self.assertIn("start ip address out of range", e.exception.args[0])
-
-        with self.assertRaises(Exception) as e:
-            mode = self.random_string()
-            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24', 'start': '10.10.5.10', 'end': '10.10.1.20'})
-        self.assertIn("start ip address out of range", e.exception.args[0])
+        bridge.service.delete()
         
         with self.assertRaises(Exception) as e:
             mode = self.random_string()
             bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24', 'start': '10.10.1.10', 'end': '10.1.1.20'})
         self.assertIn("end ip address out of range", e.exception.args[0])
-        
-        with self.assertRaises(Exception) as e:
-            mode = self.random_string()
-            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24', 'start': '10.10.1.256', 'end': '10.10.1.20'})
-        self.assertIn("invalid IP address: 10.10.1.256", e.exception.args[0])
-    
-        with self.assertRaises(Exception) as e:
-            mode = self.random_string()
-            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24', 'start': '10.10.1.25', 'end': '10.10.1.256'})
-        self.assertIn("invalid IP address: 10.10.1.256", e.exception.args[0])
-
-        with self.assertRaises(Exception) as e:
-            mode = self.random_string()
-            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24', 'start': '10.1.25', 'end': '10.10.1.20'})
-        self.assertIn("invalid IP address: 10.1.25", e.exception.args[0])
-
-        with self.assertRaises(Exception) as e:
-            mode = self.random_string()
-            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24', 'start': '10.10.1.25', 'end': '10.1.20'})
-        self.assertIn("invalid IP address: 10.1.20", e.exception.args[0])
-
-        with self.assertRaises(Exception) as e:
-            mode = self.random_string()
-            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24', 'start': '10.1..25', 'end': '10.10.1.20'})
-        self.assertIn("invalid IP address: 10.1..25", e.exception.args[0])
-
-        with self.assertRaises(Exception) as e:
-            mode = self.random_string()
-            bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24', 'start': '10.10.1.25', 'end': '10.1..20'})
-        self.assertIn("invalid IP address: 10.1..20", e.exception.args[0])
+        bridge.service.delete()
 
         with self.assertRaises(Exception) as e:
             mode = self.random_string()
             bridge.install(wait=True, mode='dnsmasq', settings={'cidr': '10.10.1.1/24', 'start': '10.10.1.50', 'end': '10.10.1.20'})
         self.assertIn("mode must be one of 'none','static','dnsmasq'", e.exception.args[0])
+        bridge.service.delete()
 
     @unittest.skip("https://github.com/threefoldtech/0-templates/issues/258")
     def test003_add_remove_list_nics_for_bridge(self):
@@ -228,9 +171,8 @@ class BridgeTestCases(BaseTest):
         #. Remove N1 from core0, should succeed.
         """
         self.log('Create bridge (B1), should succeed')
-        cidr = "20.20.30.1/24"
         bridge = self.controller.bridge_manager
-        bridge.install(wait=True, mode='static', settings={"cidr": cidr})
+        bridge.install(wait=True)
         self.bridges.append(bridge)
 
         self.log("List B1 nics, should be empty")
@@ -274,7 +216,7 @@ class BridgeTestCases(BaseTest):
         #. Try to ping 8.8.8.8 when NAT is disabled, should fail.
         """
         self.log('Create bridge (B1) with nat = False/True, should succeed')
-        cidr = "10.1.0.1/24"
+        cidr = "10.1.{}.1/24".format(random.randint(0, 255))
         bridge = self.controller.bridge_manager
         if nat == "True":
             bridge.install(wait=True, mode='static', settings={"cidr": cidr}, nat=True)
@@ -292,13 +234,14 @@ class BridgeTestCases(BaseTest):
         self.node.client.container.nic_remove(cont.id, 1) # remove the default nic as containers can reach each other through it
 
         self.log('Add ip to eth0 and set it up')
-        response = cont.client.system('ip a a 10.1.0.2/24 dev eth0').get()
+        ip = cidr[:cidr.find('/')-1] + '{}/24'.format(random.randint(2, 20))
+        response = cont.client.system('ip a a {} dev eth0'.format(ip)).get()
         self.assertEqual(response.state, 'SUCCESS', response.stderr)
         response = cont.client.bash('ip l s eth0 up').get()
         self.assertEqual(response.state, 'SUCCESS', response.stderr)
 
         self.log('set network interface eth0 as default route, should succeed')
-        response = cont.client.bash('ip route add default dev eth0 via 10.1.0.1').get()
+        response = cont.client.bash('ip route add default dev eth0 via {}'.format(cidr)).get()
         self.assertEqual(response.state, 'SUCCESS', response.stderr)
 
         if nat == "True":
@@ -309,92 +252,3 @@ class BridgeTestCases(BaseTest):
             self.log('Try to ping 8.8.8.8 when NAT is disabled, should fail')
             response = cont.client.bash('ping -w3 8.8.8.8').get()
             self.assertEqual(response.state, 'ERROR', response.stderr)
-    
-    def test006_attach_bridge_to_three_containers(self):
-        """ ZRT-ZOS-036
-        *Test case for attaching bridge to three containers*
-
-        **Test Scenario:**
-        
-        #. Create bridge (B1) with dnsmasq mode (cidr (CIDR1) and 2 ip range), should succeed.
-        #. Create 3 containers C1, C2, C3 with bridge (B1), should succeed.
-        #. Check if each container (C1), (C2) got an ip address, should be found.
-        #. Check if container (C3) got an ip address, should not be found.
-        #. Check if each container (C1), (C2) can reach each other, should succeed.
-        #. Check if container (C3) can reach the other containers, should fail.
-        """
-        self.log('Create bridge (B1) with dnsmasq mode (cidr (CIDR1) and 2 ip range), should succeed')
-        cidr = "20.20.30.1/24"
-        ip_range = ["20.20.30.2", "20.20.30.3"]
-        bridge = self.controller.bridge_manager
-        bridge.install(wait=True, mode='dnsmasq', settings={"cidr": cidr, "start": ip_range[0], "end": ip_range[1]})
-        self.bridges.append(bridge)
-
-        self.log('Create 3 containers C1, C2, C3 with bridge (B1), should succeed')
-        nic = [{'type': 'bridge', 'id': bridge.default_data['name'], 'config': {'dhcp': True}}]
-        for c in range(3):
-            container = self.controller.container_manager(parent=self.controller, service_name=None)
-            container.install(wait=True, nics=nic)
-            self.containers.append(container)
-
-        for container in self.containers:
-            self.log("Check container nics, bridge (B1) should be attached.")
-            conts = self.node.containers.list()
-            cont = [c for c in conts if container.data['hostname'] in c.hostname][0]
-            self.node.client.container.nic_remove(cont.id, 1) # remove the default nic as containers can reach each other through it
-            nics = cont.client.info.nic()
-            nic = [nic for nic in nics if nic['name'] == 'eth0']
-            self.assertTrue(nic)
-            addrs = [addr['addr'] for addr in nic[0]['addrs'] if addr['addr'][:addr['addr'].find('/')] in ip_range]
-
-            if container == self.containers[2]:
-                self.log("Check if container (C3) got an ip address, should not be found.")
-                self.assertFalse(addrs)
-
-                self.log("Check if container (C3) can reach the other containers, should fail")
-                response = cont.client.bash('ping {} -w5'.format(ip_range[0])).get()
-                self.assertEqual(response.state, 'ERROR', response.stderr.strip())
-            else:
-                self.log("Check if each container (C1), (C2) got an ip address, should be found.")
-                self.assertTrue(addrs)
-
-                self.log("Check if each container (C1), (C2) can reach each other, should succeed")
-                addrs = addrs[0][:addrs[0].find('/')]
-                addrs2 = ip_range[0] if addrs == ip_range[1] else ip_range[1]
-                response = cont.client.bash('ping {} -w5'.format(addrs2)).get()
-                self.assertEqual(response.state, 'SUCCESS', response.stderr.strip())
-    
-    @unittest.skip("https://github.com/threefoldtech/jumpscale_prefab/issues/31")
-    def test007_attach_bridge_to_vm(self):
-        """ ZRT-ZOS-037
-        *Test case for attaching bridge to vm*
-
-        **Test Scenario:**
-        
-        #. Create bridge (B1) with dnsmasq mode, should succeed.
-        #. Create VM with bridge (B1), should succeed.
-        #. Check if bridge is attached to vm, should be found.
-
-        """
-        self.log('Create bridge (B1) with dnsmasq mode, should succeed')
-        cidr = "20.20.30.1/24"
-        ip_range = ["20.20.30.2", "20.20.30.3"]
-        bridge = self.controller.bridge_manager
-        bridge.install(wait=True, mode='dnsmasq', settings={"cidr": cidr, "start": ip_range[0], "end": ip_range[1]})
-        self.bridges.append(bridge)
-
-        self.log('Create VM with bridge (B1), should succeed.')
-        nic = [{'type': 'bridge','name': 'bridge_nic', 'id': bridge.default_data['name'], 'config': {'dhcp': True}}, {'type': 'default', 'name': 'defaultnic'}]
-        ssh_config = [{'path': '/root/.ssh/authorized_keys', 'content': self.ssh_key, 'name': 'sshkey'}]
-        vm = self.controller.vm_manager
-        vm.install(wait=True, configs=ssh_config, nics=nic)
-        self.vms.append(vm)
-        source_port = int(vm1.info().result['ports'].popitem()[0])
-
-        vms = self.node.client.kvm.list()
-        vm1 = [v for v in vms if v['name'] == vm.vm_service_name][0]
-        nic = [n for n in vm['params']['nics'] if n['type'] == 'bridge']
-        self.assertTrue(nic)
-
-        result = self.ssh_vm_execute_command(vm_ip=self.node_ip, port=source_port, cmd='ip a')
-        self.assertIn(result, 'bridge_nic')

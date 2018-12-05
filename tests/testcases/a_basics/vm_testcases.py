@@ -10,6 +10,7 @@ class TestVm(BaseTest):
     def tearDown(self):
         for vm in self.vms:
             vm.uninstall()
+            vm.service.delete()
         self.vms.clear()
 
         for zdb in self.zdbs:
@@ -17,10 +18,12 @@ class TestVm(BaseTest):
             for namespace in namespaces:
                 zdb.namespace_delete(namespace['name'])
             zdb.stop()
+            zdb.service.delete()
         self.zdbs.clear()
 
         for vdisk in self.vdisks:
             vdisk.uninstall()
+            vdisk.service.delete()
         self.vdisks.clear()
         super().tearDown()
 
@@ -198,19 +201,17 @@ class TestVm(BaseTest):
 
 class VM_actions(BaseTest):
 
-    @classmethod
-    def setUpClass(cls):
-        self = cls()
+    def setUp(self):
         ssh_config = [{'path': '/root/.ssh/authorized_keys', 'content': self.ssh_key, 'name': 'sshkey'}]       
-        cls.vm = self.controller.vm_manager
-        cls.vm.install(wait=True, configs=ssh_config)
-        cls.source_port = int(cls.vm.info().result['ports'].popitem()[0])
+        self.vm = self.controller.vm_manager
+        self.vm.install(wait=True, configs=ssh_config)
+        self.source_port = int(self.vm.info().result['ports'].popitem()[0])
         result = self.ssh_vm_execute_command(vm_ip=self.node_ip, port=self.source_port, cmd='pwd')
         self.assertEqual(result, '/root')
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.vm.uninstall()
+    def tearDown(self):
+        self.vm.uninstall()
+        self.vm.service.delete()
 
     def test001_pause_and_resume_vm(self):
         """ ZRT-ZOS-005
