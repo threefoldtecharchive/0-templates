@@ -245,7 +245,7 @@ class VM_actions(BaseTest):
 
     def test002_shutdown_and_start_vm(self):
         """ ZRT-ZOS-006
-        *Test case for testing shutdown and reset vm*
+        *Test case for testing shutdown and start vm*
 
         **Test Scenario:**
 
@@ -277,7 +277,7 @@ class VM_actions(BaseTest):
 
     def test003_enable_and_disable_vm_vnc(self):
         """ ZRT-ZOS-007
-        *Test case for testing reset vm*
+        *Test case for testing enable and disable vnc port*
 
         **Test Scenario:**
 
@@ -307,7 +307,7 @@ class VM_actions(BaseTest):
     @unittest.skip("https://github.com/threefoldtech/0-core/issues/35")
     def test004_reset_and_reboot_vm(self, action_type):
         """ ZRT-ZOS-008
-        *Test case for testing reset vm*
+        *Test case for testing reset and reboot vm*
 
         **Test Scenario:**
 

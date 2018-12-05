@@ -3,23 +3,23 @@ from zerorobot.service_collection import ServiceNotFoundError
 from testconfig import config
 import random
 
-class VMManager:
+class DMVMManager:
     def __init__(self, parent, service_name=None):
-        self.vm_template = 'github.com/threefoldtech/0-templates/vm/0.0.1'
+        self.dm_vm_template = 'github.com/threefoldtech/0-templates/dm_vm/0.0.1'
         self._parent = parent
         self.logger = self._parent.logger
-        self.robot = self._parent.remote_robot
-        self._vm_service = None
+        self.robot = self._parent.robot
+        self._dm_vm_service = None
         if service_name:
-            self._vm_service = self.robot.service.get(name=service_name)
+            self._dm_vm_service = self.robot.service.get(name=service_name)
 
 
     @property
     def service(self):
-        if self._vm_service == None:
-            self.logger.error('- VM_service is None, Install it first.')
+        if self._dm_vm_service == None:
+            self.logger.error('VM_service is None, Install it first.')
         else:
-            return self._vm_service
+            return self._dm_vm_service
 
     @property
     def install_state(self):
@@ -27,11 +27,15 @@ class VMManager:
 
     def install(self, wait=True, **kwargs):
         ssh_port = random.randint(22022, 22922)
+        zt_client = self._parent.zt_client(self._parent, local=True)
         default_data = {
             'memory': 2048,
             'cpu': 1,
-            'nics': [{'type': 'default', 'name': 'defaultnic'}],
-            'flist': 'https://hub.grid.tf/tf-bootable/ubuntu:latest.flist',
+            'mgmtNic': {'name': self._parent.random_string(),
+                        'type': 'zerotier', 'id': config['zt']['zt_netwrok_id'],
+                        'ztClient': zt_client.service_name},
+            'image': 'ubuntu',
+            'nodeId': config['node']['nodeid'],
             'ports': [{'source': ssh_port, 'target': 22, 'name': 'ssh'}],
             'configs': [
                 {'path': '/root/.ssh/authorized_keys', 'content': config['vm']['ssh'],
@@ -40,13 +44,16 @@ class VMManager:
         if kwargs:
             default_data.update(kwargs)
 
-        self.vm_service_name = "vm_{}".format(self._parent.random_string())
-        self.logger.info('Install {} vm, ssh port : {} '.format(self.vm_service_name, ssh_port))
-        self._vm_service = self.robot.services.create(self.vm_template, self.vm_service_name, default_data)
-        self._vm_service.schedule_action('install').wait(die=wait)
+        if default_data['image'] == 'zero-os':
+            default_data['kernelArgs'] = [{'name': 'development', 'key': 'development'}]
+
+        self.dm_vm_service_name = "vm_{}".format(self._parent.random_string())
+        self.logger.info('Install {} vm, ssh port : {} '.format(self.dm_vm_service_name, ssh_port))
+        self._dm_vm_service = self.robot.services.create(self.dm_vm_template, self.dm_vm_service_name, default_data)
+        self._dm_vm_service.schedule_action('install').wait(die=wait)
 
     def uninstall(self, wait=True):
-        self.logger.info('Uninstall {} vm'.format(self.vm_service_name))
+        self.logger.info('Uninstall {} vm'.format(self.dm_vm_service_name))
         self.service.schedule_action('uninstall').wait(die=wait)
 
     def info(self):
@@ -78,11 +85,9 @@ class VMManager:
 
     def disable_vnc(self):
         return self.service.schedule_action('disable_vnc').wait(die=True)
-    
+
     def add_portforward(self, name, source, target):
-        if type(source) != int or type(target) != int:
-            raise ValueError ('Source and Target type must be int')
         return self.service.schedule_action('add_portforward', args={'name': name, 'source': source, 'target': target}).wait(die=True)
 
     def remove_portforward(self, name):
-        return self.service.schedule_action('remove_portforward', args={'name': name}).wait(die=True)
+        return self.service.schedule_action('remove_portforward', args={'name': name}).wait(die=True).wait(die=True)

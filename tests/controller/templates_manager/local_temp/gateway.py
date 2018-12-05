@@ -22,7 +22,7 @@ class GWManager:
 
     def install(self, wait=True, **kwargs):
         self.default_data = {
-            'hostname': self._parent._generate_random_string(),
+            'hostname': self._parent.random_string(),
             'networks': [{'name': 'public_nic', 'type': 'default', 'public': True, 'id': ''}],
             'portforwards': [],
             'httpproxies': [],
@@ -34,7 +34,7 @@ class GWManager:
         if kwargs:
             self.default_data.update(kwargs)
             
-        self.gw_service_name = self._parent._generate_random_string()
+        self.gw_service_name = self._parent.random_string()
         self.logger.info('Install {} gateway'.format(self.gw_service_name))
         self._gw_service = self.robot.services.create(self.gw_template, self.gw_service_name, self.default_data)
         self._gw_service.schedule_action('install').wait(die=wait)

@@ -119,7 +119,17 @@ class BaseTest(TestCase):
                 time.sleep(5)
         else:
             raise RuntimeError("Can't get zerotier ip")
-        
+    
+    def get_dm_vm_zt_ip(self, dm_vm):
+        for _ in range(100):
+            ip = dm_vm.info().wait().result['zerotier']['ip']
+            if ip == None:
+                time.sleep(1)
+            else:
+                break
+        else:
+            raise RuntimeError("Can't get zerotier ip")
+        return ip
 
     def zdb_mounts(self):
         disk_mount=[]

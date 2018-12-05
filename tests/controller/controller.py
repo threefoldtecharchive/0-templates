@@ -1,7 +1,7 @@
 from jumpscale import j
 from uuid import uuid4
 from tests.controller.templates_manager.local_temp import vm, container, zerodb, vdisk, gateway, namespace, bridge
-from tests.controller.templates_manager.general_temp import zt_client
+from tests.controller.templates_manager.general_temp import zt_client, dm_vm
 
 logger = j.logger.get('controller.log')
 
@@ -26,6 +26,7 @@ class Controller:
 
         # get instance from all templates_manager
         self.vm_manager = vm.VMManager(parent=self, service_name=None)
+        self.dm_vm = dm_vm.DMVMManager(parent=self, service_name=None)
         self.zdb_manager = zerodb.ZDBManager(parent=self, service_name=None)
         self.vdisk = vdisk.VdiskManager(parent=self, service_name=None)
         self.ns_manager = namespace.NSManager(parent=self, service_name=None)
@@ -34,5 +35,5 @@ class Controller:
         self.zt_client = zt_client.ZT_Client
         self.gw_manager = gateway.GWManager
 
-    def _generate_random_string(self):
+    def random_string(self):
         return str(uuid4()).replace('-', '')[10:]

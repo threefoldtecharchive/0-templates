@@ -9,7 +9,7 @@ class BrigeManager:
         self._parent = parent
         self.logger = self._parent.logger
         self.robot = self._parent.remote_robot
-        self._bridge_service = service_name
+        self._bridge_service = None
         if service_name:
             self._bridge_service = self.robot.service.get(name=service_name)
          
@@ -22,7 +22,7 @@ class BrigeManager:
 
     def install(self, wait=True, **kwargs):
         self.default_data = {
-            'name': self._parent._generate_random_string()[:10],
+            'name': self._parent.random_string()[:10],
             'hwaddr' : None,
             'mode': 'none',
             'nat': False,
