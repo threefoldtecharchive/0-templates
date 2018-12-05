@@ -9,7 +9,7 @@ class NSManager:
         self._parent = parent
         self.logger = self._parent.logger
         self.robot = self._parent.remote_robot
-        self._ns_service = service_name
+        self._ns_service = None
         if service_name:
             self._ns_service = self.robot.service.get(name=service_name)
          
@@ -23,11 +23,11 @@ class NSManager:
     def install(self, wait=True, **kwargs):
         self.default_data = {
             'size': random.randint(1, 50),
-            'nsName' : self._parent._generate_random_string(),
+            'nsName' : self._parent.random_string(),
             'diskType': 'hdd',
             'public': False,
             'mode': 'user',
-            'password': self._parent._generate_random_string(),
+            'password': self._parent.random_string(),
         }
         if kwargs:
             self.default_data.update(kwargs)
