@@ -12,7 +12,13 @@ class GWTests(BaseTest):
     def tearDown(self):
         for gw in self.gws:
             gw.stop()
+            gw.service.delete()
         self.gws.clear()
+
+        for vm in self.vms:
+            vm.uninstall()
+            vm.service.delete()
+        self.vms.clear()
         super().tearDown()
         
     def test001_deploy_getway_with_without_public_network(self):
@@ -29,6 +35,7 @@ class GWTests(BaseTest):
         with self.assertRaises(Exception) as e:
             gateway.install(wait=True, networks=network)
         self.assertEqual("Need exactly one public network", e.exception.args[0])
+        gateway.service.delete()
 
         self.log('Create gateways[GW1] with public default network, should succeed.')
         network[0]['public'] = True
@@ -89,6 +96,9 @@ class GWTests(BaseTest):
         self.log('Check that zerotier network is added successfully to gateway[GW1].')
         gw_zt_ip = self.get_zerotier_ip(identity)
         self.assertTrue(gw_zt_ip)
+
+        self.log('Remove zerotier service')
+        zt_client.delete()
     
     def test004_remove_network(self):
         """ZRT-ZOS-024

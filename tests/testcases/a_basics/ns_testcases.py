@@ -10,9 +10,15 @@ items = [['user', 'seq', 'direct'],
          ['hdd', 'ssd']]
 para_list = list(itertools.product(*items))
 
-class NSTestCases(BaseTest):  
+class NSTestCases(BaseTest):
+    def setUp(self):
+        super().setUp()
+        self.namespaces = []
     def tearDown(self):
-        self.ns.uninstall()
+        for ns in self.namespaces:
+            ns.uninstall()
+            ns.service.delete()
+        self.namespaces.clear()
         super().tearDown()
 
     def find_namespace_in_list(self, zdb, ns_name):
