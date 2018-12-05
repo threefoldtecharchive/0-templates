@@ -14,18 +14,20 @@ class ZerotierClient(TemplateBase):
         super().__init__(name=name, guid=guid, data=data)
         self.add_delete_callback(self.uninstall)
 
+    def validate(self):
         # client instance already exists
         if self.name in j.clients.zerotier.list():
             return
 
-    def validate(self):
         # create the client instance
         token = self.data.get('token')
         if not token:
             raise ValueError("no token specified in service data")
 
         # this will create a configuration for this instance
-        j.clients.zerotier.get(self.name, data={'token_': self.data['token']})
+        zt = j.clients.zerotier.new(self.name, data={'token_': self.data['token']})
+        zt.config.data_set('token_', self.data['token'])
+        zt.config.save()
 
     def uninstall(self):
         """

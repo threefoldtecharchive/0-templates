@@ -20,9 +20,6 @@ class Zerodb(TemplateBase):
         self._node_sal = j.clients.zos.get(NODE_CLIENT)
         self.recurring_action('_monitor', 10)  # every 10 seconds
 
-    def validate(self):
-        self.state.delete('status', 'running')
-
     @property
     def _zerodb_sal(self):
         data = self.data.copy()
@@ -46,10 +43,30 @@ class Zerodb(TemplateBase):
         node.state.check('disks', 'mounted', 'ok')
 
         if not self._zerodb_sal.is_running():
-            self.state.delete('status', 'running')
-            self._deploy()
+            data = {
+                'attributes': {},
+                'resource': self.guid,
+                'environment': 'Production',
+                'severity': 'critical',
+                'event': 'Hardware',
+                'tags': [],
+                'service': ['zerodb']
+            }
+            try:
+                self._deploy()
+            except Exception:
+                self.state.delete('status', 'running')
+                data['text'] = 'Failed to deploy zerodb {}'.format(self.name)
+                send_alert(self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'), data)
+                return
+
             if self._zerodb_sal.is_running():
                 self.state.set('status', 'running', 'ok')
+            else:
+                self.state.delete('status', 'running')
+                data['text'] = 'Failed to start zerodb {}'.format(self.name)
+                send_alert(self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'), data)
+
         else:
             self.state.set('status', 'running', 'ok')
 
@@ -108,7 +125,13 @@ class Zerodb(TemplateBase):
         """
         Return disk information
         """
-        return self._zerodb_sal.info
+        info = self._zerodb_sal.info
+        try:
+            self.state.check('status', 'running', 'ok')
+            info['running'] = True
+        except StateCheckError:
+            info['running'] = False
+        return info
 
     def namespace_list(self):
         """
@@ -246,3 +269,8 @@ class Zerodb(TemplateBase):
     def _reserve_port(self):
         port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
         self.data['nodePort'] = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': 1}).wait(die=True).result[0]
+
+
+def send_alert(alertas, alert):
+    for alerta in alertas:
+        alerta.schedule_action('send_alert', args={'data': alert})

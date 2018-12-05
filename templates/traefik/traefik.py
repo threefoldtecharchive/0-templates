@@ -91,3 +91,9 @@ class Traefik(TemplateBase):
         self._traefik_sal.stop()
         self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
+
+    def update_endpoint(self ,etcd_endpoint):
+        self.data['etcdEndpoint'] = etcd_endpoint
+        self.state.check('actions', 'start', 'ok')
+        self._traefik_sal.stop()
+        self._traefik_sal.start()

@@ -37,7 +37,7 @@ struct Schema {
         # Environment variables for the process.
         # e.g:  'PATH=/usr/bin/local'
         stdin @4 :Text; # Data that needs to be passed into the stdin of the started process
-        id @5: Text;
+        id @5: Text; # Job id used for this process
     }
 
     struct Nic {

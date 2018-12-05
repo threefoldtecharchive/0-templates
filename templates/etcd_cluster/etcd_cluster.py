@@ -59,7 +59,7 @@ class EtcdCluster(TemplateBase):
             except StateCheckError:
                 self.state.delete('status', 'running')
                 return
-        self.state.set('status', 'runnning', 'ok')
+        self.state.set('status', 'running', 'ok')
 
     def _ensure_etcds_connections(self):
         try:

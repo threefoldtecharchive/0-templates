@@ -27,6 +27,7 @@ class Minio(TemplateBase):
         self._healer = Healer(self)
         self.add_delete_callback(self.uninstall)
         self.recurring_action('_monitor', 30)  # every 30 seconds
+        self.recurring_action('check_and_repair', 43200)  # every 12 hours
 
     def validate(self):
         self.state.delete('status', 'running')
@@ -116,7 +117,7 @@ class Minio(TemplateBase):
 
     def uninstall(self):
         self.logger.info('Uninstalling minio %s' % self.name)
-        self.healer.stop()
+        self._healer.stop()
         self._minio_sal.destroy()
 
         self._release_port()
@@ -124,11 +125,24 @@ class Minio(TemplateBase):
         self.state.delete('actions', 'install')
         self.state.delete('status', 'running')
 
-    def update_zerodbs(self, zerodbs):
+    def update_all(self, zerodbs, tlog, master):
+        if zerodbs:
+            self.update_zerodbs(zerodbs, reload=False)
+        if tlog:
+            self.update_tlog(tlog['namespace'], tlog['address'], reload=False)
+        if master:
+            self.update_master(master['namespace'], master['address'], reload=False)
+
+        minio_sal = self._minio_sal
+        if minio_sal.is_running():
+            minio_sal.create_config()
+            minio_sal.reload()
+
+    def update_zerodbs(self, zerodbs, reload=True):
         self.data['zerodbs'] = zerodbs
         # if minio is running and we update the config, tell it to reload the config
         minio_sal = self._minio_sal
-        if minio_sal.is_running():
+        if reload and minio_sal.is_running():
             minio_sal.create_config()
             minio_sal.reload()
 
@@ -138,14 +152,14 @@ class Minio(TemplateBase):
         for addr in self.data['zerodbs']:
             self.state.set('data_shards', addr, SERVICE_STATE_OK)
 
-    def update_tlog(self, namespace, address):
+    def update_tlog(self, namespace, address, reload=True):
         self.data['tlog'] = {
             'namespace': namespace,
             'address': address
         }
         # if minio is running and we update the config, tell it to reload the config
         minio_sal = self._minio_sal
-        if minio_sal.is_running():
+        if reload and minio_sal.is_running():
             minio_sal.create_config()
             minio_sal.reload()
 
@@ -153,14 +167,14 @@ class Minio(TemplateBase):
         if self.data['tlog']:
             self.state.set('tlog_shards', self.data['tlog']['address'], SERVICE_STATE_OK)
 
-    def update_master(self, namespace, address):
+    def update_master(self, namespace, address, reload=True):
         self.data['master'] = {
             'namespace': namespace,
             'address': address
         }
         # if minio is running and we update the config, tell it to reload the config
         minio_sal = self._minio_sal
-        if minio_sal.is_running():
+        if reload and minio_sal.is_running():
             minio_sal.create_config()
             minio_sal.reload()
 
@@ -242,4 +256,6 @@ def _health_monitoring(state, level, msg, flag):
             state.set('data_shards', msg['shard'], SERVICE_STATE_ERROR)
         if 'tlog' in msg and not msg.get('master', False):  # we check only the minio owns tlog server, not it's master
             state.set('tlog_shards', msg['tlog'], SERVICE_STATE_ERROR)
+        if 'subsystem' in msg and msg['subsystem'] == 'disk':
+            state.set('vm', 'disk', 'error')
 

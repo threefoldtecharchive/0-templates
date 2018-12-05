@@ -9,8 +9,10 @@ This template responsible for creating and managing a web gateway consisting of 
 - `nrEtcds`: number of etcd instances in the etcd cluster
 - `etcdPassword`: etcd cluster root user password. If not supplied, the template will generate it.
 - `nics`: list of nics used for the traefik, coredns and etcd containers
-- `publicNode`: the id of the node to deploy traefik and coredns on
+- `publicNodes`: list of node ids to deploy traefik and coredns on
 - `publicIps`: the list of public ips that will be exposed by coredns
+- `etcdConnectionInfo`: save the last etcd connection info
+
 
 Nic:
 - `id`: vxlan or vlan id or zerotier network id
@@ -39,8 +41,8 @@ robot = j.clients.zrobot.robots['local']
 args = {
     'nics': [{'name': 'ten', 'type': 'zerotier', 'ztClient':'zt', 'id': '1d719394044ed153'}],
     'farmerIyoOrg': 'farmer',
-    'nrEtcds: 3,
-    'publicNode': '124121421',
+    'nrEtcds': 3,
+    'publicNodes': ['124121421']
     'publicIps': ['271.2.1.3']
     }
 
@@ -65,7 +67,8 @@ services:
             - type: 'zerotier'
           farmerIyoIrg: 'farmer'
           nrEtcds: 3
-          publicNode: 124121421
+          publicNodes:
+            - 124121421
           publicIps:
             - '271.2.1.3'
 

@@ -6,6 +6,7 @@ from zerorobot.template.state import StateCheckError, StateCategoryNotExistsErro
 
 S3_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/s3/0.0.1'
 REVERSE_PROXY_UID = 'github.com/threefoldtech/0-templates/reverse_proxy/0.0.1'
+VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/dm_vm/0.0.1'
 
 
 class S3Redundant(TemplateBase):
@@ -166,7 +167,7 @@ class S3Redundant(TemplateBase):
         urls = self._active_s3().schedule_action('url').wait(die=True).result
         try:
             reverse_proxy = self.api.services.get(template_uid=REVERSE_PROXY_UID, name=self.data['reverseProxy'])
-            reverse_proxy.schedule_action('update_servers', args={'servers': [urls['public']]})
+            reverse_proxy.schedule_action('update_servers', args={'servers': [urls['storage']]})
         except ServiceNotFoundError:
             self.logger.warning('Failed to find  and update reverse_proxy {}'.format(self.data['reverseProxy']))
 
@@ -181,6 +182,8 @@ class S3Redundant(TemplateBase):
             self.data['activeS3'] = active_s3.name
         active_s3.schedule_action('install').wait(die=True)
         self.logger.info('Installed s3 {}'.format(active_s3.name))
+        active_dmvm = self.api.services.get(template_uid=VM_TEMPLATE_UID, name=active_s3.guid)
+
 
         if self.data['passiveS3']:
             passive_s3 = self._passive_s3()
@@ -190,6 +193,7 @@ class S3Redundant(TemplateBase):
             passive_data = dict(active_data)
             passive_data['master'] = active_tlog
             passive_data['namespaces'] = namespaces
+            passive_data['excludeNodesVM'] = [active_dmvm.data['nodeId']]
             passive_s3 = self.api.services.create(S3_TEMPLATE_UID, data=passive_data)
             self.data['passiveS3'] = passive_s3.name
         passive_s3.schedule_action('install').wait(die=True)
@@ -223,11 +227,13 @@ class S3Redundant(TemplateBase):
 
     def urls(self):
         self.state.check('actions', 'install', 'ok')
-        active_urls = self._active_s3().schedule_action('url').wait(die=True).result
-        passive_urls = self._passive_s3().schedule_action('url').wait(die=True).result
+        active_task = self._active_s3().schedule_action('url')
+        passive_task = self._passive_s3().schedule_action('url')
+        for task in [active_task, passive_task]:
+            task.wait(die=True)
         return {
-            'active_urls': active_urls,
-            'passive_urls': passive_urls,
+            'active_urls': active_task.result,
+            'passive_urls': passive_task.result,
         }
 
     def start_active(self):
@@ -265,4 +271,3 @@ class S3Redundant(TemplateBase):
         except StateCheckError:
             return
         self._update_reverse_proxy_servers()
-

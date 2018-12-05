@@ -6,6 +6,7 @@ from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry
 from zerorobot.template.state import StateCheckError
 
+from JumpscaleLib.sal_zos.globals import TIMEOUT_DEPLOY
 NODE_CLIENT = 'local'
 VDISK_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vdisk/0.0.1'
 PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
@@ -58,16 +59,20 @@ class Vm(TemplateBase):
         vm_sal = self._vm_sal
 
         if not vm_sal.is_running():
-            self.state.delete('status', 'running')
-
             for disk in self.data['disks']:
                 vdisk = self.api.services.get(template_uid=VDISK_TEMPLATE_UID, name=disk['name'])
-                vdisk.state.check('status', 'running', 'ok')  # Cannot start vm until vdisks are running
+                try:
+                    vdisk.state.check('status', 'running', 'ok')  # Cannot start vm until vdisks are running
+                except StateCheckError:
+                    self.state.delete('status', 'running')
+                    raise
 
             self._update_vdisk_url()
             vm_sal.deploy()
 
-            if vm_sal.is_running():
+            if not vm_sal.is_running():
+                self.state.delete('status', 'running')
+            else:
                 self.state.set('status', 'running', 'ok')
         else:
             self.state.set('status', 'running', 'ok')
@@ -91,9 +96,11 @@ class Vm(TemplateBase):
         return self.data['ztIdentity']
 
     def _update_vdisk_url(self):
+        self.logger.info('update the vdisk url')
         for disk in self.data['disks']:
             vdisk = self.api.services.get(template_uid=VDISK_TEMPLATE_UID, name=disk['name'])
             disk['url'] = vdisk.schedule_action('private_url').wait(die=True).result
+            self.data['info'] = None # force relaod if info action data
 
     def install(self):
         self.logger.info('Installing vm %s' % self.name)
@@ -116,6 +123,7 @@ class Vm(TemplateBase):
 
         self._release_ports()
 
+        self.data['info'] = None # force relaod if info action data
         self.state.delete('actions', 'install')
         self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
@@ -171,28 +179,38 @@ class Vm(TemplateBase):
         self.state.check('actions', 'install', 'ok')
         self._vm_sal.enable_vnc()
 
-    def info(self, timeout=None):
+    def info(self, timeout=TIMEOUT_DEPLOY):
+        self.logger.info('get vm info')
+        self._load_info(timeout)
+        return self.data['info']
+
+    def _load_info(self, timeout):
+        self.logger.info('load the vm info')
         self._update_vdisk_url()
         info = self._vm_sal.info or {}
-        nics = copy.deepcopy(self.data['nics'])
-        for nic in nics:
-            if nic['type'] == 'zerotier' and nic.get('ztClient') and self.data.get('ztIdentity'):
+        self.logger.info('vm nics : {}'.format(self.data['nics']))
+        for nic in self.data['nics']:
+            if nic['type'] == 'zerotier' and nic.get('ztClient') and self.data.get('ztIdentity') and not nic.get('ip'):
                 ztAddress = self.data['ztIdentity'].split(':')[0]
+                self.logger.info('ztAddress : {}'.format(ztAddress))
                 zclient = j.clients.zerotier.get(nic['ztClient'])
                 try:
                     network = zclient.network_get(nic['id'])
+                    self.logger.info('network : {}'.format(network))
                     member = network.member_get(address=ztAddress)
-                    member.timeout = None
+                    self.logger.info('member : {}'.format(member))
+                    member.timeout = timeout
+                    self.logger.info('get private ip timeout : {}'.format(timeout))
                     nic['ip'] = member.get_private_ip(timeout)
                 except (RuntimeError, ValueError) as e:
                     self.logger.warning('Failed to retreive zt ip: %s', str(e))
-
+        self.logger.info('construct the vm data dict')
         node_sal = self._node_sal
-        return {
+        self.data['info'] = {
             'vnc': info.get('vnc'),
             'status': info.get('state', 'halted'),
             'disks': self.data['disks'],
-            'nics': nics,
+            'nics': self.data['nics'],
             'ztIdentity': self.data['ztIdentity'],
             'ports': {p['source']: p['target'] for p in self.data['ports']},
             'host': {
@@ -201,6 +219,7 @@ class Vm(TemplateBase):
                 'management_addr': node_sal.management_address,
             }
         }
+        return self.data['info']
 
     def disable_vnc(self):
         self.logger.info('Disable vnc for vm %s' % self.name)
@@ -224,6 +243,8 @@ class Vm(TemplateBase):
         self.data['ports'].append(forward)
 
         node_sal.client.kvm.add_portfoward(self._vm_sal.uuid, forward['source'], forward['target'])
+
+        self.data['info'] = None # force relaod if info action data
         return forward
 
     def remove_portforward(self, name):
@@ -231,6 +252,7 @@ class Vm(TemplateBase):
             if forward['name'] == name:
                 self._node_sal.client.kvm.remove_portfoward(self._vm_sal.uuid, str(forward['source']), forward['target'])
                 self.data['ports'].remove(forward)
+                self.data['info'] = None # force relaod if info action data
                 return
 
     def _populate_port_forwards(self, ports):
