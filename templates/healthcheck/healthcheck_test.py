@@ -101,3 +101,4 @@ class TestHealthcheckTemplate(ZrobotBaseTest):
         healthcheck._monitor()
 
         healthcheck._healthcheck.assert_called_with()
+

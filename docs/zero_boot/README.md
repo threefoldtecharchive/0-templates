@@ -54,7 +54,7 @@ js_shell
 
 Or import Jumpscale when using as a script
 ```py
-from jumpscale import j
+from Jumpscale import j
 ```
 
 Load the ZeroRobot
@@ -400,3 +400,4 @@ reservation_1.schedule_action('uninstall').wait(die=True).result
 # delete the service
 reservation_1.delete()
 ```
+

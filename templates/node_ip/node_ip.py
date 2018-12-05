@@ -1,5 +1,5 @@
 
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 import netaddr
@@ -54,3 +54,4 @@ class NodeIp(TemplateBase):
         if cidr in ips:
             node.client.ip.addr.delete(interface, cidr)
         self.state.delete('actions', 'install')
+

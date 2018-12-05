@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from testconfig import config
 import random

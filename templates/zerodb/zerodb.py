@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry
@@ -274,3 +274,4 @@ class Zerodb(TemplateBase):
 def send_alert(alertas, alert):
     for alerta in alertas:
         alerta.schedule_action('send_alert', args={'data': alert})
+

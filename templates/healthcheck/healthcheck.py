@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 
 from zerorobot.template.base import TemplateBase
 
@@ -76,3 +76,4 @@ def _update_healthcheck_state(service, healthcheck):
             _update(service, hc)
     else:
         _update(service, healthcheck)
+

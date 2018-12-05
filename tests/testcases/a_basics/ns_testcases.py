@@ -1,6 +1,6 @@
 from tests.testcases.base_test import BaseTest
 from nose_parameterized import parameterized
-from jumpscale import j
+from Jumpscale import j
 import unittest
 import time, random
 import itertools

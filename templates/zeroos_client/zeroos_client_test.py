@@ -63,3 +63,4 @@ class TestZeroosClientTemplate(ZrobotBaseTest):
         service.delete()
 
         delete.assert_called_once_with('zos')
+

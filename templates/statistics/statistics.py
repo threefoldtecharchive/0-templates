@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import timeout
 
@@ -78,3 +78,4 @@ class Statistics(TemplateBase):
                     "value": float(value)
                 }
             }], database='statistics')
+

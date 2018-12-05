@@ -4,7 +4,7 @@ import os
 import pytest
 
 from erp_registeration import ErpRegisteration
-from jumpscale import j
+from Jumpscale import j
 
 from JumpscaleZrobot.test.utils import ZrobotBaseTest
 
@@ -130,3 +130,4 @@ class TestErpRegisterationTemplate(ZrobotBaseTest):
             erp._get_erp_client = MagicMock(side_effect=Exception)
             erp._get_bot_client = MagicMock()
             erp.register('node')
+

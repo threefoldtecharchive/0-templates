@@ -1,5 +1,5 @@
 from unittest.mock import MagicMock, patch
-from jumpscale import j
+from Jumpscale import j
 import os
 import pytest
 
@@ -209,3 +209,4 @@ class TestZrobotTemplate(ZrobotBaseTest):
         zrobot._monitor()
         zrobot.state.delete.assert_called_with('status', 'running')
         zrobot.start.assert_called_once_with()
+

@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.base import TemplateBase
 
 
@@ -98,3 +98,4 @@ class Coredns(TemplateBase):
         self.state.check('actions', 'start', 'ok')
         self._coredns_sal.stop()
         self._coredns_sal.start()
+

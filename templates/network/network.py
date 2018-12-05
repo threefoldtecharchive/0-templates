@@ -1,5 +1,5 @@
 
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry, timeout
 from zerorobot.template.state import StateCheckError
@@ -101,3 +101,4 @@ class Network(TemplateBase):
 def send_alert(alertas, alert):
     for alerta in alertas:
         alerta.schedule_action('send_alert', args={'data': alert})
+

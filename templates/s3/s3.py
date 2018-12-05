@@ -5,7 +5,7 @@ import requests
 
 import gevent
 import netaddr
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import timeout
@@ -856,3 +856,4 @@ class NamespaceDeployError(RuntimeError):
     def __init__(self, msg, node):
         super().__init__(self, msg)
         self.node = node
+

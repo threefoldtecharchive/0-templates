@@ -1,7 +1,7 @@
 import os
 import signal
 
-from jumpscale import j
+from Jumpscale import j
 
 from zerorobot.template.base import TemplateBase
 from zerorobot.config.data_repo import _parse_zdb
@@ -29,7 +29,7 @@ class ZrobotConfig(TemplateBase):
         install writes the config, then send a signal to the robot to stop itself
         in production 0-os will detect that the robot stops and will restart it
         """
-        j.data.serializer.yaml.dump(
+        j.data.serializers.yaml.dump(
             CONFIG_PATH,
             {'zdb_url': self.data['dataRepo']}
         )
@@ -64,3 +64,4 @@ class ZrobotConfig(TemplateBase):
         # Should reset backend to file
         j.core.state.configSetInDict("myconfig", "backend", "file")
         self._kill_robot()
+

@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import timeout
@@ -271,3 +271,4 @@ class S3Redundant(TemplateBase):
         except StateCheckError:
             return
         self._update_reverse_proxy_servers()
+

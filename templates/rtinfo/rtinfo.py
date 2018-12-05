@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 
@@ -47,3 +47,4 @@ class Rtinfo(TemplateBase):
     def uninstall(self):
         self.node_sal.client.rtinfo.stop(self.data["address"], self.data["port"])
         self.state.delete("actions", "install")
+

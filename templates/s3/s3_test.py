@@ -4,7 +4,7 @@ import os
 import requests
 import pytest
 
-from jumpscale import j
+from Jumpscale import j
 from s3 import S3, sort_by_master_nodes
 
 from JumpscaleZrobot.test.utils import ZrobotBaseTest
@@ -176,3 +176,4 @@ class TestUtils(TestCase):
         nodes = [{'node_id': '1'}, {'node_id': '2'}, {'node_id': '3'}, {'node_id': '4'}, {'node_id': '5'}]
         sorted_nodes = sort_by_master_nodes(nodes, master_nodes)
         assert sorted_nodes == [{'node_id': '2'}, {'node_id': '4'}, {'node_id': '1'}, {'node_id': '3'}, {'node_id': '5'}]
+

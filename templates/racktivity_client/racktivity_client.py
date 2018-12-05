@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 
 from zerorobot.template.base import TemplateBase
 
@@ -36,3 +36,4 @@ class RacktivityClient(TemplateBase):
         j.clients.racktivity.delete(self.name)
         # call the delete of the base class
         super().delete()
+

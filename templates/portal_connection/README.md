@@ -14,3 +14,4 @@ It works by sending an HTTP POST request to the portal in order to register the 
 ### Actions:
 - install: Send a POST request to the url specified in the schema with the required information for the portal to track a robot.
 - uninstall: Will send a request to the portal to stop tracking this robot in the portal (Not called when service is deleted).
+

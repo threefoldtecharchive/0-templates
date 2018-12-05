@@ -559,3 +559,4 @@ class TestGatewayTemplate(ZrobotBaseTest):
         gw.state.set('actions', 'start', 'ok')
         gw.stop()
         gw._gateway_sal.stop.called_once_with()
+

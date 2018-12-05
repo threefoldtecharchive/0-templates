@@ -10,3 +10,4 @@ This template runs an rtinfo client on the local zos host.
 - `disks`: List of prefixes of disk names to watch (e.g. `["sd"]` to watch `sda`, `sdb`, `sdc`, ... disks)  
     Set an empty array (`[]`) to not include any disk data.  
     (default: `[""]` which pushes all watchable disks to rtinfod)
+

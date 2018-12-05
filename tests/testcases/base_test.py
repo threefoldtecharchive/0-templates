@@ -2,7 +2,7 @@ from unittest import TestCase
 from testconfig import config
 from tests.controller.controller import Controller
 from uuid import uuid4
-from jumpscale import j
+from Jumpscale import j
 from subprocess import Popen, PIPE, run
 import time, os, hashlib
 from urllib.parse import urlparse

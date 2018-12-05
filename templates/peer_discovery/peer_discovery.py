@@ -1,6 +1,6 @@
 from random import shuffle
 
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 
@@ -84,4 +84,5 @@ class PeerDiscovery(TemplateBase):
             peer = self.data['discoveredPeers'].pop(0)
             [addr, port] = peer.split(':')
             self._client_sal.add_peer(addr, port)
+
 

@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 import os
 import pytest
 
-from jumpscale import j
+from Jumpscale import j
 from vm import Vm, NODE_CLIENT
 from zerorobot.template.state import StateCheckError
 
@@ -312,3 +312,4 @@ class TestVmTemplate(ZrobotBaseTest):
         ]
         result = populate_port_forwards(ports, node_sal)
         assert result == ports
+

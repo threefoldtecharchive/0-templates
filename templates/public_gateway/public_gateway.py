@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 import copy
 import netaddr
 from zerorobot.template.base import TemplateBase
@@ -136,5 +136,6 @@ class PublicGateway(TemplateBase):
         for proxy in proxies:
             name = self._prefix_name(proxy['name'])
             gw_service.schedule_action('remove_http_proxy', args={'name': name}).wait(die=True)
+
 
 

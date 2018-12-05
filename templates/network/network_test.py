@@ -20,3 +20,4 @@ class TestNetworkTemplate(ZrobotBaseTest):
 
     def tearDown(self):
         patch.stopall()
+

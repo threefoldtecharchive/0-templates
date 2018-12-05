@@ -3,7 +3,7 @@ import time
 import os
 import traceback
 
-from jumpscale import j
+from Jumpscale import j
 
 WIPE=False      # wipe all drives during cleanup
 WIPE_KEY=True   # wipe ssh key used for connecting to the VM

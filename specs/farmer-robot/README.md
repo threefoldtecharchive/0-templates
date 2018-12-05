@@ -80,3 +80,4 @@ IPPoolsManager:
     - reserver_gateway(): create a GW service on on of the node
     - reserve_zdb_namespace(size, type): create a zdb namespace on of the node node
     - info: return information regarding the capacity (how much used/free,...)
+

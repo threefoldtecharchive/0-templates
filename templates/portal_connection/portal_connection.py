@@ -2,7 +2,7 @@ import requests
 import os
 import socket
 import psutil
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.server import auth
 
@@ -67,3 +67,4 @@ def _authenticate(username, password, url):
     resp.raise_for_status()
     auth_token = resp.json()
     return auth_token
+

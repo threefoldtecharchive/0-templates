@@ -1,6 +1,6 @@
 import time
 
-from jumpscale import j
+from Jumpscale import j
 
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
@@ -146,3 +146,4 @@ class ZerobootPool(TemplateBase):
             s = self.api.services.get(name=host)
             s.schedule_action("power_cycle").wait(die=True)
             time.sleep(interval)
+

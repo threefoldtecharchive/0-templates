@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
@@ -157,3 +157,4 @@ class ZerobootReservation(TemplateBase):
         self.state.check('actions', 'install', 'ok')
 
         self._host.schedule_action('configure_ipxe_boot', args={'lkrn_url': lkrn_url}).wait(die=True)
+

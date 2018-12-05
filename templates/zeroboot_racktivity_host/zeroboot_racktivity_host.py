@@ -1,6 +1,6 @@
 import time
 
-from jumpscale import j
+from Jumpscale import j
 
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
@@ -287,3 +287,4 @@ class ZerobootRacktivityHost(TemplateBase):
 
         self._host.configure_ipxe_boot(lkrn_url)
         self.data['lkrnUrl'] = lkrn_url
+

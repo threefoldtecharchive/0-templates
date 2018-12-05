@@ -158,3 +158,4 @@ class TestContainerTemplate(ZrobotBaseTest):
 
         container.stop.assert_called_once_with()
         container.state.delete.assert_called_once_with('actions', 'install')
+

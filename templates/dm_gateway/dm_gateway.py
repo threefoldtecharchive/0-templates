@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 
 from requests import HTTPError
 
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.base import TemplateBase
 
 PUBLIC_GW_ROBOTS = ["http://gw1.robot.threefoldtoken.com:6600", "http://gw2.robot.threefoldtoken.com:6600", "http://gw3.robot.threefoldtoken.com:6600"]
@@ -311,3 +311,4 @@ class DmGateway(TemplateBase):
                 zerotierservice = self.api.services.get(name=network['ztClient'])
                 data = {'url': self._robot_url, 'name': self.guid}
                 zerotierservice.schedule_action('remove_from_robot', args=data).wait(die=True)
+

@@ -14,4 +14,5 @@ This template is responsible for configuring a zeroos client on jumpscale.
 - `unixSocket`: unix socket path
 
 ### Actions:
-- `delete`: delete the client from jumpscale.
+- `delete`: delete the client from Jumpscale.
+

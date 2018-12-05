@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 from zerorobot.service_collection import ServiceNotFoundError
@@ -115,3 +115,4 @@ class Vdisk(TemplateBase):
         self._zerodb.schedule_action('namespace_delete', args={'name': self.data['nsName']}).wait(die=True)
         self.state.delete('actions', 'install')
         self.state.delete('status', 'running')
+

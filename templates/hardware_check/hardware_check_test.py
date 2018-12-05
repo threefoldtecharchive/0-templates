@@ -4,7 +4,7 @@ import os
 import pytest
 
 from hardware_check import HardwareCheck
-from jumpscale import j
+from Jumpscale import j
 from JumpscaleZrobot.test.utils import ZrobotBaseTest
 
 
@@ -213,3 +213,4 @@ class TestHardwareCheckTemplate(ZrobotBaseTest):
         with pytest.raises(
                 j.exceptions.RuntimeError, message='Template should raise error if ssdCount is not supported'):
             hw.check('node')
+

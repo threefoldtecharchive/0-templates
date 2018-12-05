@@ -22,3 +22,4 @@ to reach the 0-db and use it for storage
 
 - `install`: writes the configuration file and restart the robot
 - `delete`: deletes the configuration file and restart the robot
+

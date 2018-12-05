@@ -42,3 +42,4 @@ services:
 actions:
     actions: ['install', 'start']
 ```
+

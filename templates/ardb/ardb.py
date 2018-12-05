@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 
 from zerorobot.template.base import TemplateBase
 
@@ -9,3 +9,4 @@ class Ardb(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
+

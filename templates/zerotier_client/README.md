@@ -51,3 +51,4 @@ actions:
       service: 'client'
       actions: ['delete']
 ```
+

@@ -54,3 +54,4 @@ class TestZerotierClientTemplate(ZrobotBaseTest):
     def test_token(self):
         service = ZerotierClient(name='zttest', data={'token': 'foo'})
         assert service.token() == 'foo'
+

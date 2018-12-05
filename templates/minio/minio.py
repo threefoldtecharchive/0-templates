@@ -1,7 +1,7 @@
 import time
 from json import JSONDecodeError
 
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 from zerorobot.template.decorator import retry
@@ -251,11 +251,12 @@ class Healer:
 
 def _health_monitoring(state, level, msg, flag):
     if level in [LOG_LVL_MESSAGE_INTERNAL]:
-        msg = j.data.serializer.json.loads(msg)
+        msg = j.data.serializers.json.loads(msg)
         if 'shard' in msg:
             state.set('data_shards', msg['shard'], SERVICE_STATE_ERROR)
         if 'tlog' in msg and not msg.get('master', False):  # we check only the minio owns tlog server, not it's master
             state.set('tlog_shards', msg['tlog'], SERVICE_STATE_ERROR)
         if 'subsystem' in msg and msg['subsystem'] == 'disk':
             state.set('vm', 'disk', 'error')
+
 

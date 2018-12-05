@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 import os
 
 import pytest
-from jumpscale import j
+from Jumpscale import j
 from statistics import Statistics
 from zerorobot.template.state import StateCheckError
 

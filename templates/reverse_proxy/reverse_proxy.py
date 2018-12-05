@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 
 from zerorobot.template.base import TemplateBase
 from zerorobot.service_collection import ServiceNotFoundError
@@ -54,6 +54,7 @@ class ReverseProxy(TemplateBase):
             # and in both cases nothing needs to be done
             pass
         self.state.delete('actions', 'install')
+
 
 
 

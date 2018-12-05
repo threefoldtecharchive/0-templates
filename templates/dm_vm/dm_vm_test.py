@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from jumpscale import j
+from Jumpscale import j
 from dm_vm import DmVm, ZT_TEMPLATE_UID, VDISK_TEMPLATE_UID, VM_TEMPLATE_UID
 from zerorobot.template.state import StateCheckError
 from zerorobot import config
@@ -296,3 +296,4 @@ class TestVmTemplate(ZrobotBaseTest):
 
         self.vm._monitor()
         assert self.vm.state.delete.call_count == 0
+

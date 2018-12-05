@@ -3,7 +3,7 @@ import pytest
 from unittest import TestCase
 from unittest.mock import MagicMock
 
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.state import StateCheckError
 
 from JumpscaleZrobot.test.utils import ZrobotBaseTest
@@ -157,3 +157,4 @@ class TestZerobootPoolTemplate(ZrobotBaseTest):
         # there are only 2 available hosts, third reservation should fail
         with pytest.raises(ValueError, message="There should not be any free hosts left, thus unreserved_host will raise a ValueError"):
             r3 = pool.unreserved_host("r3-guid")
+

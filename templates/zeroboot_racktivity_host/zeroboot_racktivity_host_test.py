@@ -3,7 +3,7 @@ import pytest
 from unittest import mock
 from unittest.mock import MagicMock
 
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.state import StateCheckError
 
 from JumpscaleZrobot.test.utils import ZrobotBaseTest
@@ -437,3 +437,4 @@ class TestZerobootRacktivityHostTemplate(ZrobotBaseTest):
         instance._host.configure_ipxe_boot.assert_called_with(boot_url)
 
         assert instance.data["lkrnUrl"] == boot_url
+

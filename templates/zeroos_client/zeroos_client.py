@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 
 from zerorobot.template.base import TemplateBase
 
@@ -38,3 +38,4 @@ class ZeroosClient(TemplateBase):
         j.clients.zos.delete(self.name)
         # call the delete of the base class
         super().delete()
+

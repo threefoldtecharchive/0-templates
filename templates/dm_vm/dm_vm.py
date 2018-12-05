@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
@@ -267,3 +267,4 @@ class DmVm(TemplateBase):
             if forward['name'] == name:
                 self.data['ports'].remove(forward)
                 return
+

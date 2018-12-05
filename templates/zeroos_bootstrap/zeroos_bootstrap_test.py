@@ -298,3 +298,4 @@ class TestBootstrapTemplate(ZrobotBaseTest):
             bootstrap._add_node(self.member)
 
             node.delete.called_once_with()
+

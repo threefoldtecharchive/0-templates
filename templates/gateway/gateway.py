@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 
@@ -333,3 +333,4 @@ class Gateway(TemplateBase):
         self.logger.info('Start gateway {}'.format(self.name))
         self.state.check('actions', 'install', 'ok')
         self.install()
+

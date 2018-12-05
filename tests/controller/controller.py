@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 from uuid import uuid4
 from tests.controller.templates_manager.local_temp import vm, container, zerodb, vdisk, gateway, namespace
 from tests.controller.templates_manager.general_temp import zt_client
@@ -35,3 +35,4 @@ class Controller:
 
     def _generate_random_string(self):
         return str(uuid4()).replace('-', '')[10:]
+

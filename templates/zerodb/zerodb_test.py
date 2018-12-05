@@ -462,3 +462,4 @@ class TestZerodbTemplate(ZrobotBaseTest):
             zdb._monitor()
         with pytest.raises(StateCheckError, message='_monitor should not start zerodb is the start action has not been called'):
             zdb.state.check('status', 'running', 'ok')
+

@@ -2,7 +2,7 @@ import os
 import pytest
 from unittest.mock import MagicMock
 
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.state import StateCheckError
 
 from JumpscaleZrobot.test.utils import ZrobotBaseTest
@@ -174,3 +174,4 @@ class TestZerobootReservationTemplate(ZrobotBaseTest):
         reservation.install()
 
         reservation.configure_ipxe_boot("some.boot.url")
+

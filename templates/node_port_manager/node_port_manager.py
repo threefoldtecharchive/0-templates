@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.base import TemplateBase
 
 
@@ -64,3 +64,4 @@ class NodePortManager(TemplateBase):
             port = self.node_sal.freeports(1)[0]
         #  if we reached here, we found a free port
         return port
+

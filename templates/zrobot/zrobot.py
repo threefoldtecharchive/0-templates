@@ -1,6 +1,6 @@
 import os
 
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry
@@ -226,3 +226,4 @@ class Zrobot(TemplateBase):
             return
         port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
         port_mgr.schedule_action("release", {"service_guid": self.guid, 'ports': [self.data['port']]})
+

@@ -114,3 +114,4 @@ actions:
       service: 'minio'
       actions: ['uninstall']
 ```
+

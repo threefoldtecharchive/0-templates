@@ -160,3 +160,4 @@ class TestNodeTemplate(ZrobotBaseTest):
         node._node_sal.client.ping = MagicMock(
             return_value='PONG Version: main @Revision: 41f7eb2e94f6fc9a447f9dec83c67de23537f119')
         node.os_version() == 'main @Revision: 41f7eb2e94f6fc9a447f9dec83c67de23537f119'
+

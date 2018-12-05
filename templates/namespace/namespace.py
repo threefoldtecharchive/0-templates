@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 from zerorobot.service_collection import ServiceNotFoundError
@@ -89,4 +89,5 @@ class Namespace(TemplateBase):
     def connection_info(self):
         self.state.check('actions', 'install', 'ok')
         return self._zerodb.schedule_action('connection_info').wait(die=True).result
+
 

@@ -2,7 +2,7 @@ from tests.testcases.base_test import BaseTest
 from nose_parameterized import parameterized
 import unittest
 import time, random
-from jumpscale import j
+from Jumpscale import j
 import requests
 
 

@@ -147,3 +147,4 @@ class TestVdiskTemplate(ZrobotBaseTest):
 
         assert vdisk.private_url() == 'url'
         vdisk._zerodb.schedule_action.assert_called_once_with('namespace_private_url', args={'name': 'ns_name'})
+

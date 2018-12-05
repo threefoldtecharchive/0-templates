@@ -1,5 +1,5 @@
 
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry, timeout
 from zerorobot.template.state import StateCheckError
@@ -70,3 +70,4 @@ class NodeCapacity(TemplateBase):
         except:
             self.state.set('capacity', 'reality', 'error')
             raise
+

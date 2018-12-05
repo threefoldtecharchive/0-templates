@@ -7,7 +7,7 @@ import pytest
 from requests import HTTPError
 
 from dm_gateway import PUBLIC_GW_ROBOTS, DmGateway
-from jumpscale import j
+from Jumpscale import j
 from JumpscaleZrobot.test.utils import ZrobotBaseTest
 
 PRIVATEZT = '1234567890123456'
@@ -168,3 +168,4 @@ class TestGatewayTemplate(ZrobotBaseTest):
         assert not self.list_name_contains(self.service.data['httpproxies'], 'myproxy')
         self.public_gateway.schedule_action.assert_any_call('remove_http_proxy', args={'name': 'myproxy'})
         self.gateway.schedule_action.assert_any_call('remove_portforward', args=AlwaysTrue())
+

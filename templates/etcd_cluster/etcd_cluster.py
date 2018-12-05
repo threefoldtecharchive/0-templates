@@ -1,6 +1,6 @@
 from copy import deepcopy
 import gevent
-from jumpscale import j
+from Jumpscale import j
 
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
@@ -290,3 +290,4 @@ class EtcdDeployError(RuntimeError):
     def __init__(self, msg, node):
         super().__init__(self, msg)
         self.node = node
+

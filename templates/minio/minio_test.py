@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from jumpscale import j
+from Jumpscale import j
 from JumpscaleZrobot.test.utils import ZrobotBaseTest
 from minio import (LOG_LVL_CRITICAL_ERROR, LOG_LVL_JOB, LOG_LVL_LOG_STRUCTURED,
                    LOG_LVL_LOG_UNKNOWN, LOG_LVL_MESSAGE_INTERNAL,
@@ -174,7 +174,7 @@ class TestMinioTemplate(ZrobotBaseTest):
 class TestMinioHealthMonitor(TestCase):
 
     def setUp(self):
-        self.encoder = j.data.serializer.json
+        self.encoder = j.data.serializers.json
 
     def test_hdd_failure(self):
         state = ServiceState()
@@ -196,3 +196,4 @@ class TestMinioHealthMonitor(TestCase):
 
     def test_zos_failure(self):
         pass
+

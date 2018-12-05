@@ -1,6 +1,6 @@
 import copy
 
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry
@@ -288,3 +288,4 @@ class Vm(TemplateBase):
         port_mgr.schedule_action("release", {"service_guid": self.guid, 'ports': ports})
         for port in self.data['ports']:
             port['source'] = None
+

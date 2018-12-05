@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 
 from zerorobot.template.base import TemplateBase
 
@@ -119,3 +119,4 @@ class HardwareCheck(TemplateBase):
         finally:
             bot_cl = self._get_bot_client()
             bot_cl.send_message(self.data['chatId'], message)
+

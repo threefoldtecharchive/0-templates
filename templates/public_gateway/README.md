@@ -62,3 +62,4 @@ data = {
 service = api.services.find_or_create(PS_UID, service_name='myservices', data=data)
 service.schedule_action('install').wait(die=True)
 ```
+

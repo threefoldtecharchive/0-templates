@@ -150,3 +150,4 @@ data = {
 gwservice = api.services.find_or_create(GW_UID, service_name='mygw', data=data)
 gwservice.schedule_action('install').wait(die=True)
 ```
+

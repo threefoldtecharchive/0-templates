@@ -35,3 +35,4 @@ github.com/threefoldtech/0-templates/bridge/0.0.1__br0:
 actions:
   action: ['install']
 ```
+

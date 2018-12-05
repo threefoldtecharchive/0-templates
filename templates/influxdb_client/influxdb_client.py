@@ -1,5 +1,5 @@
 
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.base import TemplateBase
 
 
@@ -27,3 +27,4 @@ class InfluxdbClient(TemplateBase):
     def uninstall(self):
         self.influxdb = j.clients.influxdb.delete(self.name)
         self.state.delete('actions', 'install')
+

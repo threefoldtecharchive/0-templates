@@ -3,7 +3,7 @@ import json
 from copy import deepcopy
 from requests import HTTPError
 
-from jumpscale import j
+from Jumpscale import j
 
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError

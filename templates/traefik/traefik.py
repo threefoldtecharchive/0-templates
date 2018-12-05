@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.base import TemplateBase
 
 NODE_CLIENT = 'local'
@@ -97,3 +97,4 @@ class Traefik(TemplateBase):
         self.state.check('actions', 'start', 'ok')
         self._traefik_sal.stop()
         self._traefik_sal.start()
+

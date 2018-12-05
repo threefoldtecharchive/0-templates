@@ -93,3 +93,4 @@ actions:
       actions: ['uninstall']
 
 ```
+

@@ -1,6 +1,6 @@
 from gevent import sleep
 
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import timeout
 from zerorobot.template.state import StateCheckError
@@ -204,3 +204,4 @@ class ZeroosBootstrap(TemplateBase):
         for member in members:
             if redis_addr in member['config']['ipAssignments']:
                 self._unauthorize_member(member)
+

@@ -442,3 +442,4 @@ def zeroboot_ipmi_host(reader):
             print("ipmi_host_data ended at last row")
 
     return output
+

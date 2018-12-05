@@ -23,3 +23,4 @@ It also acts as a proxy for the zeroboot host.
 - power_status: proxy to the zeroboot host to return the power status of the host (True if on, False if off)
 - monitor: proxy to the zeroboot host to check if the power status on the host matches the last set by the host template
 - configure_ipxe_boot: proxy to the zeroboot host to set the ipxe configuration.
+

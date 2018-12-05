@@ -1,4 +1,4 @@
-from jumpscale import j
+from Jumpscale import j
 from urllib.parse import urlparse
 from zerorobot.template.base import TemplateBase
 
@@ -50,3 +50,4 @@ class ZerotierClient(TemplateBase):
         robotapi = self._get_remote_robot(url)
         for service in robotapi.services.find(template_uid=ZT_TEMPLATE_UID, name=name):
             service.delete()
+

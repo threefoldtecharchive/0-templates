@@ -1,6 +1,6 @@
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
-from jumpscale import j
+from Jumpscale import j
 
 
 NODE_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node/0.0.1'
@@ -106,3 +106,4 @@ class Container(TemplateBase):
         self.logger.info('Uninstalling container %s' % self.name)
         self.stop()
         self.state.delete('actions', 'install')
+

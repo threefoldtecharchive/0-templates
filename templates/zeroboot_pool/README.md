@@ -27,3 +27,4 @@ It does this by checking which hosts in the pool do not have an installed reserv
 - power_on: Powers on all the hosts in the pool
 - power_off: Powers off all the hosts in the pool
 - power_cycle: Power cycles all the hosts in the pool
+

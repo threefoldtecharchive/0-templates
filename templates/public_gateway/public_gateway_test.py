@@ -128,3 +128,4 @@ class TestPublicGatewayTemplate(ZrobotBaseTest):
         self.service.remove_portforward('forward')
         self.gwservice.schedule_action.assert_called_with('remove_portforward', args=AlwaysTrue())
         assert not self.list_name_contains(self.service.data['portforwards'], 'forward')
+

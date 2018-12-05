@@ -153,3 +153,4 @@ class TestNamespaceTemplate(ZrobotBaseTest):
 
         assert ns.private_url() == 'url'
         ns._zerodb.schedule_action.assert_called_once_with('namespace_private_url', args={'name': 'nsName'})
+

@@ -32,3 +32,4 @@ Make sure the robot has a route to the host's Racktivity device.
 - monitor: Checks if the power status matches the one of the internally saved state. On install the internal state will be fetched using `power_status`, then will be updated by the actions `power_on` and `power_off`.  
 If the last action before calling `monitor` was `power_on` but the current state of the host is `False`(off), it will turn the  power to the host back on.
 - configure_ipxe_boot: Set the ipxe boot configuration with provided LKRN URL (calling `power_cycle` is needed to use the new boot configuration).
+

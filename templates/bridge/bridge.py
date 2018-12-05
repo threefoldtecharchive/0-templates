@@ -1,5 +1,5 @@
 
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 import netaddr
@@ -72,3 +72,4 @@ class Bridge(TemplateBase):
     def nic_list(self):
         self.state.check('actions', 'install', 'ok')
         return self._node_sal.client.bridge.nic_list()
+

@@ -1,5 +1,5 @@
 import requests
-from jumpscale import j
+from Jumpscale import j
 from zerorobot.template.base import TemplateBase
 
 OK_STATES = ['OK', 'SKIPPED']
@@ -107,3 +107,4 @@ def close_alert(service, alert_id):
 
     if resp.status_code != 200:
         service.logger.error("Couldn't close alert, error code was %s" % resp.status_code)
+

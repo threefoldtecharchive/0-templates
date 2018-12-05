@@ -16,3 +16,4 @@ If the client with instance name already already exists, that instance will be u
 ### Actions:
 
 - `delete`: Deletes the client from Jumpscale and the service
+

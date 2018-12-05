@@ -1,5 +1,5 @@
 
-from jumpscale import j
+from Jumpscale import j
 from zerorobot import config
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry, timeout
@@ -378,3 +378,4 @@ def send_alert(alertas, alert):
 
 class ZDBPathNotFound(Exception):
     pass
+
