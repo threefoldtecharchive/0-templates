@@ -42,8 +42,8 @@ class Utils(object):
         rc = sub.poll()
         return rc
 
-    def send_script_to_remote_machine(self, script, ip, password):
-        cmd = 'wget "https://raw.githubusercontent.com/threefoldtech/0-templates/tests/travis/setup_env.sh"'
+    def send_script_to_remote_machine(self, script, ip, password, branch):
+        cmd = 'wget "https://raw.githubusercontent.com/threefoldtech/0-templates/{}/tests/travis/setup_env.sh"'.format(branch)
         cmd = 'sshpass -p {} ssh -o StrictHostKeyChecking=no  root@{} {}'.format(password, ip, cmd)
         self.run_cmd(cmd)
 
@@ -63,40 +63,19 @@ class Utils(object):
         nodes = resp.json() #nodes
         return random.choice(nodes)
 
-    def random_string(self, size=10):
-        return str(uuid.uuid4()).replace('-', '')[:size]     
-
-    def create_ubuntu_vm(self, zos_client, ubuntu_port):
-        print('* Creating ubuntu vm to fire the testsuite from')
-        keypath = '/root/.ssh/id_rsa.pub'
-        if not os.path.isfile(keypath):
-            os.system("echo  | ssh-keygen -P ''")
-        with open(keypath, "r") as key:
-            pub_key = key.read()
-        pub_key.replace('\n', '')
-        vm_ubuntu_name = "ubuntu{}".format(self.random_string())
-        vm_ubuntu = zos_client.primitives.create_virtual_machine(name=vm_ubuntu_name, type_='ubuntu:lts')
-        vm_ubuntu.nics.add(name='default_nic', type_='default')
-        vm_ubuntu.configs.add('sshkey', '/root/.ssh/authorized_keys', pub_key)
-        vm_ubuntu.ports.add('ssh_port', ubuntu_port, 22)
-        vm_ubuntu.vcpus = 4
-        vm_ubuntu.memory = 8192
-        vm_ubuntu.deploy()
-        return vm_ubuntu
-
 def main(options):
     utils = Utils(options)
     # Send the script to setup the envirnment and run testcases 
-    utils.send_script_to_remote_machine(SETUP_ENV_SCRIPT, options.vm_ip, options.vm_password)
+    utils.send_script_to_remote_machine(SETUP_ENV_SCRIPT, options.vm_ip, options.vm_password, options.branch)
 
     # get available node to run testcaases against it 
     print('* get available node to run test cases on it ')
     zos_available_node = utils.get_farm_available_node_to_execute_testcases()
-    node_robot_address = zos_available_node["robot_address"]
+    node_robot_address = zos_available_node["robot_address"][7:-5]
     print('* The available node robot {} '.format(node_robot_address))
     
     # Access the ubuntu vm and install requirements  
-    cmd = 'bash {script} {branch} {zrobot} {zt_token} {zt_network}'.format(script=SETUP_ENV_SCRIPT_NAME, branch="testcases", zrobot=node_robot_address, zt_token=options.zt_token,zt_network= options.zt_network)
+    cmd = 'bash {script} {branch} {zrobot} {zt_token} {zt_network}'.format(script=SETUP_ENV_SCRIPT_NAME, branch=options.branch, zrobot=node_robot_address, zt_token=options.zt_token,zt_network= options.zt_network)
     utils.run_cmd_on_remote_machine(cmd, options.vm_ip, options.vm_password)
 
         

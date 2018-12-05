@@ -24,7 +24,7 @@ matrix:
         - sudo python3 tests/travis/farm_setup.py --password ${vm_password} --vm_ip ${VM_IP}  --branch ${JSBRANCH} --zt_token ${zerotier_token} --zt_network ${env_zt_network}
 
       script:
-        - sudo sshpass -p ${vm_password} ssh -o StrictHostKeyChecking=no root@${VM_IP} "cd 0-templates/tests/; nosetests -v -s ${tests_path} --tc-file config.ini"
+        - sudo sshpass -p ${vm_password} ssh -o  ConnectTimeout=300  -o StrictHostKeyChecking=no root@${VM_IP} "cd 0-templates/tests/; nosetests -v -s ${tests_path} --tc-file config.ini"
       after_script:
         - sudo zerotier-cli leave ${env_zt_network}
 
