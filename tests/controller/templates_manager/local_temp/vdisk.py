@@ -9,7 +9,7 @@ class VdiskManager:
         self._parent = parent
         self.logger = self._parent.logger
         self.robot = self._parent.remote_robot
-        self._vdisk_service = service_name
+        self._vdisk_service = None
         if service_name:
             self._vdisk_service = self.robot.service.get(name=service_name)
 
@@ -23,13 +23,13 @@ class VdiskManager:
     def install(self, wait=True, **kwargs):
         filesystem=['ext4', 'ext3', 'ext2', 'btrfs']
         default_data = {
-            'nsName': self._parent._generate_random_string(),
+            'nsName': self._parent.random_string(),
             'zerodb': '',
             'diskType': 'ssd',
             'size': random.randint(1, 20),
-            'mountPoint': '/mnt/{}'.format(self._parent._generate_random_string()),
+            'mountPoint': '/mnt/{}'.format(self._parent.random_string()),
             'filesystem': random.choice(filesystem),
-            'label': self._parent._generate_random_string(),
+            'label': self._parent.random_string(),
         }
         if kwargs:
             default_data.update(kwargs)
@@ -42,10 +42,10 @@ class VdiskManager:
         self.service.schedule_action('uninstall').wait(die=wait)
 
     def info(self):
-        return self.service.schedule_action('info').wait()
+        return self.service.schedule_action('info').wait(die=True)
 
     def url(self):
-        return self.service.schedule_action('url')
+        return self.service.schedule_action('url').wait(die=True)
     
     def private_url(self):
-        return self.service.schedule_action('private_url')
+        return self.service.schedule_action('private_url').wait(die=True)
