@@ -14,7 +14,7 @@ class BaseTest(TestCase):
         super().__init__(*args, **kwargs)
         self.config = config
         self.logger = logger
-        self.controller = Controller(config=self.config, god_token=None)
+        self.controller = Controller(config=self.config)
         self.ssh_key = self.load_ssh_key()
         self.node_ip = self.config['robot']['remote_server'][7:-5]
         self.node = self.controller.node
@@ -55,7 +55,7 @@ class BaseTest(TestCase):
         return response
 
     def ssh_vm_execute_command(self, vm_ip, cmd, port=22):
-        for _ in range(10):            
+        for _ in range(10):
             resposne = self.execute_command(ip=vm_ip, cmd=cmd, port=port)
             if resposne.returncode:
                 time.sleep(25)
@@ -100,7 +100,7 @@ class BaseTest(TestCase):
         if os.path.exists('{}/.ssh/id_rsa.pub'.format(home_user)):
             with open('{}/.ssh/id_rsa.pub'.format(home_user), 'r') as file:
                 ssh = file.readline().replace('\n', '')
-        else:              
+        else:
             cmd = 'ssh-keygen -t rsa -N "" -f {}/.ssh/id_rsa -q -P ""; ssh-add {}/.ssh/id_rsa'.format(home_user, home_user)
             run(cmd, shell=True, stdout=PIPE, stderr=PIPE)
             ssh = self.load_ssh_key()
@@ -119,7 +119,7 @@ class BaseTest(TestCase):
                 time.sleep(5)
         else:
             raise RuntimeError("Can't get zerotier ip")
-    
+
     def get_dm_vm_zt_ip(self, dm_vm):
         for _ in range(100):
             ip = dm_vm.info().wait().result['zerotier']['ip']
