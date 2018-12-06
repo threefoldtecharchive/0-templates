@@ -4,15 +4,16 @@ import unittest
 import time, random
 
 class ZDBTestCases(BaseTest):  
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        for zdb in cls.zdbs:
+
+    def tearDown(self):
+        for zdb in self.zdbs:
             namespaces = zdb.namespace_list().result
             for namespace in namespaces:
                 zdb.namespace_delete(namespace['name'])
             zdb.stop()
-        cls.zdbs.clear()
+            zdb.service.delete()
+        self.zdbs.clear()
+        super().tearDown()
 
     @parameterized.expand(['user', 'seq', 'direct'])
     @unittest.skip('https://github.com/threefoldtech/jumpscale_lib/issues/208')

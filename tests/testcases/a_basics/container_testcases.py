@@ -14,6 +14,7 @@ class TestContainer(BaseTest):
     def tearDown(self):
         for container in self.containers:
             container.uninstall()
+            container.service.delete()
         self.containers.clear()
         super().tearDown()
 
@@ -96,7 +97,6 @@ class TestContainer(BaseTest):
         #. Add zerotier network to container (c1) after the deployment.
         #. Check that netwrok is added successfully to the container.
         """
-        import ipdb; ipdb.set_trace()
         zt_network = [{'name': self.random_string(), 'type': 'zerotier', 'id': self.zt_id}]
         container = self.controller.container_manager(parent=self.controller, service_name=None)
         if state == 'before':
@@ -258,4 +258,3 @@ class TestContainer(BaseTest):
         container3.install(wait=True, ports=['{}:{}'.format(host_port, guest_port)])
         self.containers.append(container3)
         self.assertTrue(container3.install_state, " Installtion state is False")
-
