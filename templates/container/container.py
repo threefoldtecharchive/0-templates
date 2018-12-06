@@ -1,3 +1,4 @@
+import copy
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 from jumpscale import j
@@ -61,7 +62,7 @@ class Container(TemplateBase):
             envs[env['name']] = env['value']
 
         self._container = self._node_sal.containers.create(self.name, self.data['flist'], hostname=self.data['hostname'],
-                                        mounts=mounts, nics=self.data['nics'],
+                                        mounts=mounts, nics=copy.deepcopy(self.data['nics']),
                                         host_network=self.data['hostNetworking'],
                                         ports=ports, storage=self.data['storage'],
                                         init_processes=self.data['initProcesses'],
@@ -104,7 +105,10 @@ class Container(TemplateBase):
         self.state.set('actions', 'start', 'ok')
 
     def stop(self):
-        self.state.check('actions', 'install', 'ok')
+        self.state.check('actions', 'start', 'ok')
+        self._stop()
+
+    def _stop(self):
         self.logger.info('Stopping container %s' % self.name)
         try:
             self._node_sal.containers.get(self.name)
@@ -115,6 +119,5 @@ class Container(TemplateBase):
         self.state.delete('actions', 'start')
 
     def uninstall(self):
-        self.logger.info('Uninstalling container %s' % self.name)
-        self.stop()
+        self._stop()
         self.state.delete('actions', 'install')
