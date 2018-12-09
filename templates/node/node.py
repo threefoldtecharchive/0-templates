@@ -110,13 +110,21 @@ class Node(TemplateBase):
 
         # make sure the bridges are installed
         for service in self.api.services.find(template_uid=BRIDGE_TEMPLATE_UID):
-            self.logger.info("configuring bridge %s" % service.name)
-            service.schedule_action('install')
+            try:
+                service.state.check('actions', 'install', 'ok')
+                self.logger.info("configuring bridge %s" % service.name)
+                service.schedule_action('install')
+            except StateCheckError:
+                pass
 
         # make sure the networks are configured
         for service in self.api.services.find(template_uid=NETWORK_TEMPLATE_UID):
-            self.logger.info("configuring network %s" % service.name)
-            service.schedule_action('configure')
+            try:
+                service.state.check('actions', 'install', 'ok')
+                self.logger.info("configuring network %s" % service.name)
+                service.schedule_action('configure')
+            except StateCheckError:
+                pass
 
     def _register(self):
         """

@@ -37,7 +37,8 @@ class Bridge(TemplateBase):
     def install(self):
         try:
             self.state.check('actions', 'install', 'ok')
-            return
+            if self.name in self._node_sal.client.bridge.list():
+                return
         except StateCheckError:
             pass
 
