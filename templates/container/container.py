@@ -69,7 +69,6 @@ class Container(TemplateBase):
                                         privileged=self.data['privileged'], identity=self.data['ztIdentity'],
                                         env=envs)
         self.data['ztIdentity'] = self._container_sal.identity
-        self._container_sal.authorize_networks(self.data['nics'])
 
         self.state.set('actions', 'install', 'ok')
         self.state.set('actions', 'start', 'ok')
@@ -79,9 +78,6 @@ class Container(TemplateBase):
             if self._compare_objects(existing_nic, nic, 'type', 'id'):
                 raise ValueError('Nic with same type/id combination already exists')
         self.data['nics'].append(nic)
-        if nic['type'] == 'zerotier':
-            self._container_sal.authorize_networks([nic])
-
         self._container_sal.add_nic(nic)
 
     def remove_nic(self, nicname):
