@@ -43,11 +43,11 @@ class Bridge(TemplateBase):
             pass
 
         self.logger.info('install bridge %s', self.name)
-
+        network = self.data['mode'] if self.data['mode'] != 'none' else None
         self._node_sal.client.bridge.create(
             name=self.name,
             hwaddr=self.data['hwaddr'],
-            network=self.data['mode'],
+            network=network,
             nat=self.data.get('nat', False),
             settings=self.data.get('settings', None),
         )
@@ -68,8 +68,8 @@ class Bridge(TemplateBase):
     def nic_remove(self, nic):
         self.state.check('actions', 'install', 'ok')
         if nic in self._node_sal.client.bridge.nic_list():
-            self._node_sal.client.bridge.nic_remove(self.name, nic)
+            self._node_sal.client.bridge.nic_remove(nic)
 
     def nic_list(self):
         self.state.check('actions', 'install', 'ok')
-        return self._node_sal.client.bridge.nic_list()
+        return self._node_sal.client.bridge.nic_list(self.name)

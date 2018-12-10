@@ -45,7 +45,7 @@ struct Schema {
         id @1: Text;
         config @2: NicConfig;
         name @3: Text;
-        token @4: Text;
+        ztClient @4: Text;
         hwaddr @5: Text;
     }
 
