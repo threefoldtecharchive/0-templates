@@ -1,10 +1,11 @@
 
+import re
+
+import netaddr
 from jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry, timeout
 from zerorobot.template.state import StateCheckError
-import netaddr
-import re
 
 ALERTA_UID = 'github.com/threefoldtech/0-templates/alerta/0.0.1'
 NODE_CLIENT = 'local'
@@ -75,6 +76,9 @@ class Network(TemplateBase):
     def configure(self):
         self.logger.info('installing network %s' % self.name)
 
+        if 'backplane' in [nic['name'] for nic in self.node.client.ip.link.list()]:
+            return
+
         driver = self.data.get('driver')
         if driver:
             self.logger.info("reload driver {}".format(driver))
@@ -88,6 +92,7 @@ class Network(TemplateBase):
             bonded=self.data.get('bonded', False),
             mtu=self.data.get('mtu', 9000) or 9000,
             mode=self.data.get('mode', 'ovs'),
+            interfaces=self.data.get('interfaces') or None,
         )
 
         self.state.set('actions', 'install', 'ok')
