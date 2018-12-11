@@ -1,4 +1,7 @@
-from jumpscale import j
+from Jumpscale import j
+from zerorobot.service_collection import ServiceNotFoundError
+from testconfig import config
+import random
 
 
 class NodeManager:
@@ -31,4 +34,12 @@ class NodeManager:
         return self.service.schedule_action('os_version').wait(die=True)
 
     def create_zdb_namespace(self):
-        return self.service.schedule_action('create_zdb_namespace').wait(die=True)
+        args = {
+            'disktype': 'hdd',
+            'mode': 'user',
+            'password': self._parent.random_string(),
+            'public': False,
+            'ns_size': random.randint(1, 20),
+            'name': self._parent.random_string()
+        }
+        return self.service.schedule_action('create_zdb_namespace', args).wait(die=True)
