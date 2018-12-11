@@ -55,11 +55,11 @@ class NodeTestcases(BaseTest):
         #. Check that the node_service processes is the same as that of the node.
         """
 
-        self.log('Get node_service statistics, should succeed.')
+        self.log('Get node_service processes, should succeed.')
         ser_processes = self.node_tem.processes()
         self.assertTrue(ser_processes)
 
-        self.log('Check that the node_service statistics is the same as that of the node')
+        self.log('Check that the node_service processes is the same as that of the node')
         node_processes = self.node.client.process.list()
         self.assertEqual(len(ser_processes.result), len(node_processes))
 
