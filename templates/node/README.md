@@ -28,7 +28,7 @@ Parameters:
 - `mode`: Mode to run ZDB in seq, user or direct
 - `password`: Namespace password
 - `public`: Indicates if the namespace is public or not
-- `size`: Size of the namespace in GiB
+- `ns_size`: Size of the namespace in GiB
 
 This action will return the name of the ZDB service used and the name of the namespace that was created
 
@@ -66,5 +66,3 @@ actions:
     size: 10
 
 ```
-
-

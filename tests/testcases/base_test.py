@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 
 logger = j.logger.get('testsuite.log')
 
+
 class BaseTest(TestCase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -18,8 +19,8 @@ class BaseTest(TestCase):
         self.ssh_key = self.load_ssh_key()
         self.node_ip = self.config['robot']['remote_server'][7:-5]
         self.node = self.controller.node
-        self.container_flist ="https://hub.grid.tf/tf-bootable/ubuntu:16.04.flist"
-        self.container_storage ="zdb://hub.grid.tf:9900"
+        self.container_flist = "https://hub.grid.tf/tf-bootable/ubuntu:16.04.flist"
+        self.container_storage = "zdb://hub.grid.tf:9900"
         self.zt_id = self.config['zt']['zt_netwrok_id']
 
     @classmethod
@@ -199,7 +200,7 @@ class BaseTest(TestCase):
             if con.default_ip().ip.format() == ip:
                 cont = con
                 break
-        zdb_ser_name = cont.name[7 :]
+        zdb_ser_name = cont.name[7:]
         disk_name = cont.client.info.disk()[0]['device']
         d_type = self.node.disks.get_device(disk_name).disk.type.value
         if d_type == 'ARCHIVE':
