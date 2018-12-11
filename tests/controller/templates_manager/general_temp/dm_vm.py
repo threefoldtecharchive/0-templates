@@ -35,7 +35,7 @@ class DMVMManager:
                         'type': 'zerotier', 'id': config['zt']['zt_netwrok_id'],
                         'ztClient': zt_client.service_name},
             'image': 'ubuntu',
-            'nodeId': config['node']['nodeid'],
+            'nodeId': self._parent.node.name,
             'ports': [{'source': ssh_port, 'target': 22, 'name': 'ssh'}],
             'configs': [
                 {'path': '/root/.ssh/authorized_keys', 'content': config['vm']['ssh'],
