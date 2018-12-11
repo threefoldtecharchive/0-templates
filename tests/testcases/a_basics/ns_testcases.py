@@ -31,7 +31,7 @@ class NSTestCases(BaseTest):
 
     @parameterized.expand(para_list)
     def test001_create_namespace(self, mode, public, disk_type):
-        """ ZRT-ZOS-028
+        """ ZRT-ZOS-025
         *Test case for creating namespace *
 
         **Test Scenario:**
@@ -62,7 +62,7 @@ class NSTestCases(BaseTest):
         self.assertEqual(info['public'], public)
 
     def test002_uninstall_namespace_with_zdb(self):
-        """ ZRT-ZOS-029
+        """ ZRT-ZOS-026
         *Test case for uninstalling namespace *
 
         **Test Scenario:**

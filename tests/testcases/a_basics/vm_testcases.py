@@ -28,7 +28,7 @@ class TestVm(BaseTest):
         super().tearDown()
 
     def test001_create_vm(self):
-        """ ZRT-ZOS-003
+        """ ZRT-ZOS-009
         *Test case for creating a vm.*
 
         **Test Scenario:**
@@ -62,7 +62,7 @@ class TestVm(BaseTest):
         self.assertFalse(vm)
 
     def test002_create_vm_with_non_valid_params(self):
-        """ ZRT-ZOS-004
+        """ ZRT-ZOS-010
         *Test case for creating vm with non-valid parameters*
 
         **Test Scenario:**
@@ -78,7 +78,7 @@ class TestVm(BaseTest):
         self.assertIn( "invalid input. Vm requires flist or ipxeUrl to be specifed.", e.exception.args[0])
 
     def test003_create_vm_with_zt_network(self):
-        """ZRT-ZOS-013
+        """ZRT-ZOS-011
         * Test case for creating a vm with zerotier netwotk.
         Test Scenario:
 
@@ -109,7 +109,7 @@ class TestVm(BaseTest):
         zt_client.delete()
         
     def test004_add_remove_port_forward_to_vm(self):
-        """ZRT-ZOS-014
+        """ZRT-ZOS-012
         * Test case for adding and removing port forward to vm.
         Test Scenario:
 
@@ -156,7 +156,7 @@ class TestVm(BaseTest):
 
     @parameterized.expand(['ext4', 'ext3', 'ext2', 'btrfs'])
     def test005_add_vdisk_from_vm(self, filesystem):
-        """ ZRT-ZOS-015
+        """ ZRT-ZOS-013
         * Test case for adding vdisk to the vm.
         **Test Scenario:**
         
@@ -214,7 +214,7 @@ class VM_actions(BaseTest):
         self.vm.service.delete()
 
     def test001_pause_and_resume_vm(self):
-        """ ZRT-ZOS-005
+        """ ZRT-ZOS-014
         *Test case for testing pause and resume vm*
 
         **Test Scenario:**
@@ -244,7 +244,7 @@ class VM_actions(BaseTest):
         self.assertEqual(result, '/root')
 
     def test002_shutdown_and_start_vm(self):
-        """ ZRT-ZOS-006
+        """ ZRT-ZOS-015
         *Test case for testing shutdown and start vm*
 
         **Test Scenario:**
@@ -276,7 +276,7 @@ class VM_actions(BaseTest):
         self.assertEqual(result, '/root')
 
     def test003_enable_and_disable_vm_vnc(self):
-        """ ZRT-ZOS-007
+        """ ZRT-ZOS-016
         *Test case for testing enable and disable vnc port*
 
         **Test Scenario:**
@@ -306,7 +306,7 @@ class VM_actions(BaseTest):
     @parameterized.expand(["reset", "reboot"])    
     @unittest.skip("https://github.com/threefoldtech/0-core/issues/35")
     def test004_reset_and_reboot_vm(self, action_type):
-        """ ZRT-ZOS-008
+        """ ZRT-ZOS-017
         *Test case for testing reset and reboot vm*
 
         **Test Scenario:**

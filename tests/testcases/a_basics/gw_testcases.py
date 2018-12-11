@@ -22,7 +22,7 @@ class GWTests(BaseTest):
         super().tearDown()
         
     def test001_deploy_getway_with_without_public_network(self):
-        """ ZRT-ZOS-021
+        """ ZRT-ZOS-043
         *Test case for deploying gateway with/without default public network .
         Test Scenario:
 
@@ -43,7 +43,7 @@ class GWTests(BaseTest):
         self.gws.append(gateway)
     
     def test002_add_network_name_exist(self):
-        """ZRT-ZOS-022
+        """ZRT-ZOS-044
         *Test case for adding network to gateway with same name.
         Test Scenario:
 
@@ -70,7 +70,7 @@ class GWTests(BaseTest):
 
     @unittest.skip('https://github.com/threefoldtech/0-templates/issues/218')
     def test003_add_zerotier_network(self):
-        """ZRT-ZOS-023
+        """ZRT-ZOS-045
         *Test case for adding zerotier network to gateway .
         Test Scenario:
 
@@ -101,7 +101,7 @@ class GWTests(BaseTest):
         zt_client.delete()
     
     def test004_remove_network(self):
-        """ZRT-ZOS-024
+        """ZRT-ZOS-046
         *Test case for removing network from gateway .
         Test Scenario:
 
@@ -133,7 +133,7 @@ class GWTests(BaseTest):
         self.assertNotEqual(info['networks'][0]['type'], 'zerotier')
 
     def test005_deploy_getways_with_same_default_public_network(self):
-        """ZRT-ZOS-025
+        """ZRT-ZOS-047
         *Test case for deploying more than one gateway with default public network .
         Test Scenario:
 
@@ -154,7 +154,7 @@ class GWTests(BaseTest):
 
     @unittest.skip("https://github.com/threefoldtech/0-templates/issues/226")
     def test006_create_gateway_with_port_forward(self):
-        """ZRT-ZOS-026
+        """ZRT-ZOS-048
         *Test case for creating gateway with port forward
         Test Scenario:
 
@@ -203,7 +203,7 @@ class GWTests(BaseTest):
 
     @unittest.skip('https://github.com/threefoldtech/0-templates/issues/218')
     def test007_stop_and_start_gateway(self):
-        """ZRT-ZOS-027
+        """ZRT-ZOS-049
         *Test case for stopping and starting gateway .
         Test Scenario:
 

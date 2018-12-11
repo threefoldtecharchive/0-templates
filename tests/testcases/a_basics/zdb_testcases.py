@@ -18,7 +18,7 @@ class ZDBTestCases(BaseTest):
     @parameterized.expand(['user', 'seq', 'direct'])
     @unittest.skip('https://github.com/threefoldtech/jumpscale_lib/issues/208')
     def test001_create_zdb(self, mode):
-        """ ZRT-ZOS-009
+        """ ZRT-ZOS-018
         *Test case for creating zerodb *
 
         **Test Scenario:**
@@ -44,7 +44,7 @@ class ZDBTestCases(BaseTest):
         self.zdbs.append(zdb)
         
     def test002_create_list_namespaces(self):
-        """ ZRT-ZOS-010
+        """ ZRT-ZOS-019
         *Test case for creating and listing namespaces*
 
         **Test Scenario:**
@@ -77,7 +77,7 @@ class ZDBTestCases(BaseTest):
 
     @parameterized.expand(['password', 'public', 'size'])
     def test003_set_namespace_properities(self, prop):
-        """ ZRT-ZOS-011
+        """ ZRT-ZOS-020
         *Test case for setting namespace properities*
 
         **Test Scenario:**
@@ -120,7 +120,7 @@ class ZDBTestCases(BaseTest):
         self.zdbs.append(zdb)
 
     def test004_start_stop_zerodb(self):
-        """ ZRT-ZOS-012
+        """ ZRT-ZOS-021
         *Test case for starting and stopping zerodb service*
 
         **Test Scenario:**

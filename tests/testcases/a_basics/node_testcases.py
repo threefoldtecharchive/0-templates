@@ -9,7 +9,7 @@ class NodeTestcases(BaseTest):
         self.node_tem = self.controller.node_manager
 
     def test001_get_node_info(self):
-        """ ZRT-ZOS-000
+        """ ZRT-ZOS-039
         *Test case for getting node info *
 
         **Test Scenario:**
@@ -28,7 +28,7 @@ class NodeTestcases(BaseTest):
             self.assertAlmostEqual(node_info[key], ser_info.result[key], delta=10)
 
     def test002_get_node_stats(self):
-        """ ZRT-ZOS-000
+        """ ZRT-ZOS-040
         *Test case for getting node statistics *
 
         **Test Scenario:**
@@ -46,7 +46,7 @@ class NodeTestcases(BaseTest):
         self.assertEqual(len(ser_stats.result), len(node_stats))
 
     def test003_get_node_processes(self):
-        """ ZRT-ZOS-000
+        """ ZRT-ZOS-041
         *Test case for getting node processes *
 
         **Test Scenario:**
@@ -64,7 +64,7 @@ class NodeTestcases(BaseTest):
         self.assertEqual(len(ser_processes.result), len(node_processes))
 
     def test004_get_node_os_version(self):
-        """ ZRT-ZOS-000
+        """ ZRT-ZOS-042
         *Test case for getting node os version *
 
         **Test Scenario:**
