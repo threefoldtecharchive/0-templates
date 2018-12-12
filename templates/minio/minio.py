@@ -45,6 +45,7 @@ class Minio(TemplateBase):
 
         if not self._minio_sal.is_running():
             self.state.delete('status', 'running')
+            self._healer.stop()
             self.start()
             if self._minio_sal.is_running():
                 self.state.set('status', 'running', 'ok')
@@ -227,7 +228,8 @@ class Healer:
 
     def stop(self):
         self.logger.info("stop minio logs processing")
-        self.service.gl_mgr.stop(Healer.MinioStreamKey, wait=True, timeout=5)
+        if self.service.gl_mgr.gls.get(Healer.MinioStreamKey, None) is not None:
+            self.service.gl_mgr.stop(Healer.MinioStreamKey, wait=True, timeout=5)
 
     def _process_logs(self):
         self.logger.info("processing logs for minio '%s'" % self.service)
