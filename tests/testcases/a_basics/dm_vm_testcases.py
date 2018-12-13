@@ -42,29 +42,28 @@ class DmVm_Testcases(BaseTest):
             result = self.ssh_vm_execute_command(vm_ip=vm_zt_ip, cmd='pwd')
             self.assertEqual(result, '/root')
         
-    @parameterized.expand([('zero-os', 'ext4'), ('zero-os', 'ext3'), ('zero-os', 'ext2'), ('zero-os', 'btrfs'),
-                           ('ubuntu', 'ext4'), ('ubuntu', 'ext3'), ('ubuntu', 'ext2'), ('ubuntu', 'btrfs')])
-    def test002_attach_disk_to_vm(self, os_type, filesystem):
+    @parameterized.expand(['zero-os', 'ubuntu'])
+    def test002_attach_disk_to_vm(self, os_type):
         """ ZRT-ZOS-033
         * Test case for adding vdisk to the vm.*
 
         **Test Scenario:**
         
-        #. Create vm [VM] with disk [D], should succeed.
-        #. Check that disk [D1] added successfully to vm.
+        #. Create vm [VM] with disk [D1], should succeed.
+        #. Check that disk [D1] has been added successfully to vm.
         """
         if os_type == 'zero-os':
             # config is not working on current zos flist, and sal code is using config to make filesystem and mointpoint
             self.skipTest("https://github.com/threefoldtech/jumpscale_prefab/issues/32")
 
-        self.log('Create vm [VM] with disk [D], should succeed.')
+        self.log('Create vm [VM] with disk [D1], should succeed.')
         vm = self.controller.dm_vm
         ssh_config = [{'path': '/root/.ssh/authorized_keys', 'content': self.ssh_key, 'name': 'sshkey'}]
         disk = [{'label': 'label',
                  'diskType': self.disk_type,
                  'size': random.randint(1, int(self.disk_size/10)),
                  'mountPoint':'/mnt/{}'.format(self.random_string()),
-                 'filesystem': filesystem,
+                 'filesystem': 'ext4',
                  }]
         vm.install(wait=True, configs=ssh_config, ports=[], image=os_type, disks=disk)
         self.vms.append(vm)
@@ -72,21 +71,21 @@ class DmVm_Testcases(BaseTest):
         self.log('Get zerotier ip from vm info.')
         vm_zt_ip = self.get_dm_vm_zt_ip(vm)
 
-        self.log('Check that disk [D1] added successfully to vm.')
+        self.log('Check that disk [D1] has been added successfully to vm.')
         if os_type == 'zero-os':
             node = j.clients.zos.get(self.random_string(), data={'host': vm_zt_ip})
             disks = node.client.disks.list()
             self.assertEqual(len(disks), 1)
             disk_size = int(disks[0]['size']/(1024**3))
             self.assertEqual(disk_size, disk[0]['size'])
-            self.assertEqual(disk[0]['fstype'], filesystem)
+            self.assertEqual(disk[0]['fstype'], 'ext4')
             self.assertEqual(disk[0]['mountpoint'], disk[0]['mountPoint'])            
         else:
             self.assertTrue(vm.info().result['disks']) 
             cmd = 'df -Th | grep {} '.format(disk[0]['mountPoint'])
             result = self.ssh_vm_execute_command(vm_ip=vm_zt_ip, cmd=cmd)
             disk_filesystem = result.split()[1]
-            self.assertEqual(disk_filesystem, filesystem)
+            self.assertEqual(disk_filesystem, 'ext4')
     
     @parameterized.expand(['zero-os', 'ubuntu'])
     def test003_add_remove_port_forward_to_vm(self, os_type):
@@ -96,9 +95,9 @@ class DmVm_Testcases(BaseTest):
 
         #. Create vm[VM1], should succeed.
         #. Check vm info, ports should be empty.
-        #. Add port forward [p1] to [VM1], should succeed.
-        #. Check vm info again, ports should be found.
-        #. Remove port forward [p1] from [VM1], should succeed.
+        #. Add port forward [P1] to [VM1], should succeed.
+        #. Check vm info again, P1 should be found.
+        #. Remove port forward [P1] from [VM1], should succeed.
         #. Check vm info again, ports should be empty.
         """
         self.log('Create vm[VM1], should succeed.')
@@ -112,19 +111,19 @@ class DmVm_Testcases(BaseTest):
         vm_info = [v for v in vms if vm.service.data['guid'] in v['name']]
         self.assertFalse(vm_info[0]['params']['port'])
 
-        self.log('Add port forward [p1] to [VM1], should succeed.')
+        self.log('Add port forward [P1] to [VM1], should succeed.')
         port_name = self.random_string()   
         host_port = random.randint(3000, 4000)
         guest_port = random.randint(5000, 6000)
         vm.add_portforward(name=port_name, source=host_port, target=guest_port)
 
-        self.log("Check vm info again, ports should be found.")
+        self.log("Check vm info again, P1 should be found.")
         vms = self.controller.node.client.kvm.list()
         vm_info = [v for v in vms if vm.service.data['guid'] in v['name']]
         port = {'{}'.format(host_port): guest_port}
         self.assertEqual(vm_info[0]['params']['port'], port)
 
-        self.log('Remove port forward [p1] from [VM1], should succeed.')
+        self.log('Remove port forward [P1] from [VM1], should succeed.')
         vm.remove_portforward(port_name)
 
         self.log("Check vm info again, ports should be empty.")
