@@ -181,7 +181,9 @@ class ZDBTestCases(BaseTest):
         namespaces = zdb.namespace_list()
         self.assertEqual(len(namespaces.result), 1)
         self.assertEqual(namespaces.result[0]['name'], ns_name)
-        
+        response = self.node.client.bash("ls {}/data/{}".format(self.mount_paths, ns_name)).get()
+        self.assertEqual(response.state, 'SUCCESS')
+
         self.log("Delete namespace (NS), should succeed.")
         delete = zdb.namespace_delete(name=ns_name)
         time.sleep(2)
@@ -190,6 +192,9 @@ class ZDBTestCases(BaseTest):
         self.log('list the namespaces, should be empty')
         namespaces = zdb.namespace_list()
         self.assertEqual(namespaces.result, [])
+        response = self.node.client.bash("ls {}/data/{}".format(self.mount_paths, ns_name)).get()
+        self.assertEqual(response.state, 'ERROR')
+        self.assertIn("No such file or directory", response.stderr.strip())
     
     def test006_zdb_with_zerotier_nics(self):
         """ ZRT-ZOS-023
