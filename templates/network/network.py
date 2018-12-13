@@ -66,7 +66,7 @@ class Network(TemplateBase):
         nics_by_name = {n['name']: n for n in self._node_sal.client.ip.link.list()}
         for nic_name in self.data['usedInterfaces']:
             if nic_name not in nics_by_name:
-                data['text'] = "interface %s not found"
+                data['text'] = "interface %s not found" % nic_name
                 send_alert(self.api.services.find(template_uid=ALERTA_UID), data)
             elif not nics_by_name[nic_name].get('up', False):
                 data['text'] = "interface %s is down" % nic_name
