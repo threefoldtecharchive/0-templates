@@ -3,7 +3,6 @@ from nose_parameterized import parameterized
 import unittest
 import time, random
 
-@unittest.skip("https://github.com/threefoldtech/0-templates/issues/260")
 class BridgeTestCases(BaseTest):
     def setUp(self):
         super().setUp()
@@ -24,7 +23,7 @@ class BridgeTestCases(BaseTest):
         
     @parameterized.expand(['none', 'static', 'dnsmasq'])
     def test001_create_bridge(self, mode):
-        """ ZRT-ZOS-030
+        """ ZRT-ZOS-026
         *Test case for creating bridge *
 
         **Test Scenario:**
@@ -55,9 +54,9 @@ class BridgeTestCases(BaseTest):
         addrs = [addr['addr'] for addr in nic[0]['addrs']][0]
         self.assertIn(bridge.default_data['settings']['cidr'], addrs)
 
-    @unittest.skip("https://github.com/threefoldtech/0-templates/issues/260")
+    @unittest.skip("https://github.com/threefoldtech/0-templates/issues/258")
     def test002_uninstall_bridge(self):
-        """ ZRT-ZOS-031
+        """ ZRT-ZOS-027
         *Test case for uninstalling bridge *
 
         **Test Scenario:**
@@ -83,8 +82,9 @@ class BridgeTestCases(BaseTest):
         bridge_list = self.node.client.bridge.list()
         self.assertNotIn(bridge.default_data['name'], bridge_list)
 
+    @unittest.skip("https://github.com/threefoldtech/0-templates/issues/258")
     def test003_create_bridge_with_hw_addr(self):
-        """ ZRT-ZOS-032
+        """ ZRT-ZOS-028
         *Test case for creating bridge with specificed hardware address*
 
         **Test Scenario:**
@@ -114,7 +114,7 @@ class BridgeTestCases(BaseTest):
 
     @unittest.skip("https://github.com/threefoldtech/0-core/issues/87")
     def test004_create_bridge_with_invalid_data(self):
-        """ ZRT-ZOS-033
+        """ ZRT-ZOS-029
         *Test case for creating bridge with invalid data*
 
         **Test Scenario:**
@@ -157,8 +157,8 @@ class BridgeTestCases(BaseTest):
         bridge.service.delete()
 
     @unittest.skip("https://github.com/threefoldtech/0-templates/issues/258")
-    def test003_add_remove_list_nics_for_bridge(self):
-        """ ZRT-ZOS-034
+    def test005_add_remove_list_nics_for_bridge(self):
+        """ ZRT-ZOS-030
         *Test case for adding, removing and listing nics for a bridges*
 
         **Test Scenario:**
@@ -202,8 +202,8 @@ class BridgeTestCases(BaseTest):
         self.node.client.bash('ip link delete {} type dummy'.format(nic_name)).get()
     
     @parameterized.expand(["True", "False"])
-    def test005_create_bridges_with_nat_parameter(self, nat):
-        """ ZRT-ZOS-035
+    def test006_create_bridges_with_nat_parameter(self, nat):
+        """ ZRT-ZOS-031
         *Test case for creating bridge with nat paramter*
 
         **Test Scenario:**
@@ -241,7 +241,7 @@ class BridgeTestCases(BaseTest):
         self.assertEqual(response.state, 'SUCCESS', response.stderr)
 
         self.log('set network interface eth0 as default route, should succeed')
-        response = cont.client.bash('ip route add default dev eth0 via {}'.format(cidr)).get()
+        response = cont.client.bash('ip route add default dev eth0 via {}'.format(cidr[:cidr.find('/')])).get()
         self.assertEqual(response.state, 'SUCCESS', response.stderr)
 
         if nat == "True":

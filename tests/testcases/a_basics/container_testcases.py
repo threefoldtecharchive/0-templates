@@ -86,7 +86,7 @@ class TestContainer(BaseTest):
     @parameterized.expand(['before', 'after'])
     @unittest.skip('https://github.com/threefoldtech/0-templates/issues/201')
     def test004_add_zerotier_network_before_and_after_deploying_container(self, state):
-        """ ZRT-ZOS-016
+        """ ZRT-ZOS-004
         *Test case for adding zerotier network before and after deploying the container*
         **Test Scenario:**
 
@@ -119,7 +119,7 @@ class TestContainer(BaseTest):
         self.assertTrue(container_ip, "Failed to retreive zt ip: Cannot get private ip address for zerotier member")
 
     def test005_add_mount_container(self):
-        """ ZRT-ZOS-017
+        """ ZRT-ZOS-005
         *Test case for adding mount directory to container*
         **Test Scenario:**
 
@@ -155,7 +155,7 @@ class TestContainer(BaseTest):
 
     @parameterized.expand(["True", "False"])    
     def test006_add_port_forward_and_host_network_parameters_to_container(self, host_network):
-        """ ZRT-ZOS-018
+        """ ZRT-ZOS-006
         *Test case for adding port forward and host network parameters to container*
         **Test Scenario:**
         #. Create a container (C1) with port forward (P1) and host network True or False.
@@ -203,7 +203,7 @@ class TestContainer(BaseTest):
             self.assertEqual(content, data)
     
     def test007_add_initprocess_to_container(self):
-        """ ZRT-ZOS-019
+        """ ZRT-ZOS-007
         *Test case for adding init process to container*
         **Test Scenario:**
         #. Create a container (C1) with init process.
@@ -230,7 +230,7 @@ class TestContainer(BaseTest):
         self.assertEqual(job['cmd']['arguments']['args'][0], '1000s')
     
     def test008_create_containers_with_same_port_forward(self):
-        """ ZRT-ZOS-020
+        """ ZRT-ZOS-008
         *Test case for creating container with same port forward*
         **Test Scenario:**
         #. Create a container (C1) with port forward (P1).
