@@ -22,18 +22,20 @@ class ZDBManager:
             return self._zdb_service
 
     def install(self, path, wait=True, **kwargs):
-        default_data = {
+        self.default_data = {
             'name' : self._parent.random_string(),
             'sync': True,
             'mode': 'user',
             'admin': self._parent.random_string(),
-            'path': path
+            'path': path,
+            'namespaces': [],
+            'nics': []
         }
         if kwargs:
-            default_data.update(kwargs)
+            self.default_data.update(kwargs)
 
-        self.zdb_service_name = default_data['name']
-        self._zdb_service = self.robot.services.create(self.zdb_template, self.zdb_service_name, default_data)
+        self.zdb_service_name = self.default_data['name']
+        self._zdb_service = self.robot.services.create(self.zdb_template, self.zdb_service_name, self.default_data)
         self._zdb_service.schedule_action('install').wait(die=wait)
 
     def info(self):
