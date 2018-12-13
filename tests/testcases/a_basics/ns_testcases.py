@@ -80,11 +80,7 @@ class NSTestCases(BaseTest):
         self.log("Get the zdb that namespace (NS1) has been created on")
         url = self.ns.private_url().result
         d_type, zdb_ser_name = self.get_namespace_disk_type(url)
-        robot_name = self.random_string()
-        j.clients.zrobot.get(robot_name, data={'url': self.config['robot']['remote_server']})
-        robot = j.clients.zrobot.robots[robot_name]
-        robot = self.robot_god_token(self.controller.remote_robot)
-        zdb = robot.services.get(name=zdb_ser_name)
+        zdb = self.controller.remote_robot.services.get(name=zdb_ser_name)
 
         self.log('Check that namesapce (NS1) in namespace list, should be found.')
         ns_found = self.find_namespace_in_list(zdb, self.ns.default_data['nsName'])

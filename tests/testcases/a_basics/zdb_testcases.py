@@ -158,3 +158,57 @@ class ZDBTestCases(BaseTest):
         self.assertEqual(len(namespaces.result), 1)
         self.assertEqual(namespaces.result[0]['name'], ns_name)
         self.zdbs.append(zdb)
+
+    def test005_delete_namespaces(self):
+        """ ZRT-ZOS-022
+        *Test case for deleting namespaces*
+
+        **Test Scenario:**
+
+        #. Create zerodb (zdb) with namespace, should succeed.
+        #. List namespaces, NS should be found.
+        #. Delete namespace (NS), should succeed. 
+        #. List namesapces, should be empty. 
+        """
+        self.log('Create zerodb (zdb) with basic params, should succeed')
+        ns_name = self.random_string()
+        namespace = [{'name': ns_name, 'size': random.randint(1, 30), 'password': self.random_string(), 'public': False}]
+        zdb = self.controller.zdb_manager
+        zdb.install(wait=True, path=self.mount_paths, namespaces=namespace)
+        self.zdbs.append(zdb)
+
+        self.log('List namespaces, NS should be found')
+        namespaces = zdb.namespace_list()
+        self.assertEqual(len(namespaces.result), 1)
+        self.assertEqual(namespaces.result[0]['name'], ns_name)
+        
+        self.log("Delete namespace (NS), should succeed.")
+        delete = zdb.namespace_delete(name=ns_name)
+        time.sleep(2)
+        self.assertEqual(delete.state, 'ok')
+
+        self.log('list the namespaces, should be empty')
+        namespaces = zdb.namespace_list()
+        self.assertEqual(namespaces.result, [])
+    
+    def test006_zdb_with_zerotier_nics(self):
+        """ ZRT-ZOS-023
+        *Test case for creating zdb with zerotier network*
+
+        **Test Scenario:**
+
+        #. Create zerodb (zdb) with zerotier network, should succeed.
+        #. Check that zdb got a zerotier ip.
+        """
+        self.log('Create zerodb (zdb) with basic params, should succeed')
+        zt_client = self.controller.zt_client(self.controller)
+        zt_network = [{'name': self.random_string(), 'type': 'zerotier', 'id': self.zt_id, 'ztClient': zt_client.service_name}]
+        zdb = self.controller.zdb_manager
+        zdb.install(wait=True, path=self.mount_paths, nics=zt_network)
+        self.zdbs.append(zdb)
+
+        self.log("Check that zdb got a zerotier ip.")
+        name = 'zerodb_' + zdb.default_data['name']
+        cont = self.node.containers.get(name)
+        ip = self.get_zerotier_ip(cont.identity)
+        self.assertTrue(ip)
