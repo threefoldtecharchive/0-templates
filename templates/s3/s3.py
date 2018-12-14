@@ -6,19 +6,21 @@ import requests
 import gevent
 import netaddr
 from jumpscale import j
+from JumpscaleLib.sal_zos.globals import TIMEOUT_DEPLOY
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import timeout
-from JumpscaleLib.sal_zos.globals import TIMEOUT_DEPLOY
 from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
-                                      SERVICE_STATE_SKIPPED, SERVICE_STATE_WARNING,
-                                      StateCheckError, StateCategoryNotExistsError)
+                                      SERVICE_STATE_SKIPPED,
+                                      SERVICE_STATE_WARNING,
+                                      StateCategoryNotExistsError,
+                                      StateCheckError)
 
 VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/dm_vm/0.0.1'
 GATEWAY_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/gateway/0.0.1'
 MINIO_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/minio/0.0.1'
 NS_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/namespace/0.0.1'
-
+ALERTA_UID = 'github.com/threefoldtech/0-templates/alerta/0.0.1'
 
 class S3(TemplateBase):
     version = '0.0.1'
@@ -629,7 +631,7 @@ class S3(TemplateBase):
 
         This function will yield namespaces as they are created
         It can return once nr_namespaces has been created or if we cannot create namespaces on any nodes.
-        It is up to the caller to count the number of namespaces received from this function to know if the deployed enough namespaces
+        It is up to the caller to count the number of namespaces     received from this function to know if the deployed enough namespaces
         """
 
         if storage_type not in ['ssd', 'hdd']:
@@ -724,6 +726,11 @@ class S3(TemplateBase):
                 return
             if shard_state == 'error':
                 self.state.set('data_shards', connection_info, SERVICE_STATE_ERROR)
+                self._send_alert(
+                    connection_info,
+                    text='data shard %s is in error state' % connection_info,
+                    tags=['shard:%s' % connection_info],
+                    event='storage')
 
         if not check_vm_info():
             self.logger.error("storage is not healthy, will kick start self healing")
@@ -734,6 +741,11 @@ class S3(TemplateBase):
         try:
             disk_state = state.get('vm', 'disk')
             self.state.set('vm', 'disk', disk_state['disk'])
+            self._send_alert(
+                    "vdisk",
+                    text="VM vdisk is in error state",
+                    tags=[],
+                    event='storage')
         except:
             # probably no state set on the minio disk
             pass
@@ -744,8 +756,14 @@ class S3(TemplateBase):
         for connection_info, shard_state in state.get('tlog_shards').items():
             if shard_state == 'error':
                 self.state.set('tlog_shards', connection_info, SERVICE_STATE_ERROR)
+                self._send_alert(
+                    connection_info,
+                    text='tlog shard %s is in error state' % connection_info,
+                    tags=['shard:%s' % connection_info],
+                    event='storage')
 
         pool.join()
+
 
     def _deploy_minio(self, namespaces_connections, tlog_connection, master):
         self.logger.info("wait for the minio VM to be reachable")
@@ -799,6 +817,22 @@ class S3(TemplateBase):
 
         self.logger.info("open port %s on minio vm", port)
         self._vm().schedule_action('add_portforward', args={'name': 'minio_%s' % self.guid, 'target': port, 'source': None}).wait(die=True)
+
+
+
+    def _send_alert(self, ressource, text, tags, event):
+        alert = {
+                'attributes': {},
+                'resource': ressource,
+                'environment': 'Production',
+                'severity': 'critical',
+                'event': event,
+                'tags': tags,
+                'service': [self.name],
+                'text': text,
+            }
+        for alerta in self.api.services.find(template_uid=ALERTA_UID):
+            alerta.schedule_action('send_alert', args={'data': alert})
 
 
 def compute_minimum_namespaces(total_size, data, parity):

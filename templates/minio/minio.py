@@ -11,7 +11,6 @@ from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
                                       SERVICE_STATE_WARNING, StateCheckError)
 
 PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
-ALERTA_UID = 'github.com/threefoldtech/0-templates/alerta/0.0.1'
 
 NODE_CLIENT = 'local'
 
@@ -223,53 +222,20 @@ class Healer:
         self.logger = minio.logger
 
     def start(self):
-        self.logger.info("start minio logs processing")
         if self.service.gl_mgr.gls.get(Healer.MinioStreamKey, None) is None:
+            self.logger.info("start minio logs processing")
             self.service.gl_mgr.add(Healer.MinioStreamKey, self._process_logs)
 
     def stop(self):
-        self.logger.info("stop minio logs processing")
         if self.service.gl_mgr.gls.get(Healer.MinioStreamKey, None) is not None:
+            self.logger.info("stop minio logs processing")
             self.service.gl_mgr.stop(Healer.MinioStreamKey, wait=True, timeout=5)
 
     def _process_logs(self):
         self.logger.info("processing logs for minio '%s'" % self.service)
 
-        hostname = self.service._node_sal.client.info.os()['hostname']
-        node_id = self.service._node_sal.name
-        data = {
-            'attributes': {},
-            'resource': hostname,
-            'environment': 'Production',
-            'severity': 'critical',
-            'event': 'storage',
-            'tags': ["node:%s" % hostname, "node_id:%s" % node_id],
-            'service': [self.service.name]
-        }
-
         def callback(level, msg, flag):
             _health_monitoring(self.service.state, level, msg, flag)
-
-            def alert():
-                alertas = self.service.api.services.find(template_uid=ALERTA_UID)
-                for shard, state in self.service.state.categories.get('data_shards', {}).items():
-                    if state == SERVICE_STATE_ERROR:
-                        data['text'] = "data shard %s error" % shard
-                        data['tags'] = 'shard:%s' % shard
-                        send_alert(alertas, data)
-
-                for shard, state in self.service.state.categories.get('tlog_shards', {}).items():
-                    if state == SERVICE_STATE_ERROR:
-                        data['text'] = "tlog shard %s error" % shard
-                        data['tags'] = 'shard:%s' % shard
-                        send_alert(alertas, data)
-
-                for disk, state in self.service.state.categories.get('vm', {}).items():
-                    if state == SERVICE_STATE_ERROR:
-                        data['text'] = "VM vdisk %s error" % disk
-                        data['tags'] = 'vdisk:%s' % disk
-                        send_alert(alertas, data)
-            gevent.spawn(alert)
 
         while True:
             # wait for the process to be running before processing the logs
@@ -294,8 +260,3 @@ def _health_monitoring(state, level, msg, flag):
             state.set('tlog_shards', msg['tlog'], SERVICE_STATE_ERROR)
         if 'subsystem' in msg and msg['subsystem'] == 'disk':
             state.set('vm', 'disk', 'error')
-
-
-def send_alert(alertas, alert):
-    for alerta in alertas:
-        alerta.schedule_action('send_alert', args={'data': alert})
