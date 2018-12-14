@@ -80,7 +80,7 @@ class Network(TemplateBase):
     def configure(self):
         self.logger.info('installing network %s' % self.name)
 
-        nics_by_name = {n['name']: n for n in self.node.client.ip.link.list()}
+        nics_by_name = {n['name']: n for n in self._node_sal.client.ip.link.list()}
         if 'backplane' in nics_by_name and nics_by_name['backplane'].get('up', False):
             return
 
