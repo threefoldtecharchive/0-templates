@@ -1,10 +1,11 @@
 
+import re
+
+import netaddr
 from jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry, timeout
 from zerorobot.template.state import StateCheckError
-import netaddr
-import re
 
 ALERTA_UID = 'github.com/threefoldtech/0-templates/alerta/0.0.1'
 NODE_CLIENT = 'local'
@@ -62,18 +63,26 @@ class Network(TemplateBase):
             'service': [self.template_uid.name]
         }
 
-        nics_by_name = {n['name']: n for n in self._node_sal.client.ip.link.list()}
+        nics_by_name = {n['name']: n for n in self._node_sal.client.info.nic()}
         for nic_name in self.data['usedInterfaces']:
             if nic_name not in nics_by_name:
                 data['text'] = "interface %s not found"
                 send_alert(self.api.services.find(template_uid=ALERTA_UID), data)
-            elif not nics_by_name[nic_name].get('up', False):
+            elif 'up' not in nics_by_name[nic_name]['flags']:
                 data['text'] = "interface %s is down" % nic_name
+                data['tags'].append('interface:%s' % nic_name)
+                send_alert(self.api.services.find(template_uid=ALERTA_UID), data)
+            elif 'no-carrier' in nics_by_name[nic_name]['flags']:
+                data['text'] = "interface %s has no carrier" % nic_name
                 data['tags'].append('interface:%s' % nic_name)
                 send_alert(self.api.services.find(template_uid=ALERTA_UID), data)
 
     def configure(self):
         self.logger.info('installing network %s' % self.name)
+
+        nics_by_name = {n['name']: n for n in self.node.client.ip.link.list()}
+        if 'backplane' in nics_by_name and nics_by_name['backplane'].get('up', False):
+            return
 
         driver = self.data.get('driver')
         if driver:
