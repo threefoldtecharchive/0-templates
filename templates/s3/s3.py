@@ -20,7 +20,7 @@ VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/dm_vm/0.0.1'
 GATEWAY_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/gateway/0.0.1'
 MINIO_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/minio/0.0.1'
 NS_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/namespace/0.0.1'
-ALERTA_UID = 'github.com/threefoldtech/0-templates/alerta/0.0.1'
+
 
 class S3(TemplateBase):
     version = '0.0.1'
@@ -57,6 +57,7 @@ class S3(TemplateBase):
             self.data['tlog'] = {}
         if self.data['master'] is None:
             self.data['master'] = {}
+
 
     @property
     def _tlog_namespace(self):
@@ -377,6 +378,7 @@ class S3(TemplateBase):
         updates the namespaces then call install to make sure that the namespace is deployed
         """
         self.data['namespaces'] = namespaces
+        self.state.delete('data_shards')
         self.install()
 
     def uninstall(self):
@@ -464,9 +466,9 @@ class S3(TemplateBase):
     def _vm(self):
         return self.api.services.get(template_uid=VM_TEMPLATE_UID, name=self.guid)
 
-    def _vm_robot_and_ip(self, timeout=TIMEOUT_DEPLOY):
+    def _vm_robot_and_ip(self):
         vm = self._vm()
-        vminfo = vm.schedule_action('info', args={'timeout': timeout}).wait(die=True).result
+        vminfo = vm.schedule_action('info', args={'timeout': TIMEOUT_DEPLOY}).wait(die=True).result
         mgmt_ip = vminfo['zerotier'].get('ip')
 
         if not mgmt_ip:
@@ -500,10 +502,12 @@ class S3(TemplateBase):
                                                        password=self.data['nsPassword'],
                                                        nodes=nodes):
             deployed_namespaces.append(namespace)
+            address = namespace_connection_info(namespace)
             self.data['namespaces'].append({'name': namespace.name,
                                             'url': node['robot_address'],
                                             'node': node['node_id'],
-                                            'address': namespace_connection_info(namespace)})
+                                            'address': address})
+            self.state.set('data_shards', address, SERVICE_STATE_OK)
 
             deployed_nr_namespaces = len(deployed_namespaces)
             self.logger.info("%d namespaces deployed, remaining %s", deployed_nr_namespaces, required_nr_namespaces - deployed_nr_namespaces)
@@ -527,18 +531,23 @@ class S3(TemplateBase):
             retries -= 1
         return False
 
-    def _handle_data_shard_failure(self, connection_info):
-        namespace = self._get_namespace_by_address(connection_info)
-        if self._test_namespace_ok(namespace):
-            self.state.delete('data_shards', namespace['address'])
-            return
+    def _handle_data_shard_failure(self):
+        # delete in failure shards and call install again to ensure all the required namespaces
+        for address in list(self.state.get('data_shards').keys()):
+            state = self.state.get('data_shards')[address]
+            if state == SERVICE_STATE_OK:
+                continue
+            try:
+                namespace = self._get_namespace_by_address(address)
+            except ValueError: # in case not found
+                self.state.delete('data_shards', address)
+                continue
 
-        # if the namespace still unreachable we will delete it and call install again
-        # to ensure all the required namespaces
-        self._delete_namespace(namespace)
-        if namespace in self.data['namespaces']:
-            self.data['namespaces'].remove(namespace)
-        self.state.delete('data_shards', namespace['address'])
+            self._delete_namespace(namespace)
+            if namespace in self.data['namespaces']:
+                self.data['namespaces'].remove(namespace)
+            self.state.delete('data_shards', namespace['address'])
+
         self.install()
         self._minio().schedule_action('check_and_repair').wait(die=True)
 
@@ -564,11 +573,12 @@ class S3(TemplateBase):
                                                        password=self.data['nsPassword'],
                                                        nodes=nodes):
             tlog_namespace = namespace
+            address = namespace_connection_info(namespace)
             self.data['tlog'] = {'name': tlog_namespace.name,
                                  'url': node['robot_address'],
                                  'node': node['node_id'],
-                                 'address': namespace_connection_info(namespace)}
-
+                                 'address': address}
+            self.state.set('tlog_shards', address, SERVICE_STATE_OK)
         if not tlog_namespace:
             raise RuntimeError("could not deploy tlog namespace for minio")
 
@@ -621,6 +631,7 @@ class S3(TemplateBase):
                 vm.delete(wait=True, timeout=60, die=False)
             else:
                 self.state.set('vm', 'running', 'ok')
+                self.state.set('vm', 'disk', SERVICE_STATE_OK)
                 return vm
 
         raise RuntimeError("could not deploy vm for minio")
@@ -631,7 +642,7 @@ class S3(TemplateBase):
 
         This function will yield namespaces as they are created
         It can return once nr_namespaces has been created or if we cannot create namespaces on any nodes.
-        It is up to the caller to count the number of namespaces     received from this function to know if the deployed enough namespaces
+        It is up to the caller to count the number of namespaces received from this function to know if the deployed enough namespaces
         """
 
         if storage_type not in ['ssd', 'hdd']:
@@ -695,79 +706,29 @@ class S3(TemplateBase):
 
     def _monitor_minio(self):
         """
-        Checks state of namespaces from minio service and bubble it up
+        copy namespaces state from minio service and bubble it up
         """
         try:
             self.state.check('actions', 'install', 'ok')
         except StateCheckError:
             return
-
-        def get_state():
-            vm_robot, _ = self._vm_robot_and_ip()
-            minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
-            return minio.state
-
-        def check_vm_info():
-            """
-            checks the vm info and handle disk failure
-            """
-            vm_robot, _ = self._vm_robot_and_ip()
-            _, info = vm_robot._client.api.robot.GetRobotInfo()
-            info = info.json()
-
-            return info['storage_healthy']
-
-        def test_namespace(info):
-            connection_info, shard_state = info
-            try:
-                self._get_namespace_by_address(connection_info)
-            except ValueError:
-                # this is probably an old shard that is not cleaned from data
-                return
-            if shard_state == 'error':
-                self.state.set('data_shards', connection_info, SERVICE_STATE_ERROR)
-                self._send_alert(
-                    connection_info,
-                    text='data shard %s is in error state' % connection_info,
-                    tags=['shard:%s' % connection_info],
-                    event='storage')
-
-        if not check_vm_info():
-            self.logger.error("storage is not healthy, will kick start self healing")
-            self.state.set('vm', 'disk', 'error')
-            return
-        state = get_state()
-
+        vm_robot, _ = self._vm_robot_and_ip()
+        minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
         try:
-            disk_state = state.get('vm', 'disk')
-            self.state.set('vm', 'disk', disk_state['disk'])
-            self._send_alert(
-                    "vdisk",
-                    text="VM vdisk is in error state",
-                    tags=[],
-                    event='storage')
+            self.state.set('vm', 'disk', minio.state.get('vm', 'disk'))
         except:
             # probably no state set on the minio disk
             pass
 
-        pool = gevent.pool.Pool(50)
-        pool.map(test_namespace, state.get('data_shards').items())
+        for connection_info, shard_state in minio.state.get('data_shards').items():
+            self.state.set('data_shards', connection_info, shard_state)
 
-        for connection_info, shard_state in state.get('tlog_shards').items():
-            if shard_state == 'error':
-                self.state.set('tlog_shards', connection_info, SERVICE_STATE_ERROR)
-                self._send_alert(
-                    connection_info,
-                    text='tlog shard %s is in error state' % connection_info,
-                    tags=['shard:%s' % connection_info],
-                    event='storage')
-
-        pool.join()
-
+        for connection_info, shard_state in minio.state.get('tlog_shards').items():
+            self.state.set('tlog_shards', connection_info, shard_state)
 
     def _deploy_minio(self, namespaces_connections, tlog_connection, master):
         self.logger.info("wait for the minio VM to be reachable")
-        vm_robot, _ = self._vm_robot_and_ip(timeout=600)
+        vm_robot, _ = self._vm_robot_and_ip()
         self.logger.info("create the minio service on the vm")
         minio_data = {
             'zerodbs': namespaces_connections,
@@ -817,22 +778,6 @@ class S3(TemplateBase):
 
         self.logger.info("open port %s on minio vm", port)
         self._vm().schedule_action('add_portforward', args={'name': 'minio_%s' % self.guid, 'target': port, 'source': None}).wait(die=True)
-
-
-
-    def _send_alert(self, ressource, text, tags, event):
-        alert = {
-                'attributes': {},
-                'resource': ressource,
-                'environment': 'Production',
-                'severity': 'critical',
-                'event': event,
-                'tags': tags,
-                'service': [self.name],
-                'text': text,
-            }
-        for alerta in self.api.services.find(template_uid=ALERTA_UID):
-            alerta.schedule_action('send_alert', args={'data': alert})
 
 
 def compute_minimum_namespaces(total_size, data, parity):
