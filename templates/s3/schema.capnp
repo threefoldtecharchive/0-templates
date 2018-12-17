@@ -9,11 +9,15 @@ struct Schema {
     storageSize @5: UInt64; # total s3 storage size in GB
     namespaces @6: List(Namespace); # namespace services created for s3. This is set by the template.
     tlog @7: Namespace;
-    minioLogin @8: Text; # minio login
-    minioPassword @9: Text; # minio password
-    minioUrls @10: Urls; # url to access minio on. This is set by the template.
-    nsPassword @11: Text; # Namespace password
-    minioBlockSize @12 :UInt32=1048576; # minio data block size in bytes
+    master @8: Namespace;
+    minioLogin @9: Text; # minio login
+    minioPassword @10: Text; # minio password
+    minioUrls @11: Urls; # url to access minio on. This is set by the template.
+    nsPassword @12: Text; # Namespace password
+    minioBlockSize @13 :UInt32=1048576; # minio data block size in bytes
+    nsName @14 :Text; # Namespace name prefix that will be used for naming all zdb reservations. Should be unique between different S3 deployments.
+    deletableNamespaces @15 :List(Namespace);
+    excludeNodesVM @16 :List(Text); # list of node to avoid using when deploying VM and Vdisk
 
     enum StorageType {
      hdd @0;
@@ -29,6 +33,7 @@ struct Schema {
       name @0: Text; # namespace service name
       node @1: Text; # node id of the node on which the namespace was created
       url @2: Text; # node zrobot url
+      address @3: Text; # zerodb address
     }
 
     struct Urls {

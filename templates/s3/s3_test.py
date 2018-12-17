@@ -1,10 +1,11 @@
+from unittest import TestCase
 from unittest.mock import MagicMock, patch, PropertyMock
 import os
 import requests
 import pytest
 
 from jumpscale import j
-from s3 import S3
+from s3 import S3, sort_by_master_nodes
 
 from JumpscaleZrobot.test.utils import ZrobotBaseTest
 
@@ -38,12 +39,6 @@ class TestS3Template(ZrobotBaseTest):
 
     def tearDown(self):
         patch.stopall()
-
-    def test_get_zrobot(self):
-        patch('jumpscale.j.clients.zrobot', MagicMock(robots={'main': 'main'})).start()
-        robot = self.s3._get_zrobot('main', 'url')
-        assert j.clients.zrobot.get.called_once_with('main', data={'url': 'url'})
-        assert robot == 'main'
 
     def test_invalid_data(self):
         with pytest.raises(ValueError, message='template should fail if parityShards are higher than dataShards'):
@@ -173,3 +168,11 @@ class TestS3Template(ZrobotBaseTest):
         assert compute_minimum_namespaces(2500, 1, 1) == (3, 2500)
         assert compute_minimum_namespaces(50000, 16, 4) == (25, 3125)
         assert compute_minimum_namespaces(50000, 10, 4) == (18, 4000)
+
+
+class TestUtils(TestCase):
+    def test_sort_by_master_nodes(self):
+        master_nodes = ['1', '3', '5']
+        nodes = [{'node_id': '1'}, {'node_id': '2'}, {'node_id': '3'}, {'node_id': '4'}, {'node_id': '5'}]
+        sorted_nodes = sort_by_master_nodes(nodes, master_nodes)
+        assert sorted_nodes == [{'node_id': '2'}, {'node_id': '4'}, {'node_id': '1'}, {'node_id': '3'}, {'node_id': '5'}]

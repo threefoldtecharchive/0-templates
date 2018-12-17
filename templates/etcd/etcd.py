@@ -25,17 +25,23 @@ class Etcd(TemplateBase):
         else:
             raise ValueError('Service must contain at least one zerotier nic')
 
-        self.data['password'] = self.data['password'] if self.data['password'] else j.data.idgenerator.generateXCharID(10)
+        self.data['password'] = self.data['password'] if self.data['password'] else j.data.idgenerator.generateXCharID(16)
+        self.data['token'] = self.data['token'] if self.data['token'] else self.guid
+
 
     def _deploy(self):
         etcd_sal = self._etcd_sal
         etcd_sal.deploy()
         self.data['ztIdentity'] = etcd_sal.zt_identity
-        
+
 
     def _monitor(self):
+        try:
+            self.state.check('actions', 'start', 'ok')
+        except StateCheckError:
+            return
+
         self.logger.info('Monitor etcd %s' % self.name)
-        self.state.check('actions', 'start', 'ok')
 
         if not self._etcd_sal.is_running():
             self.state.delete('status', 'running')
@@ -99,9 +105,12 @@ class Etcd(TemplateBase):
         self.state.delete('status', 'running')
 
     def connection_info(self):
-        self.state.check('status', 'running', 'ok')
+        # connection info depends on the container running but not on the process
+        # @todo: if someone stops the service, that would kill the container and this will crash.
+        # may be we should add a state just for the connection
+        self.state.check('actions', 'install', 'ok')
         return self._etcd_sal.connection_info()
-    
+
     def update_cluster(self, cluster):
         self.data['cluster'] = cluster
         try:
@@ -110,3 +119,9 @@ class Etcd(TemplateBase):
             self._etcd_sal.start()
         except StateCheckError:
             pass
+
+    def _enable_auth(self):
+        self._etcd_sal.enable_auth()
+
+    def _prepare_traefik(self):
+        self._etcd_sal.prepare_traefik()

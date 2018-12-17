@@ -12,14 +12,14 @@ class ZT_Client:
             self.robot = self._parent.robot
         else:
             self.robot = self._parent.remote_robot
-        self.service_name = self._parent._generate_random_string()
+        self.service_name = self._parent.random_string()
         self._zt_service = self.robot.services.create(self.zt_template, self.service_name, {'token': config['zt']['zt_client']})
 
     def uninstall(self):
-       return self._zt_service.schedule_action('uninstall')
+       return self._zt_service.schedule_action('uninstall').wait(die=True)
 
     def token(self):
-       return self._zt_service.schedule_action('token').wait()
+       return self._zt_service.schedule_action('token').wait(die=True)
 
     def delete(self):
-       return self._zt_service.schedule_action('delete')
+       return self._zt_service.schedule_action('delete').wait(die=True)

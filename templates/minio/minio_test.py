@@ -1,10 +1,22 @@
-from unittest.mock import MagicMock, patch
 import os
+from unittest import TestCase
+from unittest.mock import MagicMock, patch
+
 import pytest
 
-from minio import Minio, NODE_CLIENT
-from zerorobot.template.state import StateCheckError
+from jumpscale import j
 from JumpscaleZrobot.test.utils import ZrobotBaseTest
+from minio import (LOG_LVL_CRITICAL_ERROR, LOG_LVL_JOB, LOG_LVL_LOG_STRUCTURED,
+                   LOG_LVL_LOG_UNKNOWN, LOG_LVL_MESSAGE_INTERNAL,
+                   LOG_LVL_MESSAGE_PUBLIC, LOG_LVL_OPS_ERROR,
+                   LOG_LVL_RESULT_HRD, LOG_LVL_RESULT_JSON,
+                   LOG_LVL_RESULT_TOML, LOG_LVL_RESULT_YAML,
+                   LOG_LVL_STATISTICS, LOG_LVL_STDERR, LOG_LVL_STDOUT,
+                   LOG_LVL_WARNING, NODE_CLIENT, Minio, _health_monitoring)
+from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
+                                      SERVICE_STATE_SKIPPED,
+                                      SERVICE_STATE_WARNING, ServiceState,
+                                      StateCheckError)
 
 
 class TestMinioTemplate(ZrobotBaseTest):
@@ -92,7 +104,7 @@ class TestMinioTemplate(ZrobotBaseTest):
         minio.api.services.find_or_create = MagicMock()
         minio._get_zdbs = MagicMock()
         minio.install()
-        
+
         container_data = {
             'node': self.valid_data['node'],
             'env':  [
@@ -158,3 +170,29 @@ class TestMinioTemplate(ZrobotBaseTest):
         minio._minio_sal.destroy.assert_called_once_with()
         minio.state.delete.call_count == 2
 
+
+class TestMinioHealthMonitor(TestCase):
+
+    def setUp(self):
+        self.encoder = j.data.serializer.json
+
+    def test_hdd_failure(self):
+        state = ServiceState()
+        logs = [(LOG_LVL_MESSAGE_INTERNAL, self.encoder.dumps({'error': 'IO error', 'shard': '192.168.0.1:9000'}), None)]
+        for level, msg, flag in logs:
+            _health_monitoring(state, level, msg, flag)
+
+        assert 'data_shards' in state.categories
+        assert state.categories['data_shards']['192.168.0.1:9000'] == SERVICE_STATE_ERROR
+
+    def test_tlog_failure(self):
+        state = ServiceState()
+        logs = [(LOG_LVL_MESSAGE_INTERNAL, self.encoder.dumps({'error': 'IO error', 'tlog': '192.168.0.1:9000'}), None)]
+        for level, msg, flag in logs:
+            _health_monitoring(state, level, msg, flag)
+
+        assert 'tlog_shards' in state.categories
+        assert state.categories['tlog_shards']['192.168.0.1:9000'] == SERVICE_STATE_ERROR
+
+    def test_zos_failure(self):
+        pass

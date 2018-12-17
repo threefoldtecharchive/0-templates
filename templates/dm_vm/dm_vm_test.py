@@ -86,8 +86,9 @@ class TestVmTemplate(ZrobotBaseTest):
         capacity.api.GetCapacity.return_value = (MagicMock(robot_address='url'), None)
         patch('jumpscale.j.clients.threefold_directory.get.return_value', capacity).start()
         vm = DmVm('vm', data=self.valid_data)
+        vm.api.robots = MagicMock()
         vm.validate()
-        j.clients.zrobot.get.assert_called_with(self.valid_data['nodeId'], data={'url': 'url'})
+        vm.api.robots.get.assert_called_with(self.valid_data['nodeId'], data={'url': 'url'})
         assert vm.data == self.valid_data
 
     def test_node_vm(self):
@@ -115,7 +116,7 @@ class TestVmTemplate(ZrobotBaseTest):
         create = self.vm._node_api.services.find_or_create
         create.return_value.name = vdisk_name
         self.vm.install()
-        zt_client.schedule_action.assert_called_once_with('add_to_robot', args={'serviceguid': self.vm.guid, 'url': 'url'})
+        zt_client.schedule_action.assert_called_once_with('add_to_robot', args={'name': self.vm.guid, 'url': 'url'})
         assert self.vm._node_api.services.find_or_create.call_count == 2
 
         disks = [{

@@ -1,11 +1,11 @@
 @0xb1e322af4c1787e4;
 
 struct Schema {
-    etcd @0: Text; #Name of Etcd service
-    etcdWatch @1: Bool=true; #watch changes in Traefik web 
-    nics @2 :List(Nic); # Configuration of the attached nics to the traefik container
-    ztIdentity @3 :Text; # ztidentity of the container running traefik
-
+    etcdEndpoint @0 :Text; # etcd endpoint
+    etcdWatch @1 :Bool=true; # watch changes in Traefik web 
+    etcdPassword @2 :Text; # etcd root user password
+    nics @3 :List(Nic); # Configuration of the attached nics to the traefik container
+    ztIdentity @4 :Text; # ztidentity of the container running traefik
 
     struct Nic {
         type @0 :NicType;

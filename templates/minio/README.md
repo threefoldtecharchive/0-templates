@@ -15,6 +15,7 @@ This template is responsible for managing [minio](https://minio.io/) server inst
 - `blockSize`:  block size of the data on minio. Defaults to 1048576 bytes.
 - `tlog`: entry of type Tlog. Used to fill the tlog config of the [Transaction Log](https://github.com/threefoldtech/minio/tree/zerostor/cmd/gateway/zerostor#transaction-log).
 - `master`: entry of type Tlog. Used to fill the master config of the [Transaction Log](https://github.com/threefoldtech/minio/tree/zerostor/cmd/gateway/zerostor#transaction-log).
+- `nodePort`: public port on the node that is forwarded to the minio inside the container. This field is filled by the template
 
 
 Tlog:
@@ -27,15 +28,24 @@ Tlog:
 - `stop`: stops minio process.
 - `uninstall`: stop the minio server and remove the container from the node. Executing this action will make you loose all data stored on minio
 
+### States
+This service set these states:
+- status:
+    - running: if OK, minio is running and ready
+- actions:
+    - install: if OK, install has been done successfully
+    - start: if OK, start action has been called, the service will try to stay running
+
+- data_shards: Contains the health of all data shards used by minio. If OK, shards is healthy, if ERROR, shards needs to be healed
+- tlog_shards: contains the health of all tlog shards used by minio. If OK, shards is healthy, if ERROR, shards needs to be healed
+
 
 ### Usage example via the 0-robot DSL
 
 To create instance `erp` then register `node1`
 
 ```python
-from zerorobot.dsl import ZeroRobotAPI
-api = ZeroRobotAPI.ZeroRobotAPI()
-robot = api.robots['main']
+robot = j.clients.zrobot.robots['main']
 
 args = {
     'zerodbs': [
@@ -48,7 +58,7 @@ args = {
     'namespace': 'namespace',
     'privateKey': 'ab345678901234567890123456789012s',
 }
-minio = api.services.create('github.com/threefoldtech/0-templates/minio/0.0.1', 'minio', args)
+minio = robot.services.create('github.com/threefoldtech/0-templates/minio/0.0.1', 'minio', args)
 minio.schedule_action('install')
 minio.schedule_action('start')
 minio.schedule_action('stop')

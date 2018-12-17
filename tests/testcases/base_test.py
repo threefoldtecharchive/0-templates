@@ -5,6 +5,7 @@ from uuid import uuid4
 from jumpscale import j
 from subprocess import Popen, PIPE, run
 import time, os, hashlib
+from urllib.parse import urlparse
 
 logger = j.logger.get('testsuite.log')
 
@@ -108,17 +109,27 @@ class BaseTest(TestCase):
     def random_string(self):
         return str(uuid4()).replace('-', '')[:10]
 
-    def get_zt_ip(self, obj):
+    def get_vm_zt_ip(self, vm):
         for _ in range(20):
             try:
-                ip = obj.info().result['nics'][0]['ip']
+                ip = vm.info().result['nics'][0]['ip']
                 self.assertTrue(ip)
                 return ip
             except Exception:
                 time.sleep(5)
         else:
             raise RuntimeError("Can't get zerotier ip")
-        
+    
+    def get_dm_vm_zt_ip(self, dm_vm):
+        for _ in range(100):
+            ip = dm_vm.info().wait().result['zerotier']['ip']
+            if ip == None:
+                time.sleep(1)
+            else:
+                break
+        else:
+            raise RuntimeError("Can't get zerotier ip")
+        return ip
 
     def zdb_mounts(self):
         disk_mount=[]
@@ -167,3 +178,48 @@ class BaseTest(TestCase):
         size_bytes = self.node.client.disk.getinfo(self.disk_name)['size']
         size_gb = size_bytes / 1024**3
         return int(size_gb)
+
+    def get_zerotier_ip(self, ztIdentity, timeout=None):
+        ztAddress = ztIdentity.split(':')[0]
+        zt_client = j.clients.zerotier.get(instance=self.random_string(), data={'token_': self.config['zt']['zt_client']})
+        zt_network = zt_client.network_get(self.zt_id)
+        for _ in range(30):
+            try:
+                member = zt_network.member_get(address=ztAddress)
+                member.timeout = None
+                member_ip = member.get_private_ip(timeout)
+                return member_ip
+            except (RuntimeError, ValueError) as e:
+                time.sleep(10)
+
+    def get_namespace_disk_type(self, url):
+        ip = url[6 : url.find(":", 7)]
+        conts = self.node.containers.list()
+        for con in conts:
+            if con.default_ip().ip.format() == ip:
+                cont = con
+                break
+        zdb_ser_name = cont.name[7 :]
+        disk_name = cont.client.info.disk()[0]['device']
+        d_type = self.node.disks.get_device(disk_name).disk.type.value
+        if d_type == 'ARCHIVE':
+            d_type = 'hdd'
+        elif d_type == 'NVME':
+            d_type = 'ssd'
+        return d_type.lower(), zdb_ser_name
+
+    def robot_god_token(self, robot):
+        """
+        try to retreive the god token from the node 0-robot
+        of a node
+        """
+        try:
+            u = urlparse(robot._client.config.data['url'])
+            node = j.clients.zos.get('godtoken', data={'host': u.hostname})
+            zcont = node.containers.get('zrobot')
+            resp = zcont.client.system('zrobot godtoken get').get()
+            token = resp.stdout.split(':', 1)[1].strip()
+            robot._client.god_token_set(token)
+        finally:
+            j.clients.zos.delete('godtoken')
+        return robot

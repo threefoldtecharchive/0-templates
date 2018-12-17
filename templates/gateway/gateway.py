@@ -237,7 +237,7 @@ class Gateway(TemplateBase):
         for existing_network in self.data['networks']:
             name, combination = self._compare_objects(existing_network, network, 'type', 'id')
             if name:
-                raise ValueError('Network with name {} already exists'.format(name))
+                raise ValueError('Network with name {} already exists'.format(network['name']))
             if combination:
                 raise ValueError('network with same type/id combination already exists')
         self.data['networks'].append(network)

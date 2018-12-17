@@ -1,9 +1,11 @@
 from jumpscale import j
+from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
+from zerorobot.template.decorator import retry
 from zerorobot.template.state import StateCheckError
 
-
 NODE_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node/0.0.1'
+PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
 NODE_CLIENT = 'local'
 
 
@@ -14,15 +16,9 @@ class Zerodb(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        self.recurring_action('_monitor', 10)  # every 10 seconds
-
-    def validate(self):
-        self.state.delete('status', 'running')
-
-    @property
-    def _node_sal(self):
         # hardcoded local instance, this service is only intended to be install by the node robot
-        return j.clients.zos.get(NODE_CLIENT)
+        self._node_sal = j.clients.zos.get(NODE_CLIENT)
+        self.recurring_action('_monitor', 10)  # every 10 seconds
 
     @property
     def _zerodb_sal(self):
@@ -46,17 +42,31 @@ class Zerodb(TemplateBase):
         node = self.api.services.get(template_account='threefoldtech', template_name='node')
         node.state.check('disks', 'mounted', 'ok')
 
-        if self.data['diskType'] == 'ssd':
-            try:
-                self.state.check('status', 'running', 'ok')
-            except StateCheckError:
-                self._node_sal.zerodbs.mount_subvolume(self.name, self.data['path'])
-
         if not self._zerodb_sal.is_running():
-            self.state.delete('status', 'running')
-            self._deploy()
+            data = {
+                'attributes': {},
+                'resource': self.guid,
+                'environment': 'Production',
+                'severity': 'critical',
+                'event': 'Hardware',
+                'tags': [],
+                'service': ['zerodb']
+            }
+            try:
+                self._deploy()
+            except Exception:
+                self.state.delete('status', 'running')
+                data['text'] = 'Failed to deploy zerodb {}'.format(self.name)
+                send_alert(self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'), data)
+                return
+
             if self._zerodb_sal.is_running():
                 self.state.set('status', 'running', 'ok')
+            else:
+                self.state.delete('status', 'running')
+                data['text'] = 'Failed to start zerodb {}'.format(self.name)
+                send_alert(self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'), data)
+
         else:
             self.state.set('status', 'running', 'ok')
 
@@ -78,6 +88,7 @@ class Zerodb(TemplateBase):
             if not self.data['path']:
                 raise RuntimeError('Failed to find a suitable disk for the zerodb')
 
+        self._reserve_port()
         self._deploy()
         self.state.set('actions', 'install', 'ok')
         self.state.set('actions', 'start', 'ok')
@@ -114,7 +125,13 @@ class Zerodb(TemplateBase):
         """
         Return disk information
         """
-        return self._zerodb_sal.info
+        info = self._zerodb_sal.info
+        try:
+            self.state.check('status', 'running', 'ok')
+            info['running'] = True
+        except StateCheckError:
+            info['running'] = False
+        return info
 
     def namespace_list(self):
         """
@@ -220,7 +237,7 @@ class Zerodb(TemplateBase):
         return {
             'ip': zdb_sal.node.public_addr,
             'storage_ip': zdb_sal.node.storage_addr,
-            'port': zdb_sal.node_port,
+            'port': self.data['nodePort'],
         }
 
     def _namespace_exists_update_delete(self, name, prop=None, value=None, delete=False):
@@ -247,3 +264,13 @@ class Zerodb(TemplateBase):
                     self.data['namespaces'].remove(namespace)
                 return ns
         return False
+
+    @retry(exceptions=ServiceNotFoundError, tries=3, delay=3, backoff=2)
+    def _reserve_port(self):
+        port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
+        self.data['nodePort'] = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': 1}).wait(die=True).result[0]
+
+
+def send_alert(alertas, alert):
+    for alerta in alertas:
+        alerta.schedule_action('send_alert', args={'data': alert})

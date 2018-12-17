@@ -14,6 +14,7 @@ class ZerotierClient(TemplateBase):
         super().__init__(name=name, guid=guid, data=data)
         self.add_delete_callback(self.uninstall)
 
+    def validate(self):
         # client instance already exists
         if self.name in j.clients.zerotier.list():
             return
@@ -24,7 +25,9 @@ class ZerotierClient(TemplateBase):
             raise ValueError("no token specified in service data")
 
         # this will create a configuration for this instance
-        j.clients.zerotier.get(self.name, data={'token_': self.data['token']})
+        zt = j.clients.zerotier.new(self.name, data={'token_': self.data['token']})
+        zt.config.data_set('token_', self.data['token'])
+        zt.config.save()
 
     def uninstall(self):
         """
@@ -37,14 +40,13 @@ class ZerotierClient(TemplateBase):
 
     def _get_remote_robot(self, url):
         robotname = urlparse(url).netloc
-        j.clients.zrobot.get(robotname, {'url': url}, interactive=False)
-        return j.clients.zrobot.robots[robotname]
+        return self.api.robots.get(robotname, url)
 
-    def add_to_robot(self, url, serviceguid):
+    def add_to_robot(self, url, name):
         robotapi = self._get_remote_robot(url)
-        robotapi.services.find_or_create(ZT_TEMPLATE_UID, service_name=serviceguid, data={'token': self.data['token']})
+        robotapi.services.find_or_create(ZT_TEMPLATE_UID, service_name=name, data={'token': self.data['token']})
 
-    def remove_from_robot(self, url, serviceguid):
+    def remove_from_robot(self, url, name):
         robotapi = self._get_remote_robot(url)
-        for service in robotapi.services.find(template_uid=ZT_TEMPLATE_UID, name=serviceguid):
+        for service in robotapi.services.find(template_uid=ZT_TEMPLATE_UID, name=name):
             service.delete()

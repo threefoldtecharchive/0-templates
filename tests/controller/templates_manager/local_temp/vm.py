@@ -9,7 +9,7 @@ class VMManager:
         self._parent = parent
         self.logger = self._parent.logger
         self.robot = self._parent.remote_robot
-        self._vm_service = service_name
+        self._vm_service = None
         if service_name:
             self._vm_service = self.robot.service.get(name=service_name)
 
@@ -40,7 +40,7 @@ class VMManager:
         if kwargs:
             default_data.update(kwargs)
 
-        self.vm_service_name = "vm_{}".format(self._parent._generate_random_string())
+        self.vm_service_name = "vm_{}".format(self._parent.random_string())
         self.logger.info('Install {} vm, ssh port : {} '.format(self.vm_service_name, ssh_port))
         self._vm_service = self.robot.services.create(self.vm_template, self.vm_service_name, default_data)
         self._vm_service.schedule_action('install').wait(die=wait)
@@ -53,36 +53,36 @@ class VMManager:
         return self.service.schedule_action('info').wait(die=True)
 
     def shutdown(self, force=True):
-        return self.service.schedule_action('shutdown')
+        return self.service.schedule_action('shutdown').wait(die=True)
     
     def start(self):
-        return self.service.schedule_action('start')
+        return self.service.schedule_action('start').wait(die=True)
 
     def stop(self):
-        return self.service.schedule_action('stop')
+        return self.service.schedule_action('stop').wait(die=True)
     
     def pause(self):
-        return self.service.schedule_action('pause')    
+        return self.service.schedule_action('pause').wait(die=True)
 
     def resume(self):
-        return self.service.schedule_action('resume')    
+        return self.service.schedule_action('resume').wait(die=True)
 
     def reboot(self):
-        return self.service.schedule_action('reboot')    
+        return self.service.schedule_action('reboot').wait(die=True)
 
     def reset(self):
-        return self.service.schedule_action('reset')    
+        return self.service.schedule_action('reset').wait(die=True)
 
     def enable_vnc(self):
-        return self.service.schedule_action('enable_vnc')    
+        return self.service.schedule_action('enable_vnc').wait(die=True)
 
     def disable_vnc(self):
-        return self.service.schedule_action('disable_vnc')
+        return self.service.schedule_action('disable_vnc').wait(die=True)
     
     def add_portforward(self, name, source, target):
         if type(source) != int or type(target) != int:
             raise ValueError ('Source and Target type must be int')
-        return self.service.schedule_action('add_portforward', args={'name': name, 'source': source, 'target': target})
+        return self.service.schedule_action('add_portforward', args={'name': name, 'source': source, 'target': target}).wait(die=True)
 
     def remove_portforward(self, name):
-        return self.service.schedule_action('remove_portforward', args={'name': name})
+        return self.service.schedule_action('remove_portforward', args={'name': name}).wait(die=True)

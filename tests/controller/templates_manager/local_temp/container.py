@@ -37,7 +37,7 @@ class ContManager:
                 'mounts':[],
                 'initProcesses':[],
                 'hostNetwprking': False,
-                'hostname':self._parent._generate_random_string(),
+                'hostname':self._parent.random_string(),
                 'ports': [],
                 'zerotierNetwork':'',
                 'privileged':False,
@@ -46,7 +46,7 @@ class ContManager:
         if kwargs:
             self.data.update(kwargs)
 
-        self.container_service_name = "container_{}".format(self._parent._generate_random_string())
+        self.container_service_name = "container_{}".format(self._parent.random_string())
         self.logger.info('Install {} container'.format(self.container_service_name))
         self._container_service = self.robot.services.create(self.container_template, self.container_service_name, self.data)
         self._container_service.schedule_action('install').wait(die=wait)
@@ -56,8 +56,13 @@ class ContManager:
         self.service.schedule_action('uninstall').wait(die=wait)
 
     def start(self):
-        return self.service.schedule_action('start')
+        return self.service.schedule_action('start').wait(die=True)
 
     def stop(self):
-        return self.service.schedule_action('stop')
-    
+        return self.service.schedule_action('stop').wait(die=True)
+
+    def add_nic(self, nic):
+        return self.service.schedule_action('add_nic', args={'nic': nic}).wait(die=True)
+
+    def remove_nic(self, name):
+        return self.service.schedule_action('remove_nic', args={'name': name}).wait(die=True)
