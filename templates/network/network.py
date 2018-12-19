@@ -72,7 +72,7 @@ class Network(TemplateBase):
                 data['text'] = "interface %s is down" % nic_name
                 data['tags'].append('interface:%s' % nic_name)
                 send_alert(self.api.services.find(template_uid=ALERTA_UID), data)
-            elif 'no-carrier' in nics_by_name[nic_name]['flags']:
+            elif 'carrier' in nics_by_name[nic_name] and nics_by_name[nic_name]['carrier'] is False:
                 data['text'] = "interface %s has no carrier" % nic_name
                 data['tags'].append('interface:%s' % nic_name)
                 send_alert(self.api.services.find(template_uid=ALERTA_UID), data)
