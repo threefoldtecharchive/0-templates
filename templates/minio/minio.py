@@ -223,13 +223,13 @@ class Healer:
         self.logger = minio.logger
 
     def start(self):
-        self.logger.info("start minio logs processing")
         if self.service.gl_mgr.gls.get(Healer.MinioStreamKey, None) is None:
+            self.logger.info("start minio logs processing")
             self.service.gl_mgr.add(Healer.MinioStreamKey, self._process_logs)
 
     def stop(self):
-        self.logger.info("stop minio logs processing")
         if self.service.gl_mgr.gls.get(Healer.MinioStreamKey, None) is not None:
+            self.logger.info("stop minio logs processing")
             self.service.gl_mgr.stop(Healer.MinioStreamKey, wait=True, timeout=5)
 
     def _process_logs(self):
@@ -256,19 +256,16 @@ class Healer:
                     if state == SERVICE_STATE_ERROR:
                         data['text'] = "data shard %s error" % shard
                         data['tags'] = 'shard:%s' % shard
-                        send_alert(alertas, data)
 
                 for shard, state in self.service.state.categories.get('tlog_shards', {}).items():
                     if state == SERVICE_STATE_ERROR:
                         data['text'] = "tlog shard %s error" % shard
                         data['tags'] = 'shard:%s' % shard
-                        send_alert(alertas, data)
 
                 for disk, state in self.service.state.categories.get('vm', {}).items():
                     if state == SERVICE_STATE_ERROR:
                         data['text'] = "VM vdisk %s error" % disk
                         data['tags'] = 'vdisk:%s' % disk
-                        send_alert(alertas, data)
             gevent.spawn(alert)
 
         while True:
@@ -294,8 +291,3 @@ def _health_monitoring(state, level, msg, flag):
             state.set('tlog_shards', msg['tlog'], SERVICE_STATE_ERROR)
         if 'subsystem' in msg and msg['subsystem'] == 'disk':
             state.set('vm', 'disk', 'error')
-
-
-def send_alert(alertas, alert):
-    for alerta in alertas:
-        alerta.schedule_action('send_alert', args={'data': alert})

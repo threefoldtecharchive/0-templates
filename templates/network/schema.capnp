@@ -9,4 +9,5 @@ struct Schema {
     mtu @5: Int32; # mtu of backplane optional (default 9000)
     mode @6: Text="ovs"; # optional configuration mode ovs, or native (default ovs)
     usedInterfaces @7: List(Text); # interfaces that have been configure, this is filled by the template
+    interfaces @8: List(Text); # if you don't want the service to auto discover the interfaces, you can pass them explicitly here
 }
