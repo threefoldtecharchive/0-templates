@@ -97,7 +97,7 @@ class Network(TemplateBase):
             bonded=self.data.get('bonded', False),
             mtu=self.data.get('mtu', 9000) or 9000,
             mode=self.data.get('mode', 'ovs'),
-            interfaces=self.data.get('interfaces') or None,
+            interfaces=self.data.get('interfaces').copy() or None,
         )
 
         self.state.set('actions', 'install', 'ok')
