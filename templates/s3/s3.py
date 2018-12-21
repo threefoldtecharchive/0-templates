@@ -20,7 +20,7 @@ VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/dm_vm/0.0.1'
 GATEWAY_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/gateway/0.0.1'
 MINIO_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/minio/0.0.1'
 NS_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/namespace/0.0.1'
-
+ALERTA_UID = 'github.com/threefoldtech/0-templates/alerta/0.0.1'
 
 class S3(TemplateBase):
     version = '0.0.1'
@@ -712,19 +712,38 @@ class S3(TemplateBase):
             self.state.check('actions', 'install', 'ok')
         except StateCheckError:
             return
+
         vm_robot, _ = self._vm_robot_and_ip()
         minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
         try:
             self.state.set('vm', 'disk', minio.state.get('vm', 'disk'))
+            if minio.state.get('vm', 'disk') == SERVICE_STATE_ERROR:
+                self._send_alert(
+                    "vdisk from %s" % minio.name,
+                    text="Minoi VM vdisk is in error state",
+                    tags=['minio_name:%s' % minio.name],
+                    event='storage')
         except:
             # probably no state set on the minio disk
             pass
 
         for connection_info, shard_state in minio.state.get('data_shards').items():
             self.state.set('data_shards', connection_info, shard_state)
+            if shard_state == SERVICE_STATE_ERROR:
+                self._send_alert(
+                    connection_info,
+                    text='data shard %s is in error state' % connection_info,
+                    tags=['shard:%s' % connection_info],
+                    event='storage')
 
         for connection_info, shard_state in minio.state.get('tlog_shards').items():
             self.state.set('tlog_shards', connection_info, shard_state)
+            if shard_state == SERVICE_STATE_ERROR:
+                self._send_alert(
+                    connection_info,
+                    text='tlog shard %s is in error state' % connection_info,
+                    tags=['shard:%s' % connection_info],
+                    event='storage')
 
     def _deploy_minio(self, namespaces_connections, tlog_connection, master):
         self.logger.info("wait for the minio VM to be reachable")
@@ -778,6 +797,20 @@ class S3(TemplateBase):
 
         self.logger.info("open port %s on minio vm", port)
         self._vm().schedule_action('add_portforward', args={'name': 'minio_%s' % self.guid, 'target': port, 'source': None}).wait(die=True)
+
+    def _send_alert(self, ressource, text, tags, event, severity='critical'):
+        alert = {
+            'attributes': {},
+            'resource': ressource,
+            'environment': 'Production',
+            'severity': 'critical',
+            'event': event,
+            'tags': tags,
+            'service': [self.name],
+            'text': text,
+        }
+        for alerta in self.api.services.find(template_uid=ALERTA_UID):
+            alerta.schedule_action('send_alert', args={'data': alert})
 
 
 def compute_minimum_namespaces(total_size, data, parity):
