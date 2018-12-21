@@ -1,9 +1,9 @@
 from jumpscale import j
-
-from zerorobot.template.base import TemplateBase
+from JumpscaleLib.sal.webgateway.errors import \
+    ServiceNotFoundError as WgServiceNotFound
 from zerorobot.service_collection import ServiceNotFoundError
-from JumpscaleLib.sal.webgateway.errors import ServiceNotFoundError as WgServiceNotFound
-
+from zerorobot.template.base import TemplateBase
+from zerorobot.template.decorator import retry
 
 WEB_GATEWAY_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/web_gateway/0.0.1'
 
@@ -27,6 +27,7 @@ class ReverseProxy(TemplateBase):
         web_gateway.state.check('status', 'running', 'ok')
         return j.sal.webgateway.get(self.data['webGateway'])
 
+    @retry(Exception, tries=3, delay=1, backoff=2, logger=None)
     def install(self):
         web_gateway = self._webgateway_sal()
         try:
@@ -36,6 +37,7 @@ class ReverseProxy(TemplateBase):
         service.expose(self.data['domain'], self.data['servers'])
         self.state.set('actions', 'install', 'ok')
 
+    @retry(Exception, tries=3, delay=1, backoff=2, logger=None)
     def update_servers(self, servers):
         self.state.check('actions', 'install', 'ok')
         self.data['servers'] = servers
@@ -44,6 +46,7 @@ class ReverseProxy(TemplateBase):
         service.proxy.backend_set(servers)
         service.deploy()
 
+    @retry(Exception, tries=3, delay=1, backoff=2, logger=None)
     def uninstall(self):
         try:
             web_gateway = self._webgateway_sal()
@@ -54,6 +57,3 @@ class ReverseProxy(TemplateBase):
             # and in both cases nothing needs to be done
             pass
         self.state.delete('actions', 'install')
-
-
-
