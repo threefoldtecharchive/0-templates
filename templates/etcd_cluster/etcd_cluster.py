@@ -190,7 +190,7 @@ class EtcdCluster(TemplateBase):
         self.data['clusterConnections'] = cluster_connection(etcds)
         tasks = list()
         for etcd in etcds:
-            tasks.append(etcd.schedule_action('update_cluster', args={'cluster': cluster_connection}))
+            tasks.append(etcd.schedule_action('update_cluster', args={'cluster': self.data['clusterConnections']}))
             tasks.append(etcd.schedule_action('start'))
         for task in tasks:
             task.wait(die=True)
