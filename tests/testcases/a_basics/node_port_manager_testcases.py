@@ -22,16 +22,16 @@ class NodePortManagerTestcases(BaseTest):
         node_service = self.controller.node_manager
         guid = node_service.service.guid
         self.log('reserving port for one service')
-        node_port_service = self.controller.node_port_manager
-        ports = node_port_service.reserve(guid, 2).result
+        node_port = self.controller.node_port_manager
+        ports = node_port.reserve(guid, 2).result
         self.assertTrue(ports)
         port_reserved_1 = ports[0]
         port_reserved_2 = ports[1]
         self.log('releasing  the 1st reserved port for one service')
-        node_port_service.release(guid, port_reserved_1)
+        node_port.release(guid, port_reserved_1)
         self.log('releasing  the 1st reserved port for one service')
-        node_port_service.release(guid, port_reserved_2)
-        port_reserved_3 = node_port_service.reserve(guid).result
+        node_port.release(guid, port_reserved_2)
+        port_reserved_3 = node_port.reserve(guid).result
         self.assertEqual(port_reserved_3, port_reserved_1)
 
 
@@ -48,12 +48,12 @@ class NodePortManagerTestcases(BaseTest):
         node_service = self.controller.node_manager
         guid = node_service.service.guid
         guid2 = (self.controller.remote_robot.services.find(template_name='node_capacity')[0]).guid
-        node_port_service = self.controller.node_port_manager
-        port = node_port_service.reserve(guid).result
+        node_port = self.controller.node_port_manager
+        port = node_port.reserve(guid).result
         self.assertTrue(port)
         self.log('releasing the reserved port with different guid , should fail')
         with self.assertRaises(Exception):
-            node_port_service.release(guid2, port)
+            node_port.release(guid2, port)
         self.log('releasing the reserved port with right guid , should success')
-        node_port_service.release(guid, port)
+        node_port.release(guid, port)
 

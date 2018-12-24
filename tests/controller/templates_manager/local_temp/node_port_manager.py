@@ -24,6 +24,6 @@ class NodePortManager:
 
     def release(self, guid, ports):
 
-        return self.service.schedule_action('reserve', {"service_guid": guid, 'ports': ports}).wait(die=True)
+        return self.service.schedule_action('release', {"service_guid": guid, 'ports': ports}).wait(die=True)
 
 
