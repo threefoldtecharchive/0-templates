@@ -8,6 +8,7 @@ struct Schema {
     publicNodes @4 :List(Text); # node to deploy traefik and coredns on
     publicIps @5 :List(Text); # list of public ips to be used with this web gateway
     etcdConnectionInfo @6 :ClusterConnection; #save last etcd connection info
+    backplane @7 :Text="backplane"; #the network interface name that will answer dns queries only
 
     struct Nic {
         type @0 :NicType;
