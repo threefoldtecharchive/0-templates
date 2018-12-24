@@ -439,7 +439,7 @@ class S3(TemplateBase):
         Promote s3 by clearing its master section and reloading minio
         """
         self.data['master'] = dict()
-        self._minio().schedule_action('update_master', args={'namespace': '', 'address': ''})
+        self._minio().schedule_action('update_master', args={'namespace': '', 'address': ''}).wait(die=True)
 
     def redeploy(self, reset_tlog=True):
         """
