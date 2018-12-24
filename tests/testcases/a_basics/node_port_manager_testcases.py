@@ -1,6 +1,6 @@
 from tests.testcases.base_test import BaseTest
 import unittest
-
+import time
 
 
 
@@ -29,6 +29,7 @@ class NodePortManagerTestcases(BaseTest):
         port_reserved_2 = ports[1]
         self.log('releasing  the 1st reserved port for one service')
         node_port.release(guid, [port_reserved_1])
+        time.sleep(30)
         self.log('releasing  the 1st reserved port for one service')
         node_port.release(guid, [port_reserved_2])
         port_reserved_3 = node_port.reserve(guid).result
