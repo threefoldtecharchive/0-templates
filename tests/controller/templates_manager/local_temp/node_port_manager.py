@@ -18,12 +18,12 @@ class NodePortManager:
             self._node_service = self.robot.services.find(template_name='node_port_manager')[0]
         return self._node_service
 
-    def reserve(self, guid, n):
+    def reserve(self, guid, n=1):
 
         return self.service.schedule_action('reserve', {"service_guid": guid, "n": n}).wait(die=True)
 
     def release(self, guid, ports):
 
-        return self.service.schedule_action('reserve', {"service_guid": guid}, ports).wait(die=True)
+        return self.service.schedule_action('reserve', {"service_guid": guid, 'ports': ports}).wait(die=True)
 
 
