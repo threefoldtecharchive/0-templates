@@ -1,7 +1,5 @@
 from tests.testcases.base_test import BaseTest
-from uuid import uuid4
 import unittest
-import random
 
 
 
@@ -21,7 +19,8 @@ class NodePortManagerTestcases(BaseTest):
             #. make sure that the port is released by reserve another new port again
 
         """
-        guid = str(uuid4())
+        node_service = self.controller.node_manager
+        guid = node_service.service.guid
         self.log('reserving port for one service')
         node_port_service = self.controller.node_port_manager
         ports = node_port_service.reserve(guid, 2).result
@@ -45,8 +44,10 @@ class NodePortManagerTestcases(BaseTest):
             #. try to release this port using different guid , should fail
             #. release this port using same GUID , should success
         """
-        guid = str(uuid4())
-        guid2 = str(uuid4())
+
+        node_service = self.controller.node_manager
+        guid = node_service.service.guid
+        guid2 = (self.controller.remote_robot.services.find(template_name='node_capacity')[0]).guid
         node_port_service = self.controller.node_port_manager
         port = node_port_service.reserve(guid).result
         self.assertTrue(port)

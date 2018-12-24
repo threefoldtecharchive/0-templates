@@ -1,9 +1,6 @@
 from Jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from testconfig import config
-import random
-from uuid import uuid4
-
 
 
 class NodePortManager:
@@ -13,8 +10,8 @@ class NodePortManager:
         self.logger = self._parent.logger
         self.robot = self._parent.remote_robot
         self._node_service = None
-        self.guid1 = str(uuid4())
-        self.guid2 = str(uuid4())
+
+
     @property
     def service(self):
         if self._node_service is None:
