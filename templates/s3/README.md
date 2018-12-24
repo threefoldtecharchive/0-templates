@@ -20,6 +20,7 @@ This template is responsible for managing s3 instance. It supports creating both
 - `minioBlockSize`: block size of the data on minio. Defaults to 1048576 bytes.
 - `nsName`: the namespace name.
 - `nsPassowrd`: the namespace password. If not supplied, a random one will be generated. **optional**
+- `excludeNodesVM` list of node to avoid using when deploying VM and Vdisk
 
 Nic:
 - `id`: zerotier network id or vxlan id.

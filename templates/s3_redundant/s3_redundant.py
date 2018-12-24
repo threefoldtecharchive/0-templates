@@ -2,10 +2,15 @@ from jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import timeout
-from zerorobot.template.state import StateCheckError, StateCategoryNotExistsError
+from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
+                                      SERVICE_STATE_SKIPPED,
+                                      SERVICE_STATE_WARNING,
+                                      StateCategoryNotExistsError,
+                                      StateCheckError)
 
 S3_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/s3/0.0.1'
 REVERSE_PROXY_UID = 'github.com/threefoldtech/0-templates/reverse_proxy/0.0.1'
+VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/dm_vm/0.0.1'
 
 
 class S3Redundant(TemplateBase):
@@ -45,14 +50,14 @@ class S3Redundant(TemplateBase):
             self.data['passiveS3'] = ''
             raise
 
-    def _handle_data_shard_failure(self, active, passive, address):
+    def _handle_data_shard_failure(self, active, passive):
         # handle data failure in the active node then update the namespaces in the passive node
         self.logger.info("Handling data shard failure")
-        active.schedule_action('_handle_data_shard_failure', {'connection_info': address}).wait(die=True)
+        active.schedule_action('_handle_data_shard_failure').wait(die=True)
         namespaces = active.schedule_action('namespaces').wait(die=True).result
         passive.schedule_action('_update_namespaces', {'namespaces': namespaces}).wait(die=True)
 
-    def _handle_active_tlog_failure(self, address):
+    def _handle_active_tlog_failure(self):
         """
         If master tlog failed we need to promote the passive and redeploy
         a new passive
@@ -60,17 +65,15 @@ class S3Redundant(TemplateBase):
         Note: there is only one tlog server associated with a node
         so address is not really useful
         """
-        # TODO: we need to test the tlog namespace before taking an action
         self._promote()
 
-    def _handle_passive_tlog_failure(self, address):
+    def _handle_passive_tlog_failure(self):
         """
         If passive tlog failed we need to redeploy a new passive node
 
         Note: there is only one tlog server associated with a node
         so address is not really useful
         """
-        # TODO: we need to test the tlog namespace before taking an action
         passive = self._passive_s3()
         passive.schedule_action('redeploy').wait(die=True)
 
@@ -84,32 +87,20 @@ class S3Redundant(TemplateBase):
         active = self._active_s3()
         passive = self._passive_s3()
         try:
-            data = active.state.get('data_shards').copy()
-            for address, state in data.items():
-                if state == 'ok':
-                    continue
-
-                self._handle_data_shard_failure(active, passive, address)
+            if SERVICE_STATE_ERROR in list(active.state.get('data_shards').values()):
+                self._handle_data_shard_failure(active, passive)
         except StateCategoryNotExistsError:
             pass
 
         try:
-            tlog = active.state.get('tlog_shards').copy()
-            for address, state in tlog.items():
-                if state == 'ok':
-                    continue
-
-                self._handle_active_tlog_failure(address)
+            if SERVICE_STATE_ERROR in list(active.state.get('tlog_shards').values()):
+                self._handle_active_tlog_failure()
         except StateCategoryNotExistsError:
             pass
 
         try:
-            tlog = passive.state.get('tlog_shards').copy()
-            for address, state in tlog.items():
-                if state == 'ok':
-                    continue
-
-                self._handle_passive_tlog_failure(address)
+            if SERVICE_STATE_ERROR in list(passive.state.get('tlog_shards').values()):
+                self._handle_passive_tlog_failure()
         except StateCategoryNotExistsError:
             pass
 
@@ -181,6 +172,7 @@ class S3Redundant(TemplateBase):
             self.data['activeS3'] = active_s3.name
         active_s3.schedule_action('install').wait(die=True)
         self.logger.info('Installed s3 {}'.format(active_s3.name))
+        active_dmvm = self.api.services.get(template_uid=VM_TEMPLATE_UID, name=active_s3.guid)
 
         if self.data['passiveS3']:
             passive_s3 = self._passive_s3()
@@ -190,6 +182,7 @@ class S3Redundant(TemplateBase):
             passive_data = dict(active_data)
             passive_data['master'] = active_tlog
             passive_data['namespaces'] = namespaces
+            passive_data['excludeNodesVM'] = [active_dmvm.data['nodeId']]
             passive_s3 = self.api.services.create(S3_TEMPLATE_UID, data=passive_data)
             self.data['passiveS3'] = passive_s3.name
         passive_s3.schedule_action('install').wait(die=True)

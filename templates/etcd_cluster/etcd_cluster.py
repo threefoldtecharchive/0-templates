@@ -1,11 +1,10 @@
 from copy import deepcopy
+
 import gevent
 from jumpscale import j
-
+from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
-from zerorobot.service_collection import ServiceNotFoundError
-
 
 ETCD_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/etcd/0.0.1'
 ZT_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerotier_client/0.0.1'
@@ -36,7 +35,8 @@ class EtcdCluster(TemplateBase):
         if not self.data['farmerIyoOrg']:
             raise ValueError('Invalid value for farmerIyoOrg')
 
-        self.data['password'] = self.data['password'] if self.data['password'] else j.data.idgenerator.generateXCharID(16)
+        self.data['password'] = self.data['password'] if self.data['password'] else j.data.idgenerator.generateXCharID(
+            16)
         self.data['token'] = self.data['token'] if self.data['token'] else self.guid
 
     def _nodes(self):
@@ -103,7 +103,8 @@ class EtcdCluster(TemplateBase):
                                        'url': node['robot_address'],
                                        'node': node['node_id']})
             deployed_nr_etcd = len(deployed_etcds)
-            self.logger.info('{} etcds deployed, remaining {}'.format(deployed_nr_etcd, required_nr_etcds - deployed_nr_etcd))
+            self.logger.info('{} etcds deployed, remaining {}'.format(
+                deployed_nr_etcd, required_nr_etcds - deployed_nr_etcd))
             self.save()
         if len(deployed_etcds) < self.data['nrEtcds']:
             raise RuntimeError('Could not deploy enough etcds for cluster')
@@ -187,18 +188,17 @@ class EtcdCluster(TemplateBase):
         self.logger.info('Installing etcd cluster {}'.format(self.name))
         etcds = self._deploy_etcd_cluster()
         self.data['clusterConnections'] = cluster_connection(etcds)
+        tasks = list()
         for etcd in etcds:
-            etcd.schedule_action('update_cluster', args={'cluster': self.data['clusterConnections']}).wait(die=True)
-            etcd.schedule_action('start').wait(die=True)
+            tasks.append(etcd.schedule_action('update_cluster', args={'cluster': self.data['clusterConnections']}))
+            tasks.append(etcd.schedule_action('start'))
+        for task in tasks:
+            task.wait(die=True)
+
+        etcd = etcds[0]
         etcd.schedule_action('_enable_auth').wait(die=True)
         etcd.schedule_action('_prepare_traefik').wait(die=True)
 
-        # tasks = list()
-        # for etcd in etcds:
-        #     tasks.append(etcd.schedule_action('update_cluster', args={'cluster': cluster_connection}))
-        #     tasks.append(etcd.schedule_action('start'))
-        # for task in tasks:
-        #     task.wait(die=True)
         self.state.set('actions', 'install', 'ok')
         self.state.set('actions', 'start', 'ok')
         self.state.set('status', 'running', 'ok')

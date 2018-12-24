@@ -1,8 +1,6 @@
 from jumpscale import j
-
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
-
 
 NODE_CLIENT = 'local'
 
@@ -25,15 +23,14 @@ class Etcd(TemplateBase):
         else:
             raise ValueError('Service must contain at least one zerotier nic')
 
-        self.data['password'] = self.data['password'] if self.data['password'] else j.data.idgenerator.generateXCharID(16)
+        self.data['password'] = self.data['password'] if self.data['password'] else j.data.idgenerator.generateXCharID(
+            16)
         self.data['token'] = self.data['token'] if self.data['token'] else self.guid
-
 
     def _deploy(self):
         etcd_sal = self._etcd_sal
         etcd_sal.deploy()
         self.data['ztIdentity'] = etcd_sal.zt_identity
-
 
     def _monitor(self):
         try:
@@ -43,11 +40,12 @@ class Etcd(TemplateBase):
 
         self.logger.info('Monitor etcd %s' % self.name)
 
-        if not self._etcd_sal.is_running():
+        etcd_sal = self._etcd_sal
+        if not etcd_sal.is_running():
             self.state.delete('status', 'running')
             self._deploy()
-            self._etcd_sal.start()
-            if self._etcd_sal.is_running():
+            etcd_sal.start()
+            if etcd_sal.is_running():
                 self.state.set('status', 'running', 'ok')
         else:
             self.state.set('status', 'running', 'ok')
@@ -68,7 +66,6 @@ class Etcd(TemplateBase):
             'password': self.data['password'],
         }
         return j.sal_zos.etcd.get(**kwargs)
-
 
     def install(self):
         self.logger.info('Installing etcd %s' % self.name)
@@ -113,12 +110,10 @@ class Etcd(TemplateBase):
 
     def update_cluster(self, cluster):
         self.data['cluster'] = cluster
-        try:
-            self.state.check('actions', 'start', 'ok')
-            self._etcd_sal.stop()
-            self._etcd_sal.start()
-        except StateCheckError:
-            pass
+        etcd_sal = self._etcd_sal
+        if etcd_sal.is_running():
+            etcd_sal.stop()
+            etcd_sal.start()
 
     def _enable_auth(self):
         self._etcd_sal.enable_auth()

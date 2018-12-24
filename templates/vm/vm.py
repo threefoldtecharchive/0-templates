@@ -1,12 +1,12 @@
 import copy
 
 from jumpscale import j
+from JumpscaleLib.sal_zos.globals import TIMEOUT_DEPLOY
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry
 from zerorobot.template.state import StateCheckError
 
-from JumpscaleLib.sal_zos.globals import TIMEOUT_DEPLOY
 NODE_CLIENT = 'local'
 VDISK_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vdisk/0.0.1'
 PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
@@ -22,7 +22,6 @@ class Vm(TemplateBase):
 
         self.add_delete_callback(self.uninstall)
         self.recurring_action('_monitor', 30)  # every 30 seconds
-        self.recurring_action('_load_info', 60*60)  # every hour
 
     def validate(self):
         if not (self.data['flist'] or self.data['ipxeUrl']):
@@ -101,7 +100,7 @@ class Vm(TemplateBase):
         for disk in self.data['disks']:
             vdisk = self.api.services.get(template_uid=VDISK_TEMPLATE_UID, name=disk['name'])
             disk['url'] = vdisk.schedule_action('private_url').wait(die=True).result
-            self.data['info'] = None # force relaod if info action data
+            self.data['info'] = None  # force relaod if info action data
 
     def install(self):
         self.logger.info('Installing vm %s' % self.name)
@@ -124,7 +123,7 @@ class Vm(TemplateBase):
 
         self._release_ports()
 
-        self.data['info'] = None # force relaod if info action data
+        self.data['info'] = None  # force relaod if info action data
         self.state.delete('actions', 'install')
         self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
@@ -187,7 +186,13 @@ class Vm(TemplateBase):
 
     def _load_info(self, timeout):
         self.logger.info('load the vm info')
-        self._update_vdisk_url()
+
+        # if we don't have the vdisk url, yet get it from the vdisk service
+        for disk in self.data['disks']:
+            if not disk['url']:
+                self._update_vdisk_url()
+                break
+
         info = self._vm_sal.info or {}
         self.logger.info('vm nics : {}'.format(self.data['nics']))
         for nic in self.data['nics']:
@@ -230,7 +235,8 @@ class Vm(TemplateBase):
     def add_portforward(self, name, target, source=None):
         for forward in list(self.data['ports']):
             if forward['name'] == name and (forward['target'] != target or source and source != forward['source']):
-                raise RuntimeError("port forward with name {} already exist for a different target or a different source".format(name))
+                raise RuntimeError(
+                    "port forward with name {} already exist for a different target or a different source".format(name))
             elif forward['name'] == name:
                 return forward
 
@@ -245,15 +251,16 @@ class Vm(TemplateBase):
 
         node_sal.client.kvm.add_portfoward(self._vm_sal.uuid, forward['source'], forward['target'])
 
-        self.data['info'] = None # force relaod if info action data
+        self.data['info'] = None  # force relaod if info action data
         return forward
 
     def remove_portforward(self, name):
         for forward in list(self.data['ports']):
             if forward['name'] == name:
-                self._node_sal.client.kvm.remove_portfoward(self._vm_sal.uuid, str(forward['source']), forward['target'])
+                self._node_sal.client.kvm.remove_portfoward(
+                    self._vm_sal.uuid, str(forward['source']), forward['target'])
                 self.data['ports'].remove(forward)
-                self.data['info'] = None # force relaod if info action data
+                self.data['info'] = None  # force relaod if info action data
                 return
 
     def _populate_port_forwards(self, ports):

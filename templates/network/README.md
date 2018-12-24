@@ -14,6 +14,7 @@ So networks are automatically reconfigure after a reboot.
 - `testIp`: if set, the monitor task will check that this ip is reachable from the node, if not a self healing action is taking
 - `mtu`: optional mtu, default to 9000
 - `usedInterfaces`: interfaces that have been configure, this is filled by the template
+- `interfaces`: if you don't want the service to auto discover the interfaces, you can pass them explicitly here
 
 > Note: make sure that testIp is always UP and reachable otherwise an un-necessary link restart will keep happening every 30 second
 

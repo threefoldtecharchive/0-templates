@@ -52,6 +52,7 @@ class Namespace(TemplateBase):
         try:
             # no op is already installed
             self.state.check('actions', 'install', 'ok')
+            return
         except StateCheckError:
             pass
 

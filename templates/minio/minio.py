@@ -1,17 +1,17 @@
 import time
 from json import JSONDecodeError
 
+import gevent
 from jumpscale import j
-from zerorobot.template.base import TemplateBase
-from zerorobot.template.state import StateCheckError
-from zerorobot.template.decorator import retry
 from zerorobot.service_collection import ServiceNotFoundError
+from zerorobot.template.base import TemplateBase
+from zerorobot.template.decorator import retry
 from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
                                       SERVICE_STATE_SKIPPED,
                                       SERVICE_STATE_WARNING, StateCheckError)
-import gevent
 
 PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
+ALERTA_UID = 'github.com/threefoldtech/0-templates/alerta/0.0.1'
 
 NODE_CLIENT = 'local'
 
@@ -45,6 +45,7 @@ class Minio(TemplateBase):
 
         if not self._minio_sal.is_running():
             self.state.delete('status', 'running')
+            self._healer.stop()
             self.start()
             if self._minio_sal.is_running():
                 self.state.set('status', 'running', 'ok')
@@ -125,11 +126,24 @@ class Minio(TemplateBase):
         self.state.delete('actions', 'install')
         self.state.delete('status', 'running')
 
-    def update_zerodbs(self, zerodbs):
+    def update_all(self, zerodbs, tlog, master):
+        if zerodbs:
+            self.update_zerodbs(zerodbs, reload=False)
+        if tlog:
+            self.update_tlog(tlog['namespace'], tlog['address'], reload=False)
+        if master:
+            self.update_master(master['namespace'], master['address'], reload=False)
+
+        minio_sal = self._minio_sal
+        if minio_sal.is_running():
+            minio_sal.create_config()
+            minio_sal.reload()
+
+    def update_zerodbs(self, zerodbs, reload=True):
         self.data['zerodbs'] = zerodbs
         # if minio is running and we update the config, tell it to reload the config
         minio_sal = self._minio_sal
-        if minio_sal.is_running():
+        if reload and minio_sal.is_running():
             minio_sal.create_config()
             minio_sal.reload()
 
@@ -139,14 +153,14 @@ class Minio(TemplateBase):
         for addr in self.data['zerodbs']:
             self.state.set('data_shards', addr, SERVICE_STATE_OK)
 
-    def update_tlog(self, namespace, address):
+    def update_tlog(self, namespace, address, reload=True):
         self.data['tlog'] = {
             'namespace': namespace,
             'address': address
         }
         # if minio is running and we update the config, tell it to reload the config
         minio_sal = self._minio_sal
-        if minio_sal.is_running():
+        if reload and minio_sal.is_running():
             minio_sal.create_config()
             minio_sal.reload()
 
@@ -154,14 +168,14 @@ class Minio(TemplateBase):
         if self.data['tlog']:
             self.state.set('tlog_shards', self.data['tlog']['address'], SERVICE_STATE_OK)
 
-    def update_master(self, namespace, address):
+    def update_master(self, namespace, address, reload=True):
         self.data['master'] = {
             'namespace': namespace,
             'address': address
         }
         # if minio is running and we update the config, tell it to reload the config
         minio_sal = self._minio_sal
-        if minio_sal.is_running():
+        if reload and minio_sal.is_running():
             minio_sal.create_config()
             minio_sal.reload()
 
@@ -173,7 +187,8 @@ class Minio(TemplateBase):
         if self.data['nodePort']:
             return
         port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
-        self.data['nodePort'] = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': 1}).wait(die=True).result[0]
+        self.data['nodePort'] = port_mgr.schedule_action(
+            "reserve", {"service_guid": self.guid, 'n': 1}).wait(die=True).result[0]
 
     @retry(exceptions=ServiceNotFoundError, tries=3, delay=3, backoff=2)
     def _release_port(self):
@@ -208,19 +223,50 @@ class Healer:
         self.logger = minio.logger
 
     def start(self):
-        self.logger.info("start minio logs processing")
         if self.service.gl_mgr.gls.get(Healer.MinioStreamKey, None) is None:
+            self.logger.info("start minio logs processing")
             self.service.gl_mgr.add(Healer.MinioStreamKey, self._process_logs)
 
     def stop(self):
-        self.logger.info("stop minio logs processing")
-        self.service.gl_mgr.stop(Healer.MinioStreamKey, wait=True, timeout=5)
+        if self.service.gl_mgr.gls.get(Healer.MinioStreamKey, None) is not None:
+            self.logger.info("stop minio logs processing")
+            self.service.gl_mgr.stop(Healer.MinioStreamKey, wait=True, timeout=5)
 
     def _process_logs(self):
         self.logger.info("processing logs for minio '%s'" % self.service)
 
+        hostname = self.service._node_sal.client.info.os()['hostname']
+        node_id = self.service._node_sal.name
+        data = {
+            'attributes': {},
+            'resource': hostname,
+            'environment': 'Production',
+            'severity': 'critical',
+            'event': 'storage',
+            'tags': ["node:%s" % hostname, "node_id:%s" % node_id],
+            'service': [self.service.name]
+        }
+
         def callback(level, msg, flag):
             _health_monitoring(self.service.state, level, msg, flag)
+
+            def alert():
+                alertas = self.service.api.services.find(template_uid=ALERTA_UID)
+                for shard, state in self.service.state.categories.get('data_shards', {}).items():
+                    if state == SERVICE_STATE_ERROR:
+                        data['text'] = "data shard %s error" % shard
+                        data['tags'] = 'shard:%s' % shard
+
+                for shard, state in self.service.state.categories.get('tlog_shards', {}).items():
+                    if state == SERVICE_STATE_ERROR:
+                        data['text'] = "tlog shard %s error" % shard
+                        data['tags'] = 'shard:%s' % shard
+
+                for disk, state in self.service.state.categories.get('vm', {}).items():
+                    if state == SERVICE_STATE_ERROR:
+                        data['text'] = "VM vdisk %s error" % disk
+                        data['tags'] = 'vdisk:%s' % disk
+            gevent.spawn(alert)
 
         while True:
             # wait for the process to be running before processing the logs
@@ -245,4 +291,3 @@ def _health_monitoring(state, level, msg, flag):
             state.set('tlog_shards', msg['tlog'], SERVICE_STATE_ERROR)
         if 'subsystem' in msg and msg['subsystem'] == 'disk':
             state.set('vm', 'disk', 'error')
-

@@ -33,7 +33,7 @@ class Node(TemplateBase):
         super().__init__(name=name, guid=guid, data=data)
         self._node_sal = j.clients.zos.get(NODE_CLIENT)
         self.recurring_action('_monitor', 30)  # every 30 seconds
-        self.recurring_action('_network_monitor', 30)  # every 30 seconds
+        self.recurring_action('_network_monitor', 120)  # every 2 minutes
         self.gl_mgr.add("_register", self._register)
         self.gl_mgr.add("_port_manager", self._port_manager)
 
@@ -73,46 +73,58 @@ class Node(TemplateBase):
 
         self.logger.info("network monitor")
 
-        self.logger.info("verify connectivity of management interface")
-        mgmt_addr = self._node_sal.management_address
-        mgmt_nic = None
-        for nic in self._node_sal.client.info.nic():
-            for addr in nic.get('addrs'):
-                addr = addr.get('addr')
-                if not addr:
-                    continue
-                nw = netaddr.IPNetwork(addr)
-                if str(nw.ip) == mgmt_addr:
-                    mgmt_nic = nic
-                    break
+        def nic_mgmt_monitor():
+            self.logger.info("verify connectivity of management interface")
+            mgmt_addr = self._node_sal.management_address
+            mgmt_nic = None
+            for nic in self._node_sal.client.info.nic():
+                for addr in nic.get('addrs'):
+                    addr = addr.get('addr')
+                    if not addr:
+                        continue
+                    nw = netaddr.IPNetwork(addr)
+                    if str(nw.ip) == mgmt_addr:
+                        mgmt_nic = nic
+                        break
 
-        self.logger.info(mgmt_nic)
-        if not mgmt_nic or 'up' not in mgmt_nic.get('flags', []) or mgmt_nic.get('speed') <= 0:
+            self.logger.info(mgmt_nic)
+            if not mgmt_nic or 'up' not in mgmt_nic.get('flags', []) or mgmt_nic.get('speed') <= 0:
 
-            self.logger.error("management interface is not healthy")
-            hostname = self._node_sal.client.info.os()['hostname']
-            node_id = self._node_sal.name
-            data = {
-                'attributes': {},
-                'resource': hostname,
-                'text': 'network interface %s is down' % mgmt_nic['name'],
-                'environment': 'Production',
-                'severity': 'critical',
-                'event': 'Network',
-                'tags': ["node:%s" % hostname, "node_id:%s" % node_id, "interface:%s" % mgmt_nic['name']],
-                'service': [self.template_uid.name]
-            }
-            send_alert(self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'), data)
+                self.logger.error("management interface is not healthy")
+                hostname = self._node_sal.client.info.os()['hostname']
+                node_id = self._node_sal.name
+                data = {
+                    'attributes': {},
+                    'resource': hostname,
+                    'text': 'network interface %s is down' % mgmt_nic['name'],
+                    'environment': 'Production',
+                    'severity': 'critical',
+                    'event': 'Network',
+                    'tags': ["node:%s" % hostname, "node_id:%s" % node_id, "interface:%s" % mgmt_nic['name']],
+                    'service': [self.template_uid.name]
+                }
+                send_alert(self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'), data)
+
+        if 'nic_mgmt_monitor' not in self.gl_mgr.gls:
+            self.gl_mgr.add('nic_mgmt_monitor', nic_mgmt_monitor)
 
         # make sure the bridges are installed
         for service in self.api.services.find(template_uid=BRIDGE_TEMPLATE_UID):
-            self.logger.info("configuring bridge %s" % service.name)
-            service.schedule_action('install').wait(die=True)
+            try:
+                service.state.check('actions', 'install', 'ok')
+                self.logger.info("configuring bridge %s" % service.name)
+                service.schedule_action('install')
+            except StateCheckError:
+                pass
 
         # make sure the networks are configured
         for service in self.api.services.find(template_uid=NETWORK_TEMPLATE_UID):
-            self.logger.info("configuring network %s" % service.name)
-            service.schedule_action('configure').wait(die=True)
+            try:
+                service.state.check('actions', 'install', 'ok')
+                self.logger.info("configuring network %s" % service.name)
+                service.schedule_action('configure')
+            except StateCheckError:
+                pass
 
     def _register(self):
         """
