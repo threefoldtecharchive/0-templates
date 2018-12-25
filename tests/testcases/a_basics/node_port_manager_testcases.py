@@ -21,7 +21,7 @@ class NodePortManagerTestcases(BaseTest):
         """
         node_service = self.controller.node_manager
         guid = node_service.service.guid
-        self.log('reserving port for one service')
+        self.log('reserving two ports for one service')
         node_port = self.controller.node_port_manager
         ports = node_port.reserve(guid, 2).result
         self.assertTrue(ports)
@@ -29,14 +29,18 @@ class NodePortManagerTestcases(BaseTest):
         port_reserved_2 = ports[1]
         self.log('releasing  the 1st reserved port for one service')
         node_port.release(guid, [port_reserved_1])
-        time.sleep(30)
-        self.log('releasing  the 1st reserved port for one service')
-        node_port.release(guid, [port_reserved_2])
-        port_reserved_3 = node_port.reserve(guid).result
+        time.sleep(10)
         node_port = self.controller.node_port_manager
-        for port in node_port.data["data"]["ports"]:
-                if port['port'] == port_reserved_1:
-                    print("successfully released")
+        for port in node_port.service.data["data"]["ports"]:
+            if port['port'] == port_reserved_1:
+                print("failed")
+        self.log('releasing  the 2nd reserved port for one service')
+        node_port.release(guid, [port_reserved_2])
+
+
+
+
+
         #self.assertEqual(port_reserved_3, port_reserved_1)
 
 
