@@ -62,6 +62,7 @@ class DmVm(TemplateBase):
         except:
             # cover case where remote robot cannot be reach or service is not found
             self.state.set('status', 'running', 'error')
+            raise
 
     def _monitor(self):
         self.logger.info('Monitor vm %s' % self.name)
@@ -78,9 +79,12 @@ class DmVm(TemplateBase):
                 self.state.set('status', 'running', 'ok')
                 return
             except StateCheckError:
-                self.state.delete('status', 'running')
+                self.state.set('status', 'running', 'error')
 
-        update_state()
+        try:
+            update_state()
+        except:
+            self.state.set('status', 'running', 'error')
 
     def install(self):
         self.logger.info('Installing vm %s' % self.name)
