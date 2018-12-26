@@ -11,7 +11,6 @@ class NodePortManager:
         self.robot = self._parent.remote_robot
         self._node_service = None
 
-
     @property
     def service(self):
         if self._node_service is None:
@@ -19,11 +18,7 @@ class NodePortManager:
         return self._node_service
 
     def reserve(self, guid, n=1):
-
         return self.service.schedule_action('reserve', {"service_guid": guid, "n": n}).wait(die=True)
 
     def release(self, guid, ports):
-
         return self.service.schedule_action('release', {"service_guid": guid, 'ports': ports}).wait(die=True)
-
-

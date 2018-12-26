@@ -3,10 +3,7 @@ import unittest
 import time
 
 
-
-
 class NodePortManagerTestcases(BaseTest):
-
 
     def test001_reserve_release_port_using_service_guid(self):
 
@@ -21,12 +18,14 @@ class NodePortManagerTestcases(BaseTest):
         """
         node_service = self.controller.node_manager
         guid = node_service.service.guid
+
         self.log('reserving two ports for one service')
         node_port = self.controller.node_port_manager
         ports = node_port.reserve(guid, 2).result
         self.assertTrue(ports)
         port_reserved_1 = ports[0]
         port_reserved_2 = ports[1]
+
         self.log('releasing  the 1st reserved port for one service')
         node_port.release(guid, [port_reserved_1])
         time.sleep(10)
@@ -34,15 +33,9 @@ class NodePortManagerTestcases(BaseTest):
         for port in node_port.service.data["data"]["ports"]:
             if port['port'] == port_reserved_1:
                 print("failed")
+
         self.log('releasing  the 2nd reserved port for one service')
         node_port.release(guid, [port_reserved_2])
-
-
-
-
-
-        #self.assertEqual(port_reserved_3, port_reserved_1)
-
 
     def test002_reserve_with_guid1_release_with_guid2(self):
 
@@ -60,9 +53,10 @@ class NodePortManagerTestcases(BaseTest):
         node_port = self.controller.node_port_manager
         port = node_port.reserve(guid).result
         self.assertTrue(port)
+
         self.log('releasing the reserved port with different guid , should fail')
         with self.assertRaises(Exception):
             node_port.release(guid2, port)
+
         self.log('releasing the reserved port with right guid , should success')
         node_port.release(guid, port)
-
