@@ -113,11 +113,13 @@ class S3Redundant(TemplateBase):
         active_s3 = self._active_s3()
         passive_s3 = self._passive_s3()
         try:
+            active_s3.state.check('status', 'running', 'ok')
             active_s3.state.check('vm', 'running', 'ok')
             active = True
         except StateCheckError:
             active = False
         try:
+            passive_s3.state.check('status', 'running', 'ok')
             passive_s3.state.check('vm', 'running', 'ok')
             passive = True
         except StateCheckError:

@@ -28,6 +28,9 @@ class S3(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
+        self.__minio = None
+        self.__vm = None
+        self.__vm_robot = None
         self.recurring_action('_monitor_vm', 30)
         self.recurring_action('_monitor', 60)
         self.recurring_action('_monitor_minio', 300)
@@ -70,6 +73,25 @@ class S3(TemplateBase):
             raise ValueError('There are no online nodes in this farm')
         return nodes
 
+    @property
+    def _minio(self):
+        if self.__minio is None:
+            vm_robot, _ = self._vm_robot_and_ip()
+            self.__minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
+        return self.__minio
+
+    @property
+    def _vm(self):
+        if self.__vm is None:
+            self.__vm = self.api.services.get(template_uid=VM_TEMPLATE_UID, name=self.guid)
+        return self.__vm
+
+    @property
+    def _vm_robot(self):
+        if not self.__vm_robot:
+            self.__vm_robot, _ = self._vm_robot_and_ip()
+        return self.__vm_robot
+
     @timeout(60)
     def _update_url(self):
         try:
@@ -78,11 +100,15 @@ class S3(TemplateBase):
             return
 
         self.logger.info("update minio urls")
+
         vm_robot, public_ip = self._vm_robot_and_ip()
         minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
+        self.__vm_robot = vm_robot
+        self.__minio = minio
+
         public_port = minio.schedule_action('node_port').wait(die=True).result
 
-        vm_info = self._vm().schedule_action('info').wait(die=True, timeout=TIMEOUT_DEPLOY).result
+        vm_info = self._vm.schedule_action('info').wait(die=True, timeout=TIMEOUT_DEPLOY).result
         storage_ip = vm_info['host']['storage_addr']
         storage_port = None
         for src, dest in vm_info['ports'].items():
@@ -134,14 +160,12 @@ class S3(TemplateBase):
         if not self.data.get('current_namespaces_connections'):
             self.data['current_namespaces_connections'] = sorted(namespaces_connection)
 
-        minio = self._minio()
-
         if namespaces_connection == sorted(self.data['current_namespaces_connections']):
             self.logger.info("namespace connection in service data are in sync with reality")
         else:
             self.logger.info("some namespace connection in service data are not correct, updating minio configuration")
             # calling update_zerodbs will also tell minio process to reload its config
-            minio.schedule_action('update_zerodbs', args={'zerodbs': namespaces_connection}).wait(die=True)
+            self._minio.schedule_action('update_zerodbs', args={'zerodbs': namespaces_connection}).wait(die=True)
             self.data['current_namespaces_connections'] = namespaces_connection
 
         self.logger.info("verify tlog namespace connections")
@@ -154,7 +178,7 @@ class S3(TemplateBase):
                 connection_info = namespace_connection_info(namespace)
                 if tlog.get('address') and tlog['address'] != connection_info:
                     self.logger.info("tlog namespace connection in service data is not correct, updating minio configuration")
-                    t = minio.schedule_action('update_tlog', args={'namespace': self._tlog_namespace,
+                    t = self._minio.schedule_action('update_tlog', args={'namespace': self._tlog_namespace,
                                                                    'address': connection_info})
                     t.wait(die=True)
                     self.data['tlog']['address'] = connection_info
@@ -174,7 +198,7 @@ class S3(TemplateBase):
                 connection_info = namespace_connection_info(namespace)
                 if master.get('address') and master != connection_info:
                     self.logger.info("master namespace connection in service data is not correct, updating minio configuration")
-                    t = minio.schedule_action('update_master', args={'namespace': self._tlog_namespace,
+                    t = self._minio.schedule_action('update_master', args={'namespace': self._tlog_namespace,
                                                                      'address': connection_info})
                     t.wait(die=True)
                     self.data['master']['address'] = connection_info
@@ -194,21 +218,23 @@ class S3(TemplateBase):
         try:
             disk_state = self.state.get('vm', 'disk')
             if disk_state['disk'] == 'error':
-                self.state.delete('vm', 'running')
+                self.state.set('vm', 'running', 'error')
                 return
         except StateCategoryNotExistsError:
             # disk state is only set on error, so we can ignore
             # the check exception
             pass
 
+
         self.logger.info('Monitor minio vm')
-        state = self._vm().state
         try:
-            state.check('status', 'running', 'ok')
+            self._vm.state.check('status', 'running', 'ok')
             self.state.set('vm', 'running', 'ok')
             return
         except StateCheckError:
-            self.state.delete('vm', 'running')
+            self.state.set('vm', 'running', 'error')
+        except ServiceNotFoundError:
+            self.state.set('vm', 'running', 'error')
 
     def _monitor(self):
         try:
@@ -219,15 +245,12 @@ class S3(TemplateBase):
 
         @timeout(10)
         def update_state():
-            vm_robot, _ = self._vm_robot_and_ip()
-            minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
-
             try:
-                minio.state.check('status', 'running', 'ok')
+                self._minio.state.check('status', 'running', 'ok')
                 self.state.set('status', 'running', 'ok')
                 return
             except StateCheckError:
-                self.state.delete('status', 'running')
+                self.state.set('status', 'running', 'error')
                 zdbs_connection = []
                 for namespace in self.data['namespaces']:
                     robot = self.api.robots.get(namespace['node'], namespace['url'])
@@ -238,17 +261,12 @@ class S3(TemplateBase):
                     except StateCheckError:
                         break
                 else:
-                    minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
-                    minio.schedule_action('update_zerodbs', args={'zerodbs': zdbs_connection}).wait(die=True)
+                    self._minio.schedule_action('update_zerodbs', args={'zerodbs': zdbs_connection}).wait(die=True)
 
         try:
             update_state()
         except:
-            self.state.delete('status', 'running')
-
-    def _minio(self):
-        vm_robot, _ = self._vm_robot_and_ip()
-        return vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
+            self.state.set('status', 'running', 'error')
 
     def install(self):
         nodes = list(self._nodes)
@@ -274,8 +292,7 @@ class S3(TemplateBase):
             # prevent installing the tlog namespace on the same node as the vm vdisk
             to_exclude = []
             try:
-                vm = self._vm()
-                to_exclude.append(vm.data['nodeId'])
+                to_exclude.append(self._vm.data['nodeId'])
                 to_exclude.extend(self.data['excludeNodesVM'])
             except ServiceNotFoundError:
                 pass
@@ -305,9 +322,9 @@ class S3(TemplateBase):
             if to_exclude and len(nodes) - len(to_exclude) > 1:
                 nodes = list(filter(lambda n: n['node_id'] not in to_exclude, nodes))
 
-            vm = self._deploy_minio_vm(nodes)
+            self.__vm = self._deploy_minio_vm(nodes)
             self.logger.info("minio vm deployed")
-            return vm
+            return self.__vm
 
         # deploy all namespaces and vm concurrently
         ns_data_gl = gevent.spawn(deploy_data_namespaces, nodes)
@@ -345,6 +362,9 @@ class S3(TemplateBase):
 
         self._deploy_minio(namespaces_connections, tlog_connection, master)
         self.state.set('actions', 'install', 'ok')
+        self.state.set('status','running','ok')
+        self.state.set('vm','running','ok')
+        self.state.set('vm','disk','ok')
 
     def _delete_namespace(self, namespace):
         self.logger.info("deleting namespace %s on node %s", namespace['node'], namespace['url'])
@@ -396,9 +416,11 @@ class S3(TemplateBase):
         try:
             # uninstall and delete the minio vm
             self.logger.info("deleting minio vm")
-            vm = self._vm()
-            vm.schedule_action('uninstall').wait(die=True)
-            vm.delete()
+            self._vm.schedule_action('uninstall').wait(die=True)
+            self._vm.delete()
+            self.__vm = None
+            self.__vm_robot = None
+            self.__minio = None
         except ServiceNotFoundError:
             pass
 
@@ -414,11 +436,11 @@ class S3(TemplateBase):
 
     def start(self):
         self.state.check('actions', 'install', 'ok')
-        self._minio().schedule_action('start').wait(die=True)
+        self._minio.schedule_action('start').wait(die=True)
 
     def stop(self):
         self.state.check('actions', 'install', 'ok')
-        self._minio().schedule_action('stop').wait(die=True)
+        self._minio.schedule_action('stop').wait(die=True)
 
     def upgrade(self):
         self.state.check('actions', 'install', 'ok')
@@ -439,7 +461,7 @@ class S3(TemplateBase):
         Promote s3 by clearing its master section and reloading minio
         """
         self.data['master'] = dict()
-        self._minio().schedule_action('update_master', args={'namespace': '', 'address': ''}).wait(die=True)
+        self._minio.schedule_action('update_master', args={'namespace': '', 'address': ''}).wait(die=True)
 
     def redeploy(self, reset_tlog=True):
         """
@@ -453,7 +475,7 @@ class S3(TemplateBase):
         self.state.delete('vm')
 
         try:
-            self._vm().schedule_action('uninstall').wait(die=True)
+            self._vm.schedule_action('uninstall').wait(die=True)
         except ServiceNotFoundError:
             pass
 
@@ -463,12 +485,8 @@ class S3(TemplateBase):
         self.install()
         self._update_url()
 
-    def _vm(self):
-        return self.api.services.get(template_uid=VM_TEMPLATE_UID, name=self.guid)
-
     def _vm_robot_and_ip(self):
-        vm = self._vm()
-        vminfo = vm.schedule_action('info', args={'timeout': TIMEOUT_DEPLOY}).wait(die=True).result
+        vminfo = self._vm.schedule_action('info', args={'timeout': TIMEOUT_DEPLOY}).wait(die=True).result
         mgmt_ip = vminfo['zerotier'].get('ip')
 
         if not mgmt_ip:
@@ -518,19 +536,6 @@ class S3(TemplateBase):
 
         return deployed_namespaces
 
-    def _test_namespace_ok(self, namespace, retries=3):
-        # First we will Try to wait and see if the zdb will be self healed or not
-        while retries:
-            try:
-                robot = self.api.robots.get(namespace['node'], namespace['url'])
-                ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
-                namespace_connection_info(ns)
-                return True
-            except Exception:
-                gevent.sleep(3)
-            retries -= 1
-        return False
-
     def _handle_data_shard_failure(self):
         # delete in failure shards and call install again to ensure all the required namespaces
         for address in list(self.state.get('data_shards').keys()):
@@ -549,7 +554,7 @@ class S3(TemplateBase):
             self.state.delete('data_shards', namespace['address'])
 
         self.install()
-        self._minio().schedule_action('check_and_repair').wait(die=True)
+        self._minio.schedule_action('check_and_repair').wait(die=True)
 
     def _deploy_minio_tlog_namespace(self, nodes):
         self.logger.info("create namespaces to be used as a tlog for minio")
@@ -713,41 +718,51 @@ class S3(TemplateBase):
         except StateCheckError:
             return
 
-        vm_robot, _ = self._vm_robot_and_ip()
-        minio = vm_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
+
+        def do():
+            self.logger.info("bubble up minio state")
+            try:
+                self.state.set('vm', 'disk', self._minio.state.get('vm', 'disk'))
+                if self._minio.state.get('vm', 'disk') == SERVICE_STATE_ERROR:
+                    self._send_alert(
+                        "vdisk from %s" % self._minio.name,
+                        text="Minio VM vdisk is in error state",
+                        tags=['minio_name:%s' % self._minio.name],
+                        event='storage')
+            except StateCategoryNotExistsError:
+                # probably no state set on the minio disk #FIXME
+                pass
+            except ServiceNotFoundError:
+                self.state.delete('data_shards')
+                self.state.delete('tlog_shards')
+                self.state.set('status', 'running','error')
+                return
+
+            for connection_info, shard_state in self._minio.state.get('data_shards').items():
+                self.state.set('data_shards', connection_info, shard_state)
+                if shard_state == SERVICE_STATE_ERROR:
+                    self._send_alert(
+                        connection_info,
+                        text='data shard %s is in error state' % connection_info,
+                        tags=['shard:%s' % connection_info],
+                        event='storage')
+
+            for connection_info, shard_state in self._minio.state.get('tlog_shards').items():
+                self.state.set('tlog_shards', connection_info, shard_state)
+                if shard_state == SERVICE_STATE_ERROR:
+                    self._send_alert(
+                        connection_info,
+                        text='tlog shard %s is in error state' % connection_info,
+                        tags=['shard:%s' % connection_info],
+                        event='storage')
+
         try:
-            self.state.set('vm', 'disk', minio.state.get('vm', 'disk'))
-            if minio.state.get('vm', 'disk') == SERVICE_STATE_ERROR:
-                self._send_alert(
-                    "vdisk from %s" % minio.name,
-                    text="Minoi VM vdisk is in error state",
-                    tags=['minio_name:%s' % minio.name],
-                    event='storage')
+            do()
         except:
-            # probably no state set on the minio disk
-            pass
-
-        for connection_info, shard_state in minio.state.get('data_shards').items():
-            self.state.set('data_shards', connection_info, shard_state)
-            if shard_state == SERVICE_STATE_ERROR:
-                self._send_alert(
-                    connection_info,
-                    text='data shard %s is in error state' % connection_info,
-                    tags=['shard:%s' % connection_info],
-                    event='storage')
-
-        for connection_info, shard_state in minio.state.get('tlog_shards').items():
-            self.state.set('tlog_shards', connection_info, shard_state)
-            if shard_state == SERVICE_STATE_ERROR:
-                self._send_alert(
-                    connection_info,
-                    text='tlog shard %s is in error state' % connection_info,
-                    tags=['shard:%s' % connection_info],
-                    event='storage')
+            self.state.set('status','running','error')
 
     def _deploy_minio(self, namespaces_connections, tlog_connection, master):
         self.logger.info("wait for the minio VM to be reachable")
-        vm_robot, _ = self._vm_robot_and_ip()
         self.logger.info("create the minio service on the vm")
         minio_data = {
             'zerodbs': namespaces_connections,
@@ -770,7 +785,7 @@ class S3(TemplateBase):
         minio = None
         while time.time() < now + 2400:
             try:
-                minios = vm_robot.services.find(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
+                minios = self._vm_robot.services.find(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
                 if minios:
                     minio = minios[0]
                     minio.schedule_action('update_all', args={
@@ -779,7 +794,7 @@ class S3(TemplateBase):
                         'master': minio_data['master'],
                     }).wait(die=True)
                 else:
-                    minio = vm_robot.services.create(MINIO_TEMPLATE_UID, self.guid, minio_data)
+                    minio = self._vm_robot.services.create(MINIO_TEMPLATE_UID, self.guid, minio_data)
                 break
             except requests.ConnectionError:
                 self.logger.info("vm not up yet...waiting some more")
@@ -796,14 +811,15 @@ class S3(TemplateBase):
         port = minio.schedule_action('node_port').wait(die=True).result
 
         self.logger.info("open port %s on minio vm", port)
-        self._vm().schedule_action('add_portforward', args={'name': 'minio_%s' % self.guid, 'target': port, 'source': None}).wait(die=True)
+        self._vm.schedule_action('add_portforward', args={'name': 'minio_%s' % self.guid, 'target': port, 'source': None}).wait(die=True)
+        self.__minio = minio
 
     def _send_alert(self, ressource, text, tags, event, severity='critical'):
         alert = {
             'attributes': {},
             'resource': ressource,
             'environment': 'Production',
-            'severity': 'critical',
+            'severity': severity,
             'event': event,
             'tags': tags,
             'service': [self.name],

@@ -1,9 +1,12 @@
+from requests import ConnectionError, HTTPError
+from requests.exceptions import ConnectionError
+
 from jumpscale import j
+from JumpscaleLib.sal_zos.globals import TIMEOUT_DEPLOY
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
-from zerorobot.template.state import StateCheckError
 from zerorobot.template.decorator import timeout
-from requests import HTTPError
+from zerorobot.template.state import StateCheckError
 
 VDISK_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vdisk/0.0.1'
 VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vm/0.0.1'
@@ -11,7 +14,6 @@ ZT_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerotier_client/0.0.1'
 BASEFLIST = 'https://hub.grid.tf/tf-bootable/{}.flist'
 ZEROOSFLIST = 'https://hub.grid.tf/tf-autobuilder/zero-os-development.flist'
 
-from JumpscaleLib.sal_zos.globals import TIMEOUT_DEPLOY
 
 class DmVm(TemplateBase):
 
@@ -55,7 +57,11 @@ class DmVm(TemplateBase):
 
     @property
     def _node_vm(self):
-        return self._node_api.services.get(name=self._node_vm_name)
+        try:
+            return self._node_api.services.get(name=self._node_vm_name)
+        except:
+            # cover case where remote robot cannot be reach or service is not found
+            self.state.set('status', 'running', 'error')
 
     def _monitor(self):
         self.logger.info('Monitor vm %s' % self.name)
@@ -74,10 +80,7 @@ class DmVm(TemplateBase):
             except StateCheckError:
                 self.state.delete('status', 'running')
 
-        try:
-            update_state()
-        except:
-            self.state.delete('status', 'running')
+        update_state()
 
     def install(self):
         self.logger.info('Installing vm %s' % self.name)
@@ -161,6 +164,8 @@ class DmVm(TemplateBase):
             self._node_vm.delete()
         except ServiceNotFoundError:
             pass
+        except ConnectionError:
+            self.logger.warning("connection error to node hosting the vm service, skipping delete of vm service")
 
         self.data['ports'] = []
         for disk in self.data['disks']:
