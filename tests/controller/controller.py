@@ -1,7 +1,7 @@
 from Jumpscale import j
 from uuid import uuid4
 from testconfig import config
-from tests.controller.templates_manager.local_temp import vm, container, zerodb, vdisk, gateway, namespace, bridge, node
+from tests.controller.templates_manager.local_temp import vm, container, zerodb, vdisk, gateway, namespace, bridge, node , node_port_manager
 from tests.controller.templates_manager.general_temp import zt_client, dm_vm
 
 logger = j.logger.get('controller.log')
@@ -28,6 +28,7 @@ class Controller:
 
         # get instance from all templates_manager
         self.vm_manager = vm.VMManager(parent=self, service_name=None)
+        self.node_port_manager = node_port_manager.NodePortManager(parent=self)
         self.dm_vm = dm_vm.DMVMManager(parent=self, service_name=None)
         self.zdb_manager = zerodb.ZDBManager(parent=self, service_name=None)
         self.vdisk = vdisk.VdiskManager(parent=self, service_name=None)
