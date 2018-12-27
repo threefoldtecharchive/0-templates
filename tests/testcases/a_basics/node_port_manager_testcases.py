@@ -24,21 +24,17 @@ class NodePortManagerTestcases(BaseTest):
         port_reserved_2 = ports[1]
 
         self.log("make sure that this two ports is reserved, should success.")
-        for port in node_port.service.data["data"]["ports"]:
-            if port['port'] in ports:
-                self.assertEqual(port, port_reserved_1)
-                self.assertEqual(port, port_reserved_2)
-
+        ports_data = node_port.service.data["data"]["ports"]
+        self.assertIn(port_reserved_1, ports_data)
+        self.assertIn(port_reserved_2, ports_data)
+        
         self.log('release this two ports, should success')
         node_port.release(guid, ports)
 
         self.log("make sure that the port is released by checking that it's not in reserved ports.")
-        for port in node_port.service.data["data"]["ports"]:
-            if port['port'] == port_reserved_1:
-                self.assertEqual(port, port_reserved_1)
-
-        self.log('releasing the 2nd reserved port for one service')
-        node_port.release(guid, [port_reserved_2])
+        ports_data = node_port.service.data["data"]["ports"]
+        self.assertNotIn(port_reserved_1, ports_data)
+        self.assertNotIn(port_reserved_2, ports_data)
 
     def test002_reserve_with_guid1_release_with_guid2(self):
         """ZRT-ZOS-051
