@@ -13,8 +13,7 @@ class NodePortManager:
 
     @property
     def service(self):
-        if self._node_service is None:
-            self._node_service = self.robot.services.find(template_name='node_port_manager')[0]
+        self._node_service = self.robot.services.find(template_name='node_port_manager')[0]
         return self._node_service
 
     def reserve(self, guid, n=1):

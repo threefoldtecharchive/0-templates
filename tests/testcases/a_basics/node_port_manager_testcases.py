@@ -20,14 +20,14 @@ class NodePortManagerTestcases(BaseTest):
         node_port = self.controller.node_port_manager
         ports = node_port.reserve(guid, 2).result
         self.assertTrue(ports)
-        port_reserved_1 = ports[0]
-        port_reserved_2 = ports[1]
+        port_reserved_1 = {'serviceGuid': guid, 'port': ports[0]}
+        port_reserved_2 = {'serviceGuid': guid, 'port': ports[1]}
 
         self.log("make sure that this two ports is reserved, should success.")
         ports_data = node_port.service.data["data"]["ports"]
         self.assertIn(port_reserved_1, ports_data)
         self.assertIn(port_reserved_2, ports_data)
-        
+
         self.log('release this two ports, should success')
         node_port.release(guid, ports)
 
