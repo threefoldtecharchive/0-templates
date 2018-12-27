@@ -655,9 +655,9 @@ class S3(TemplateBase):
         self.logger.info("install minio")
         minio.schedule_action('install').wait(die=True)
         minio.schedule_action('start').wait(die=True)
-        # connection_info = minio.schedule_action('connection_info').wait(die=True).result
-        # self.data['minioLocation']['public'] = connection_info['public']
-        # self.data['minioLocation']['storage'] = connection_info['storage']
+        connection_info = minio.schedule_action('connection_info').wait(die=True).result
+        self.data['minioLocation']['public'] = connection_info['public']
+        self.data['minioLocation']['storage'] = connection_info['storage']
         self.logger.info("minio installed")
 
         self.__minio = minio
