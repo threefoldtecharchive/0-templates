@@ -11,7 +11,7 @@ class NodePortManagerTestcases(BaseTest):
 
         #. get a running service GUID and reserve two ports using it, should success.
         #. make sure that this two ports is reserved, should success.
-        #. release this two ports one by one, should success.
+        #. release this two ports, should success.
         #. make sure that the port is released by checking that it's not in reserved ports.
         """
         self.log('get a running service GUID and reserve two ports using it, should success')
@@ -29,8 +29,8 @@ class NodePortManagerTestcases(BaseTest):
                 self.assertEqual(port, port_reserved_1)
                 self.assertEqual(port, port_reserved_2)
 
-        self.log('release this two ports one by one, should success')
-        node_port.release(guid, [port_reserved_1])
+        self.log('release this two ports, should success')
+        node_port.release(guid, ports)
 
         self.log("make sure that the port is released by checking that it's not in reserved ports.")
         for port in node_port.service.data["data"]["ports"]:
