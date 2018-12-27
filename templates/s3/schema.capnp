@@ -45,8 +45,8 @@ struct Schema {
     struct MinioLocation {
       nodeId @0: Text;
       robotURL @1: Text;
-      minioPublic @2: Text;
-      minioStorage @3: Text;
+      public @2: Text;
+      storage @3: Text;
     }
 }
 
