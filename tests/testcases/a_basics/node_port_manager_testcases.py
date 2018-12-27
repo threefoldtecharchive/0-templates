@@ -29,7 +29,6 @@ class NodePortManagerTestcases(BaseTest):
                 self.assertEqual(port, port_reserved_1)
                 self.assertEqual(port, port_reserved_2)
 
-        self.log('ports {},{} reserved successfully').format(port_reserved_1, port_reserved_2)
         self.log('release this two ports one by one , should success')
         node_port.release(guid, [port_reserved_1])
         for port in node_port.service.data["data"]["ports"]:
