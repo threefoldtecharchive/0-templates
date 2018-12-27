@@ -64,14 +64,14 @@ class Vm(TemplateBase):
                 try:
                     vdisk.state.check('status', 'running', 'ok')  # Cannot start vm until vdisks are running
                 except StateCheckError:
-                    self.state.delete('status', 'running')
+                    self.state.set('status', 'running', 'error')
                     raise
 
             self._update_vdisk_url()
             vm_sal.deploy()
 
             if not vm_sal.is_running():
-                self.state.delete('status', 'running')
+                self.state.set('status', 'running', 'error')
             else:
                 self.state.set('status', 'running', 'ok')
         else:

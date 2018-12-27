@@ -209,7 +209,7 @@ class Zrobot(TemplateBase):
                 self.state.set('status', 'running', 'ok')
                 return
         except (ServiceNotFoundError, LookupError):
-            self.state.delete('status', 'running')
+            self.state.set('status', 'running', 'error')
 
         # try to start
         self.start()

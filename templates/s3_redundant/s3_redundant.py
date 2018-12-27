@@ -134,6 +134,7 @@ class S3Redundant(TemplateBase):
         # only passive is down, redeploy its vm
         if not passive:
             passive_s3.schedule_action('redeploy').wait(die=True)
+            return
 
         # active is down, promote the passive and redeploy a vm for the old active
         if not active:

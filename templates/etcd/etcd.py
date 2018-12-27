@@ -42,7 +42,7 @@ class Etcd(TemplateBase):
 
         etcd_sal = self._etcd_sal
         if not etcd_sal.is_running():
-            self.state.delete('status', 'running')
+            self.state.set('status', 'running', 'error')
             self._deploy()
             etcd_sal.start()
             if etcd_sal.is_running():

@@ -1,14 +1,13 @@
-import gevent
 import json
 from copy import deepcopy
+
 from requests import HTTPError
 
+import gevent
 from jumpscale import j
-
+from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
-from zerorobot.service_collection import ServiceNotFoundError
-
 
 ETCD_CLUSTER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/etcd_cluster/0.0.1'
 TRAEFIK_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/traefik/0.0.1'
@@ -45,7 +44,7 @@ class WebGateway(TemplateBase):
                 self._coredns(node_id).state.check('status', 'running', 'ok')
             self.state.set('status', 'running', 'ok')
         except StateCheckError:
-            self.state.delete('status', 'running')
+            self.state.set('status', 'running', 'error')
 
         cluster_connection = self._etcd_cluster.schedule_action('connection_info').wait(die=True).result
         if self.data['etcdConnectionInfo']['etcds'] != cluster_connection['etcds']:
@@ -65,7 +64,8 @@ class WebGateway(TemplateBase):
             if not self.data[key]:
                 raise ValueError('Invalid value for {}'.format(key))
 
-        self.data['etcdPassword'] = self.data['etcdPassword'] if self.data['etcdPassword'] else j.data.idgenerator.generateXCharID(16)
+        self.data['etcdPassword'] = self.data['etcdPassword'] if self.data['etcdPassword'] else j.data.idgenerator.generateXCharID(
+            16)
 
         try:
             self.state.check('actions', 'install', 'ok')
@@ -100,11 +100,13 @@ class WebGateway(TemplateBase):
         return self._public_apis[node_id].services.get(template_uid=COREDNS_TEMPLATE_UID, name=self._coredns_name)
 
     def _coredns_endpoint(self):
-        coredns_endpoint = ' '.join([connection['client_url'] for connection in self.data['etcdConnectionInfo']['etcds']])
+        coredns_endpoint = ' '.join([connection['client_url']
+                                     for connection in self.data['etcdConnectionInfo']['etcds']])
         return coredns_endpoint
 
     def _traefik_endpoint(self):
-        traefik_endpoint = ','.join(['{}:{}'.format(connection['ip'], connection['client_port']) for connection in self.data['etcdConnectionInfo']['etcds']])
+        traefik_endpoint = ','.join(['{}:{}'.format(connection['ip'], connection['client_port'])
+                                     for connection in self.data['etcdConnectionInfo']['etcds']])
         return traefik_endpoint
 
     def install(self):
@@ -127,7 +129,8 @@ class WebGateway(TemplateBase):
         Create the etcd client and webgateway sal instance and set the public ips
         """
         for etcd in cluster_connection['etcds']:
-            j.clients.etcd.get(self._etcds_name, data={'host': etcd['ip'], 'port': etcd['client_port'], 'user': cluster_connection['user'], 'password_': cluster_connection['password']})
+            j.clients.etcd.get(self._etcds_name, data={
+                               'host': etcd['ip'], 'port': etcd['client_port'], 'user': cluster_connection['user'], 'password_': cluster_connection['password']})
             break
         j.sal.webgateway.get(self.name, data={'etcd_instance': self._etcds_name, 'public_ips': self.data['publicIps']})
 
@@ -201,7 +204,6 @@ class WebGateway(TemplateBase):
             traefik.schedule_action(action).wait(die=True)
             coredns = self._coredns(node_id)
             coredns.schedule_action(action).wait(die=True)
-
 
     def start(self):
         self.state.check('actions', 'install', 'ok')

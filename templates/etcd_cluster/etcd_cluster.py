@@ -57,7 +57,7 @@ class EtcdCluster(TemplateBase):
             try:
                 service.state.check('status', 'running', 'ok')
             except StateCheckError:
-                self.state.delete('status', 'running')
+                self.state.set('status', 'running', 'error')
                 return
         self.state.set('status', 'running', 'ok')
 

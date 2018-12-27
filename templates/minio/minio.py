@@ -43,7 +43,7 @@ class Minio(TemplateBase):
             return
 
         if not self._minio_sal.is_running():
-            self.state.delete('status', 'running')
+            self.state.set('status', 'running', 'error')
             self._healer.stop()
             self.start()
             if self._minio_sal.is_running():
