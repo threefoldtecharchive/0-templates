@@ -20,7 +20,7 @@ class Traefik(TemplateBase):
                 break
         else:
             raise ValueError('Service must contain at least one zerotier nic')
-        
+
         for key in ['etcdEndpoint', 'etcdPassword']:
             if not self.data[key]:
                 raise ValueError('Invalid value for {}'.format(key))
@@ -30,7 +30,7 @@ class Traefik(TemplateBase):
         self.state.check('actions', 'start', 'ok')
 
         if not self._traefik_sal.is_running():
-            self.state.delete('status', 'running')
+            self.state.set('status', 'running', 'error')
             self._traefik_sal.deploy()
             self._traefik_sal.start()
             if self._traefik_sal.is_running():
@@ -50,7 +50,7 @@ class Traefik(TemplateBase):
         kwargs = {
             'name': self.name,
             'node': self._node_sal,
-            'etcd_watch':self.data['etcdWatch'],
+            'etcd_watch': self.data['etcdWatch'],
             'zt_identity': self.data['ztIdentity'],
             'nics': self.data['nics'],
             'etcd_endpoint': self.data['etcdEndpoint'],
@@ -92,7 +92,7 @@ class Traefik(TemplateBase):
         self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
 
-    def update_endpoint(self ,etcd_endpoint):
+    def update_endpoint(self, etcd_endpoint):
         self.data['etcdEndpoint'] = etcd_endpoint
         self.state.check('actions', 'start', 'ok')
         self._traefik_sal.stop()

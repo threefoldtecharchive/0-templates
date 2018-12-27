@@ -1,8 +1,7 @@
 import copy
+
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
-from jumpscale import j
-
 
 NODE_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node/0.0.1'
 NODE_CLIENT = 'local'
@@ -39,7 +38,7 @@ class Container(TemplateBase):
 
         self.logger.info('Monitor container %s' % self.name)
         if not self._container_sal.is_running():
-            self.state.delete('status', 'running')
+            self.state.set('status', 'running', 'error')
             self.install()
             if self._container_sal.is_running():
                 self.state.set('status', 'running', 'ok')
@@ -62,12 +61,12 @@ class Container(TemplateBase):
             envs[env['name']] = env['value']
 
         self._container = self._node_sal.containers.create(self.name, self.data['flist'], hostname=self.data['hostname'],
-                                        mounts=mounts, nics=copy.deepcopy(self.data['nics']),
-                                        host_network=self.data['hostNetworking'],
-                                        ports=ports, storage=self.data['storage'],
-                                        init_processes=self.data['initProcesses'],
-                                        privileged=self.data['privileged'], identity=self.data['ztIdentity'],
-                                        env=envs)
+                                                           mounts=mounts, nics=copy.deepcopy(self.data['nics']),
+                                                           host_network=self.data['hostNetworking'],
+                                                           ports=ports, storage=self.data['storage'],
+                                                           init_processes=self.data['initProcesses'],
+                                                           privileged=self.data['privileged'], identity=self.data['ztIdentity'],
+                                                           env=envs)
         self.data['ztIdentity'] = self._container_sal.identity
 
         self.state.set('actions', 'install', 'ok')

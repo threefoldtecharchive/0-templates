@@ -1,7 +1,6 @@
 from jumpscale import j
 from zerorobot.template.base import TemplateBase
 
-
 NODE_CLIENT = 'local'
 
 
@@ -21,7 +20,7 @@ class Coredns(TemplateBase):
                 break
         else:
             raise ValueError('Service must contain at least one zerotier nic')
-        
+
         for key in ['etcdEndpoint', 'etcdPassword']:
             if not self.data[key]:
                 raise ValueError('Invalid value for {}'.format(key))
@@ -31,13 +30,14 @@ class Coredns(TemplateBase):
         self.state.check('actions', 'start', 'ok')
 
         if not self._coredns_sal.is_running():
-            self.state.delete('status', 'running')
+            self.state.set('status', 'running', 'error')
             self._coredns_sal.deploy()
             self._coredns_sal.start()
             if self._coredns_sal.is_running():
                 self.state.set('status', 'running', 'ok')
         else:
             self.state.set('status', 'running', 'ok')
+
     @property
     def _node_sal(self):
         """
@@ -92,8 +92,8 @@ class Coredns(TemplateBase):
         self._coredns_sal.stop()
         self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
-    
-    def update_endpoint(self ,etcd_endpoint):
+
+    def update_endpoint(self, etcd_endpoint):
         self.data['etcdEndpoint'] = etcd_endpoint
         self.state.check('actions', 'start', 'ok')
         self._coredns_sal.stop()

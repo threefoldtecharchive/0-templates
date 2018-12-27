@@ -1,7 +1,7 @@
 from jumpscale import j
+from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
-from zerorobot.service_collection import ServiceNotFoundError
 
 ZERODB_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerodb/0.0.1'
 
@@ -42,7 +42,7 @@ class Namespace(TemplateBase):
             self._zerodb.state.check('status', 'running', 'ok')
             self.state.set('status', 'running', 'ok')
         except StateCheckError:
-            self.state.delete('status', 'running')
+            self.state.set('status', 'running', 'error')
 
     @property
     def _zerodb(self):
@@ -67,7 +67,8 @@ class Namespace(TemplateBase):
         }
         # use the method on the node service to create the zdb and the namespace.
         # this action hold the logic of the capacity planning for the zdb and namespaces
-        self.data['zerodb'], self.data['nsName'] = node.schedule_action('create_zdb_namespace', kwargs).wait(die=True).result
+        self.data['zerodb'], self.data['nsName'] = node.schedule_action(
+            'create_zdb_namespace', kwargs).wait(die=True).result
         self.state.set('actions', 'install', 'ok')
 
     def info(self):
@@ -89,4 +90,3 @@ class Namespace(TemplateBase):
     def connection_info(self):
         self.state.check('actions', 'install', 'ok')
         return self._zerodb.schedule_action('connection_info').wait(die=True).result
-

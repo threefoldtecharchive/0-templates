@@ -17,7 +17,8 @@ struct Schema {
     minioBlockSize @13 :UInt32=1048576; # minio data block size in bytes
     nsName @14 :Text; # Namespace name prefix that will be used for naming all zdb reservations. Should be unique between different S3 deployments.
     deletableNamespaces @15 :List(Namespace);
-    excludeNodesVM @16 :List(Text); # list of node to avoid using when deploying VM and Vdisk
+    excludeNodes @16 :List(Text); # list of node to avoid using when deploying minio
+    minioLocation @17 :MinioLocation;
 
     enum StorageType {
      hdd @0;
@@ -39,6 +40,13 @@ struct Schema {
     struct Urls {
       public @0: Text;
       storage @1: Text;
+    }
+
+    struct MinioLocation {
+      nodeId @0: Text;
+      robotURL @1: Text;
+      minioPublic @2: Text;
+      minioStorage @3: Text;
     }
 }
 
