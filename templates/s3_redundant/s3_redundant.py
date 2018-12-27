@@ -18,7 +18,7 @@ class S3Redundant(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        self.recurring_action('_monitor', 60)  # every 60 seconds
+        self.recurring_action('_monitor', 30)  # every 60 seconds
 
     def validate(self):
         if self.data['parityShards'] > self.data['dataShards']:

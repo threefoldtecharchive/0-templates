@@ -79,8 +79,8 @@ class Minio(TemplateBase):
     def connection_info(self):
         self.state.check('actions', 'install', 'ok')
         return {
-            'public': '%s:%s' % (self._node_sal.public_addr, self.data['nodePort']),
-            'storage': '%s:%s' % (self._node_sal.storage_addr, self.data['nodePort']),
+            'public': 'http://%s:%s' % (self._node_sal.public_addr, self.data['nodePort']),
+            'storage': 'http://%s:%s' % (self._node_sal.storage_addr, self.data['nodePort']),
         }
 
     def install(self):
