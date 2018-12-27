@@ -10,7 +10,6 @@ from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
 
 S3_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/s3/0.0.1'
 REVERSE_PROXY_UID = 'github.com/threefoldtech/0-templates/reverse_proxy/0.0.1'
-VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/dm_vm/0.0.1'
 
 
 class S3Redundant(TemplateBase):
@@ -20,7 +19,6 @@ class S3Redundant(TemplateBase):
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self.recurring_action('_monitor', 60)  # every 60 seconds
-        self.recurring_action('_monitor_vm', 30)
 
     def validate(self):
         if self.data['parityShards'] > self.data['dataShards']:
@@ -83,62 +81,58 @@ class S3Redundant(TemplateBase):
         except StateCheckError:
             return
 
-        # for data zdb, we only watch the active s3
-        active = self._active_s3()
-        passive = self._passive_s3()
+        active_s3 = self._active_s3()
+        passive_s3 = self._passive_s3()
+        active_running = False
+        passive_running = False
+
+        # first check the state of the 2 minios
         try:
-            if SERVICE_STATE_ERROR in list(active.state.get('data_shards').values()):
-                self._handle_data_shard_failure(active, passive)
+            active_s3.state.check('status', 'running', 'ok')
+            active_running = True
+        except StateCheckError:
+            active_running = False
+
+        try:
+            passive_s3.state.check('status', 'running', 'ok')
+            passive_running = True
+        except StateCheckError:
+            passive_running = False
+
+        # both minios are down, just redeploy both but preserve the active tlog
+        if not passive_running and not active_running:
+            active_s3.schedule_action('redeploy', args={'reset_tlog': False}).wait(die=True)
+            passive_s3.schedule_action('redeploy').wait(die=True)
+            return
+
+        # only passive is down, redeploy it
+        if not passive_running:
+            passive_s3.schedule_action('redeploy').wait(die=True)
+            return
+
+        # active is down, promote the passive and redeploy a minio for the old active
+        if not active_running:
+            self._promote()
+            return
+
+        # if both minios are running fine, check the states shards
+        try:
+            if SERVICE_STATE_ERROR in list(active_s3.state.get('data_shards').values()):
+                self._handle_data_shard_failure(active_s3, passive_s3)
         except StateCategoryNotExistsError:
             pass
 
         try:
-            if SERVICE_STATE_ERROR in list(active.state.get('tlog_shards').values()):
+            if SERVICE_STATE_ERROR in list(active_s3.state.get('tlog_shards').values()):
                 self._handle_active_tlog_failure()
         except StateCategoryNotExistsError:
             pass
 
         try:
-            if SERVICE_STATE_ERROR in list(passive.state.get('tlog_shards').values()):
+            if SERVICE_STATE_ERROR in list(passive_s3.state.get('tlog_shards').values()):
                 self._handle_passive_tlog_failure()
         except StateCategoryNotExistsError:
             pass
-
-    def _monitor_vm(self):
-        try:
-            self.state.check('actions', 'install', 'ok')
-        except StateCheckError:
-            return
-        self.logger.info('Monitor s3 redundant vms %s' % self.name)
-        active_s3 = self._active_s3()
-        passive_s3 = self._passive_s3()
-        try:
-            active_s3.state.check('status', 'running', 'ok')
-            active_s3.state.check('vm', 'running', 'ok')
-            active = True
-        except StateCheckError:
-            active = False
-        try:
-            passive_s3.state.check('status', 'running', 'ok')
-            passive_s3.state.check('vm', 'running', 'ok')
-            passive = True
-        except StateCheckError:
-            passive = False
-
-        # both vms are down, just redeploy both vms but preserve the active tlog
-        if not passive and not active:
-            active_s3.schedule_action('redeploy', args={'reset_tlog': False}).wait(die=True)
-            passive_s3.schedule_action('redeploy').wait(die=True)
-            return
-
-        # only passive is down, redeploy its vm
-        if not passive:
-            passive_s3.schedule_action('redeploy').wait(die=True)
-            return
-
-        # active is down, promote the passive and redeploy a vm for the old active
-        if not active:
-            self._promote()
 
     def _promote(self):
         active_s3 = self._active_s3()
@@ -175,7 +169,6 @@ class S3Redundant(TemplateBase):
             self.data['activeS3'] = active_s3.name
         active_s3.schedule_action('install').wait(die=True)
         self.logger.info('Installed s3 {}'.format(active_s3.name))
-        active_dmvm = self.api.services.get(template_uid=VM_TEMPLATE_UID, name=active_s3.guid)
 
         if self.data['passiveS3']:
             passive_s3 = self._passive_s3()
@@ -185,7 +178,7 @@ class S3Redundant(TemplateBase):
             passive_data = dict(active_data)
             passive_data['master'] = active_tlog
             passive_data['namespaces'] = namespaces
-            passive_data['excludeNodesVM'] = [active_dmvm.data['nodeId']]
+            passive_data['excludeNodes'] = [active_s3.data['minioLocation']['nodeId']]
             passive_s3 = self.api.services.create(S3_TEMPLATE_UID, data=passive_data)
             self.data['passiveS3'] = passive_s3.name
         passive_s3.schedule_action('install').wait(die=True)

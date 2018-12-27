@@ -76,9 +76,12 @@ class Minio(TemplateBase):
         }
         return j.sal_zos.minio.get(**kwargs)
 
-    def node_port(self):
+    def connection_info(self):
         self.state.check('actions', 'install', 'ok')
-        return self.data['nodePort']
+        return {
+            'public': '%s:%s' % (self._node_sal.public_addr, self.data['nodePort']),
+            'storage': '%s:%s' % (self._node_sal.storage_addr, self.data['nodePort']),
+        }
 
     def install(self):
         self.logger.info('Installing minio %s' % self.name)
