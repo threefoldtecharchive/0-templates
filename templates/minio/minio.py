@@ -11,7 +11,7 @@ from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
                                       SERVICE_STATE_WARNING, StateCheckError)
 
 PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
-
+ALERTA_UID = 'github.com/threefoldtech/0-templates/alerta/0.0.1'
 NODE_CLIENT = 'local'
 
 
@@ -115,6 +115,8 @@ class Minio(TemplateBase):
         self.logger.info('Stopping minio %s' % self.name)
         self._minio_sal.stop()
         self._healer.stop()
+        self.state.delete('data_shards')
+        self.state.delete('tlog_shards')
         self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
 
@@ -125,6 +127,8 @@ class Minio(TemplateBase):
 
         self._release_port()
 
+        self.state.delete('data_shards')
+        self.state.delete('tlog_shards')
         self.state.delete('actions', 'install')
         self.state.delete('status', 'running')
 
@@ -234,11 +238,34 @@ class Healer:
             self.logger.info("stop minio logs processing")
             self.service.gl_mgr.stop(Healer.MinioStreamKey, wait=True, timeout=5)
 
+    def _send_alert(self, ressource, text, tags, event, severity='critical'):
+        alert = {
+            'attributes': {},
+            'resource': ressource,
+            'environment': 'Production',
+            'severity': severity,
+            'event': event,
+            'tags': tags,
+            'service': [self.service.name],
+            'text': text,
+        }
+        for alerta in self.service.api.services.find(template_uid=ALERTA_UID):
+            alerta.schedule_action('send_alert', args={'data': alert})
+
     def _process_logs(self):
         self.logger.info("processing logs for minio '%s'" % self.service)
 
         def callback(level, msg, flag):
-            _health_monitoring(self.service.state, level, msg, flag)
+            if level in [LOG_LVL_MESSAGE_INTERNAL]:
+                gevent.spawn(self._send_alert(self.service.name, msg, [], 'minio_logs', 'debug'))
+                msg = j.data.serializer.json.loads(msg)
+                if 'shard' in msg:
+                    self.service.state.set('data_shards', msg['shard'], SERVICE_STATE_ERROR)
+                # we check only the minio owns tlog server, not it's master
+                if 'tlog' in msg and not msg.get('master', False):
+                    self.service.state.set('tlog_shards', msg['tlog'], SERVICE_STATE_ERROR)
+                if 'subsystem' in msg and msg['subsystem'] == 'disk':
+                    self.service.state.set('vm', 'disk', 'error')
 
         while True:
             # wait for the process to be running before processing the logs
@@ -252,14 +279,3 @@ class Healer:
             # this will block until the process stops streaming (usually that means the process has stopped)
             self.logger.info("calling minio stream method")
             self.service._minio_sal.stream(callback)
-
-
-def _health_monitoring(state, level, msg, flag):
-    if level in [LOG_LVL_MESSAGE_INTERNAL]:
-        msg = j.data.serializer.json.loads(msg)
-        if 'shard' in msg:
-            state.set('data_shards', msg['shard'], SERVICE_STATE_ERROR)
-        if 'tlog' in msg and not msg.get('master', False):  # we check only the minio owns tlog server, not it's master
-            state.set('tlog_shards', msg['tlog'], SERVICE_STATE_ERROR)
-        if 'subsystem' in msg and msg['subsystem'] == 'disk':
-            state.set('vm', 'disk', 'error')
