@@ -615,7 +615,7 @@ class S3(TemplateBase):
             self.state.set('status','running','error')
 
     def _deploy_minio(self, nodes, namespaces_connections, tlog_connection, master):
-        nodes = sort_by_less_used(nodes, 'sru')
+        nodes = sort_minio_node_candidates(nodes)
         minio_robot = self.api.robots.get(nodes[0]['node_id'], nodes[0]['robot_address'])
 
         self.logger.info("create the minio service")
@@ -724,8 +724,23 @@ def namespace_connection_info(namespace):
 
 def sort_by_less_used(nodes, storage_key):
     def key(node):
-        return node['total_resources'][storage_key] - node['used_resources'][storage_key]
-    return sorted(nodes, key=key, reverse=True)
+        return (-node['total_resources'][storage_key], node['used_resources'][storage_key])
+    return sorted(nodes, key=key)
+
+def sort_minio_node_candidates(nodes):
+    """
+    to select a candidate node for minio install
+    we sort by
+    - amount of cpu: the node with the most cpu but least used
+    - amount of sru: the node with the most sru but least used
+    """
+
+    def key(node):
+        return (-node['total_resources']['cru'],
+                -node['total_resources']['sru'],
+                node['used_resources']['cru'],
+                node['used_resources']['sru'])
+    return sorted(nodes, key=key)
 
 
 class NamespaceDeployError(RuntimeError):
