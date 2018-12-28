@@ -651,7 +651,7 @@ class S3(TemplateBase):
             raise RuntimeError('Failed to create minio service')
 
         self.data['minioLocation']['nodeId'] = nodes[0]['node_id']
-        self.data['minioLocation']['robotUrl'] = nodes[0]['robot_address']
+        self.data['minioLocation']['robotURL'] = nodes[0]['robot_address']
         self.save()
 
         self.logger.info("install minio")
