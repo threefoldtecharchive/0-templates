@@ -1,7 +1,5 @@
 from jumpscale import j
-
 from zerorobot.template.base import TemplateBase
-
 
 NODE_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node/0.0.1'
 NODE_CLIENT = 'local'
@@ -15,7 +13,7 @@ class Healthcheck(TemplateBase):
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
 
-        self.recurring_action('_monitor', 30)
+        self.recurring_action('_monitor', 600)
 
     @property
     def node_sal(self):
