@@ -56,6 +56,23 @@ class Minio(TemplateBase):
 
     @property
     def _minio_sal(self):
+        tlog_namespace = None
+        tlog_address = None
+        master_namespace = None
+        master_address = None
+
+        if self.data['tlog']:
+            if self.data['tlog'].get('namespace'):
+                tlog_namespace = self.data['tlog']['namespace']
+            if self.data['tlog'].get('address'):
+                tlog_address = self.data['tlog']['address']
+
+        if self.data['master']:
+            if self.data['master'].get('namespace'):
+                master_namespace = self.data['master']['namespace']
+            if self.data['master'].get('address'):
+                master_address = self.data['master']['address']
+
         kwargs = {
             'name': self.name,
             'node': self._node_sal,
@@ -68,10 +85,10 @@ class Minio(TemplateBase):
             'meta_private_key': self.data['metaPrivateKey'],
             'nr_datashards': self.data['dataShard'],
             'nr_parityshards': self.data['parityShard'],
-            'tlog_namespace': self.data.get('tlog').get('namespace'),
-            'tlog_address': self.data.get('tlog').get('address'),
-            'master_namespace': self.data.get('master').get('namespace'),
-            'master_address': self.data.get('master').get('address'),
+            'tlog_namespace': tlog_namespace,
+            'tlog_address': tlog_address,
+            'master_namespace': master_namespace,
+            'master_address': master_address,
             'block_size': self.data['blockSize'],
             'node_port': self.data['nodePort'],
         }
