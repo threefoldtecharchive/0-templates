@@ -186,8 +186,11 @@ class Minio(TemplateBase):
             minio_sal.create_config()
             minio_sal.reload()
 
-    def check_and_repair(self):
-        gevent.spawn(self._minio_sal.check_and_repair)
+    def check_and_repair(self, block=False):
+        if block:
+            self._minio_sal.check_and_repair()
+        else:
+            gevent.spawn(self._minio_sal.check_and_repair)
 
     @retry(exceptions=ServiceNotFoundError, tries=3, delay=3, backoff=2)
     def _reserve_port(self):
