@@ -55,6 +55,7 @@ class Coredns(TemplateBase):
             'backplane': self.data['backplane'],
             'etcd_endpoint': self.data['etcdEndpoint'],
             'etcd_password': self.data['etcdPassword'],
+            'domain': self.data['domain'],
         }
         return j.sal_zos.coredns.get(**kwargs)
 

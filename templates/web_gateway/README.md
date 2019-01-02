@@ -12,7 +12,7 @@ This template responsible for creating and managing a web gateway consisting of 
 - `publicNodes`: list of node ids to deploy traefik and coredns on
 - `publicIps`: the list of public ips that will be exposed by coredns
 - `etcdConnectionInfo`: save the last etcd connection info
-
+- `domain`: authorative domain. If specified, SOA record will be configured for this domain
 
 Nic:
 - `id`: vxlan or vlan id or zerotier network id

@@ -9,6 +9,7 @@ This is a node template responsible for managing [coredns](https://coredns.io/) 
 - `nics`: list of nics to create for the coredns container. Must contain at least one zerotier nic.
 - `ztIdentity`: zerotier identity of the coredns container. This is set by the template.
 - `backplane` : the network interface name that will answer dns queries only  teh default value (backplane)
+- `domain`: authorative domain. If specified, SOA record will be configured for this domain
 
 Nic:
 - `id`: vxlan or vlan id or zerotier network id
