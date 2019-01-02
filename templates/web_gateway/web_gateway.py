@@ -187,7 +187,8 @@ class WebGateway(TemplateBase):
         data = {
             'etcdEndpoint': coredns_endpoint,
             'etcdPassword': self.data['etcdPassword'],
-            'backplane' : self.data['backplane'],
+            'backplane': self.data['backplane'],
+            'domain': self.data['domain'],
         }
         for node_id in self.data['publicNodes']:
             nics = self._create_zt_clients(self.data['nics'], self._public_urls[node_id])
