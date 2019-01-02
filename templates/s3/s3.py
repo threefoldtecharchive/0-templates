@@ -213,7 +213,7 @@ class S3(TemplateBase):
 
         def deploy_tlog_namespace(nodes):
             # prevent installing the tlog namespace on the same node as the minio
-            to_exclude = [self.data['excludeNodes']]
+            to_exclude = [*self.data['excludeNodes']]
             if 'master' in self.data and 'node' in self.data['master']:
                 if self.data['master']['node']:
                     to_exclude.append(self.data['master']['node'])
@@ -251,7 +251,7 @@ class S3(TemplateBase):
                 raise master_gl.exception
 
         # exlude node where the minio cannot be installed
-        to_exclude = self.data.get('excludeNodes', [])
+        to_exclude = [*self.data['excludeNodes']]
         if 'tlog' in self.data and 'node' in self.data['tlog']:
             if self.data['tlog']['node']:
                 to_exclude.append(self.data['tlog']['node'])
@@ -367,7 +367,7 @@ class S3(TemplateBase):
         self.data['master'] = dict()
         self._minio.schedule_action('update_master', args={'namespace': '', 'address': ''}).wait(die=True)
 
-    def redeploy(self, reset_tlog=True):
+    def redeploy(self, reset_tlog=True, exclude_nodes=None):
         """
         Redeploys the tlog and minio
         """
@@ -383,9 +383,14 @@ class S3(TemplateBase):
         except ServiceNotFoundError:
             pass
 
-        if reset_tlog:
+        if reset_tlog and 'node' in self.data['tlog'] and 'url' in self.data['tlog']:
             self._delete_namespace(self.data['tlog'])
             self.data['tlog'] = {}
+
+        if exclude_nodes:
+            if not isinstance(exclude_nodes, list):
+                exclude_nodes = [exclude_nodes]
+            self.data['excludeNodes'] = exclude_nodes
         self.install()
 
     def _deploy_minio_backend_namespaces(self, nodes):
