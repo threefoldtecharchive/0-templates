@@ -72,8 +72,10 @@ class S3Redundant(TemplateBase):
         Note: there is only one tlog server associated with a node
         so address is not really useful
         """
+        active = self._active_s3()
         passive = self._passive_s3()
-        passive.schedule_action('redeploy').wait(die=True)
+        passive.schedule_action('redeploy', {'exclude_nodes':
+                                             [active.data['minioLocation']['nodeId']]}).wait(die=True)
 
     def _monitor(self):
         try:
@@ -102,12 +104,14 @@ class S3Redundant(TemplateBase):
         # both minios are down, just redeploy both but preserve the active tlog
         if not passive_running and not active_running:
             active_s3.schedule_action('redeploy', args={'reset_tlog': False}).wait(die=True)
-            passive_s3.schedule_action('redeploy').wait(die=True)
+            passive_s3.schedule_action(
+                'redeploy', {'exclude_nodes': [active_s3.data['minioLocation']['nodeId']]}).wait(die=True)
             return
 
         # only passive is down, redeploy it
         if not passive_running:
-            passive_s3.schedule_action('redeploy').wait(die=True)
+            passive_s3.schedule_action(
+                'redeploy', {'exclude_nodes': [active_s3.data['minioLocation']['nodeId']]}).wait(die=True)
             return
 
         # active is down, promote the passive and redeploy a minio for the old active
@@ -148,7 +152,8 @@ class S3Redundant(TemplateBase):
 
         master_tlog = passive_s3.schedule_action('tlog').wait(die=True).result
         active_s3.schedule_action('update_master', args={'master': master_tlog}).wait(die=True)
-        active_s3.schedule_action('redeploy').wait(die=True)
+        active_s3.schedule_action(
+            'redeploy', {'exclude_nodes': [passive_s3.data['minioLocation']['nodeId']]}).wait(die=True)
 
     def _update_reverse_proxy_servers(self):
         urls = self._active_s3().schedule_action('url').wait(die=True).result
