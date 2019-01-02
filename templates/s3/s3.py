@@ -1,4 +1,5 @@
 import math
+from itertools import zip_longest
 
 import gevent
 from jumpscale import j
@@ -208,10 +209,8 @@ class S3(TemplateBase):
             }
 
         def deploy_data_namespaces(nodes):
-            namespaces = self._deploy_minio_backend_namespaces(nodes)
+            self._deploy_minio_backend_namespaces(nodes)
             self.logger.info("data backend namespaces deployed")
-            namespaces_connections = namespaces_connection_info(namespaces)
-            return namespaces_connections
 
         def deploy_tlog_namespace(nodes):
             # prevent installing the tlog namespace on the same node as the minio
@@ -223,9 +222,8 @@ class S3(TemplateBase):
             if len(nodes) - len(to_exclude) > 1:
                 nodes = list(filter(lambda n: n['node_id'] not in to_exclude, nodes))
 
-            namespace = self._deploy_minio_tlog_namespace(nodes)
+            self._deploy_minio_tlog_namespace(nodes)
             self.logger.info("tlog backend namespaces deployed")
-            return namespace_connection_info(namespace)
 
 
         # deploy all namespaces
@@ -242,23 +240,18 @@ class S3(TemplateBase):
 
         if ns_data_gl.exception:
             raise ns_data_gl.exception
-        namespaces_connections = ns_data_gl.value
-        self.data['current_namespaces_connections'] = sorted(namespaces_connections)
+        self.data['current_namespaces_connections'] = sorted([ns['address'] for ns in self.data['namespaces']])
 
         ns_tlog_gl = gevent.spawn(deploy_tlog_namespace, nodes)
         ns_tlog_gl.join()
-
         if ns_tlog_gl.exception:
             raise ns_tlog_gl.exception
-        tlog_connection = ns_tlog_gl.value
-        self.data['tlog']['address'] = tlog_connection
 
         if self.data['master'].get('name'):
             if master_gl.exception:
                 raise master_gl.exception
-            master = master_gl.value
 
-        # exluse node where the minio cannot be installed
+        # exlude node where the minio cannot be installed
         to_exclude = self.data.get('excludeNodes', [])
         if 'tlog' in self.data and 'node' in self.data['tlog']:
             if self.data['tlog']['node']:
@@ -271,7 +264,7 @@ class S3(TemplateBase):
         if to_exclude and len(nodes) - len(to_exclude) > 1:
             nodes = list(filter(lambda n: n['node_id'] not in to_exclude, nodes))
 
-        self._deploy_minio(nodes, namespaces_connections, tlog_connection, master)
+        self._deploy_minio(nodes)
         self.state.set('actions', 'install', 'ok')
         self.state.set('status','running','ok')
 
@@ -439,24 +432,43 @@ class S3(TemplateBase):
         return deployed_namespaces
 
     def _handle_data_shard_failure(self):
-        # delete in failure shards and call install again to ensure all the required namespaces
-        for address in list(self.state.get('data_shards').keys()):
-            state = self.state.get('data_shards')[address]
-            if state == SERVICE_STATE_OK:
-                continue
-            try:
-                namespace = self._get_namespace_by_address(address)
-            except ValueError: # in case not found
-                self.state.delete('data_shards', address)
-                continue
+        """
+        handling data shards failures
+        1. list all the shards marqued as in error state
+        2. walk over the list of failed shards by chunks of size N (N == parity_shards, this is required to be able to heal the data using erasure coding)
+            2.1 deploy N new namespaces and replace the shards in fails state by the new one deployed
+            2.2 update minio config with new shards
+            2.3 call check_and_repair to copy data to new shards
+            2.4 delete all shards that have been replaced
+        3. continue until all shards in failure state are replaced
+        """
+        nodes = self._nodes
+        N = self.data['parityShards']
+        namespaces_by_addr = {ns['address']: ns for ns in self.data['namespaces']}
 
-            self._delete_namespace(namespace)
-            if namespace in self.data['namespaces']:
-                self.data['namespaces'].remove(namespace)
-            self.state.delete('data_shards', namespace['address'])
+        # 1. list all the shards marqued as in error state
+        failed_shards = [address for address, state in self.state.get('data_shards').items() if state == 'error']
 
-        self.install()
-        self._minio.schedule_action('check_and_repair').wait(die=True)
+        # 2. walk over the list of failed shards by chunks of size N
+        for addresses in grouper(failed_shards, N):
+            addresses = [addr for addr in addresses if addr] # remove None from addresses, grouper method pads blocks with None
+
+            # 2.1 deploy N new namespaces and replace the shards in fails state by the new one deployed
+            for addr in addresses:
+                self.data['namespaces'].remove(namespaces_by_addr[addr])
+                self.state.delete('data_shards', addr)
+            self._deploy_minio_backend_namespaces(nodes)
+
+            # 2.2 update minio config with new shards
+            new_shards = [ns['address'] for ns in self.data['namespaces']]
+            self._minio.schedule_action('update_zerodbs', {'zerodbs': new_shards, 'reload': True}).wait(die=True)
+
+            # 2.3 call check_and_repair to copy data to new shards
+            self._minio.schedule_action('check_and_repair', {'block': True}).wait(die=True)
+
+            for addr in addresses:
+                gevent.spawn(self._delete_namespace(namespaces_by_addr[addr]))
+
 
     def _deploy_minio_tlog_namespace(self, nodes):
         self.logger.info("create namespaces to be used as a tlog for minio")
@@ -614,15 +626,15 @@ class S3(TemplateBase):
         try:
             do()
         except:
-            self.state.set('status','running','error')
+            self.state.set('status', 'running', 'error')
 
-    def _deploy_minio(self, nodes, namespaces_connections, tlog_connection, master):
+    def _deploy_minio(self, nodes):
         nodes = sort_minio_node_candidates(nodes)
         minio_robot = self.api.robots.get(nodes[0]['node_id'], nodes[0]['robot_address'])
 
         self.logger.info("create the minio service")
         minio_data = {
-            'zerodbs': namespaces_connections,
+            'zerodbs': [ns['address'] for ns in self.data['namespaces']],
             'namespace': self.data['nsName'],
             'nsSecret': self.data['nsPassword'],
             'login': self.data['minioLogin'],
@@ -631,16 +643,16 @@ class S3(TemplateBase):
             'parityShard': self.data['parityShards'],
             'tlog': {
                 'namespace': self._tlog_namespace,
-                'address': tlog_connection,
+                'address': self.data['tlog']['address'],
             },
-            'master': master,
+            'master': self.data['master'].get('address') if 'master' in self.data else None,
             'blockSize': self.data['minioBlockSize'],
         }
 
         try:
             minio = minio_robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
             minio.schedule_action('update_all', args={
-                'zerodbs': namespaces_connections,
+                'zerodbs': minio_data['zerodbs'],
                 'tlog': minio_data['tlog'],
                 'master': minio_data['master'],
             }).wait(die=True)
@@ -743,6 +755,13 @@ def sort_minio_node_candidates(nodes):
                 node['used_resources']['cru'],
                 node['used_resources']['sru'])
     return sorted(nodes, key=key)
+
+def grouper(iterable, n, fillvalue=None):
+    "Collect data into fixed-length chunks or blocks"
+    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
+    args = [iter(iterable)] * n
+    return zip_longest(*args, fillvalue=fillvalue)
+
 
 
 class NamespaceDeployError(RuntimeError):
