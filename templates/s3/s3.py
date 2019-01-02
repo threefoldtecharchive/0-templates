@@ -645,7 +645,7 @@ class S3(TemplateBase):
             },
             'master': {
                 'address': self.data['master'].get('address') if 'master' in self.data else None,
-                'namesapce': self._tlog_namespace,
+                'namespace': self._tlog_namespace,
             },
             'blockSize': self.data['minioBlockSize'],
         }
