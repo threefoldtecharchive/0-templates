@@ -4,6 +4,7 @@ import gevent
 from jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
+from zerorobot.template.decorator import retry
 from zerorobot.template.state import StateCheckError
 
 ETCD_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/etcd/0.0.1'
@@ -190,14 +191,20 @@ class EtcdCluster(TemplateBase):
         self.data['clusterConnections'] = cluster_connection(etcds)
         tasks = list()
         for etcd in etcds:
+            self.logger.info("update cluster config on %s" % etcd.name)
             tasks.append(etcd.schedule_action('update_cluster', args={'cluster': self.data['clusterConnections']}))
             tasks.append(etcd.schedule_action('start'))
         for task in tasks:
             task.wait(die=True)
 
-        etcd = etcds[0]
-        etcd.schedule_action('_enable_auth').wait(die=True)
-        etcd.schedule_action('_prepare_traefik').wait(die=True)
+        @retry(Exception, tries=4, delay=3, backoff=2)
+        def config():
+            etcd = etcds[0]
+            self.logger.info("configure etcd authentication")
+            etcd.schedule_action('_enable_auth').wait(die=True)
+            self.logger.info("configure traefik entry")
+            etcd.schedule_action('_prepare_traefik').wait(die=True)
+        config()
 
         self.state.set('actions', 'install', 'ok')
         self.state.set('actions', 'start', 'ok')
@@ -274,16 +281,9 @@ def cluster_connection(etcds):
 
 
 def etcds_connection(etcds):
-    # group = gevent.pool.Group()
-    # return list(group.imap_unordered(etcd_cluster_connection, etcds))
-    result = []
-    for etcd in etcds:
-        result.append(etcd_connection(etcd))
-    return result
-
-
-def etcd_connection(etcd):
-    return etcd.schedule_action('connection_info').wait(die=True).result
+    tasks = map(lambda etcd: etcd.schedule_action('connection_info'), etcds)
+    result = map(lambda task: task.wait(die=True).result, tasks)
+    return list(result)
 
 
 class EtcdDeployError(RuntimeError):
