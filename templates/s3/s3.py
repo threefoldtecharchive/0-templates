@@ -406,8 +406,11 @@ class S3(TemplateBase):
         if self.data['namespaces']:
             for namespace in self.data['namespaces']:
                 robot = self.api.robots.get(namespace['node'], namespace['url'])
-                namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
-                deployed_namespaces.append(namespace)
+                try:
+                    namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
+                    deployed_namespaces.append(namespace)
+                except ServiceNotFoundError:
+                    continue
 
         self.logger.info("namespaces required: %d of %dGB", required_nr_namespaces, namespace_size)
         self.logger.info("namespaces already deployed %d", len(deployed_namespaces))
@@ -459,7 +462,8 @@ class S3(TemplateBase):
 
             # 2.1 deploy N new namespaces and replace the shards in fails state by the new one deployed
             for addr in addresses:
-                self.data['namespaces'].remove(namespaces_by_addr[addr])
+                if addr in namespaces_by_addr:
+                    self.data['namespaces'].remove(namespaces_by_addr[addr])
                 self.state.delete('data_shards', addr)
             self._deploy_minio_backend_namespaces(nodes)
 
@@ -471,7 +475,8 @@ class S3(TemplateBase):
             self._minio.schedule_action('check_and_repair', {'block': True}).wait(die=True)
 
             for addr in addresses:
-                gevent.spawn(self._delete_namespace(namespaces_by_addr[addr]))
+                if addr in namespaces_by_addr:
+                    gevent.spawn(self._delete_namespace(namespaces_by_addr[addr]))
 
 
     def _deploy_minio_tlog_namespace(self, nodes):
