@@ -2,6 +2,7 @@ import time
 from json import JSONDecodeError
 
 import gevent
+from gevent.lock import Semaphore
 from jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
@@ -23,7 +24,8 @@ class Minio(TemplateBase):
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self._node_sal = j.clients.zos.get(NODE_CLIENT)
-        self._healer = Healer(self)
+        self.error_counter = ErrorCounter(self)
+        self._healer = Healer(self, self.error_counter)
         self.add_delete_callback(self.uninstall)
         self.recurring_action('_monitor', 30)  # every 30 seconds
         self.recurring_action('check_and_repair', 43200)  # every 12 hours
@@ -104,6 +106,7 @@ class Minio(TemplateBase):
         self.logger.info('Installing minio %s' % self.name)
         self._reserve_port()
         self.state.set('actions', 'install', 'ok')
+        self.error_counter.reset()
         self.state.delete('data_shards')
         self.state.delete('tlog_shards')
 
@@ -163,14 +166,15 @@ class Minio(TemplateBase):
             minio_sal.reload()
 
     def update_zerodbs(self, zerodbs, reload=True):
+        self.error_counter.reset()
+        self.state.delete('data_shards')
+
         self.data['zerodbs'] = zerodbs
         # if minio is running and we update the config, tell it to reload the config
         minio_sal = self._minio_sal
         if reload and minio_sal.is_running():
             minio_sal.create_config()
             minio_sal.reload()
-
-        self.state.delete('data_shards')
 
         # we consider shards info to be valid when we update them
         for addr in self.data['zerodbs']:
@@ -244,9 +248,10 @@ LOG_LVL_JOB = 30
 class Healer:
     MinioStreamKey = "minio.logs"
 
-    def __init__(self, minio):
+    def __init__(self, minio, error_counter):
         self.service = minio
         self.logger = minio.logger
+        self.error_counter = error_counter
 
     def start(self):
         if self.service.gl_mgr.gls.get(Healer.MinioStreamKey, None) is None:
@@ -257,6 +262,7 @@ class Healer:
         if self.service.gl_mgr.gls.get(Healer.MinioStreamKey, None) is not None:
             self.logger.info("stop minio logs processing")
             self.service.gl_mgr.stop(Healer.MinioStreamKey, wait=True, timeout=5)
+        self.error_counter.reset()
 
     def _send_alert(self, ressource, text, tags, event, severity='critical'):
         alert = {
@@ -279,16 +285,29 @@ class Healer:
             if level in [LOG_LVL_MESSAGE_INTERNAL]:
                 gevent.spawn(self._send_alert(self.service.name, msg, [], 'minio_logs', 'debug'))
                 msg = j.data.serializer.json.loads(msg)
+
                 if 'shard' in msg:
-                    addr, port = msg['shard'].split(':')
-                    if test_shard(addr, port):
-                        self.service.state.set('data_shards', msg['shard'], SERVICE_STATE_ERROR)
+                    addr = msg['shard']
+
+                    if addr not in self.service.data['zerodbs']:
+                        # this is an old shards we dont use anymore
+                        return
+
+                    if self.error_counter.increment(addr) > 10:
+                        self.service.state.set('data_shards', addr, SERVICE_STATE_ERROR)
+
                 # we check only the minio owns tlog server, not it's master
-                if 'tlog' in msg and not msg.get('master', False):
-                    addr, port = msg['tlog'].split(':')
-                    if test_shard(addr, port):
-                        self.service.state.set('tlog_shards', msg['tlog'], SERVICE_STATE_ERROR)
-                if 'subsystem' in msg and msg['subsystem'] == 'disk':
+                elif 'tlog' in msg and not msg.get('master', False):
+                    addr = msg['tlog']
+
+                    if addr not in self.service.data['zerodbs']:
+                        # this is an old shards we dont use anymore
+                        return
+
+                    if self.error_counter.increment(addr) > 10:
+                        self.service.state.set('tlog_shards', addr, SERVICE_STATE_ERROR)
+
+                elif 'subsystem' in msg and msg['subsystem'] == 'disk':
                     self.service.state.set('vm', 'disk', 'error')
 
         while True:
@@ -305,8 +324,40 @@ class Healer:
             self.service._minio_sal.stream(callback)
 
 
-def test_shard(addr, port):
-    j.tools.timer.execute_until(
-        lambda: j.sal.nettools.tcpPortConnectionTest(addr, port, 2),
-        timeout=9,
-        interval=0.1)
+class ErrorCounter:
+
+    def __init__(self, service):
+        service.data['error_counter'] = {}
+        self.counter = service.data['error_counter']
+        self._counter_mu = Semaphore()
+        gevent.spawn(self._scrub)
+
+    def increment(self, addr):
+        with self._counter_mu:
+            count = 0
+            if addr in self.counter:
+                count, last_update = self.counter[addr]
+                count += 1
+            self.counter[addr] = (count, time.time())
+            return count
+
+    def reset(self):
+        now = time.time()
+        with self._counter_mu:
+            for addr in list(self.counter.keys()):
+                self.counter[addr] = (0, now)
+
+    def _scrub(self):
+        """
+        clean up all the error counter
+        if there was not more error for 10 minutes
+        """
+        while True:
+            time.sleep(600)
+
+            ago = time.time() - 600
+            with self._counter_mu:
+                for addr in list(self.counter.keys()):
+                    _, last_update = self.counter[addr]
+                    if last_update < ago:
+                        del self.counter[addr]
