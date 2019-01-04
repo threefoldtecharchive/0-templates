@@ -280,10 +280,14 @@ class Healer:
                 gevent.spawn(self._send_alert(self.service.name, msg, [], 'minio_logs', 'debug'))
                 msg = j.data.serializer.json.loads(msg)
                 if 'shard' in msg:
-                    self.service.state.set('data_shards', msg['shard'], SERVICE_STATE_ERROR)
+                    addr, port = msg['shard'].split(':')
+                    if test_shard(addr, port):
+                        self.service.state.set('data_shards', msg['shard'], SERVICE_STATE_ERROR)
                 # we check only the minio owns tlog server, not it's master
                 if 'tlog' in msg and not msg.get('master', False):
-                    self.service.state.set('tlog_shards', msg['tlog'], SERVICE_STATE_ERROR)
+                    addr, port = msg['tlog'].split(':')
+                    if test_shard(addr, port):
+                        self.service.state.set('tlog_shards', msg['tlog'], SERVICE_STATE_ERROR)
                 if 'subsystem' in msg and msg['subsystem'] == 'disk':
                     self.service.state.set('vm', 'disk', 'error')
 
@@ -299,3 +303,10 @@ class Healer:
             # this will block until the process stops streaming (usually that means the process has stopped)
             self.logger.info("calling minio stream method")
             self.service._minio_sal.stream(callback)
+
+
+def test_shard(addr, port):
+    j.tools.timer.execute_until(
+        lambda: j.sal.nettools.tcpPortConnectionTest(addr, port, 2),
+        timeout=9,
+        interval=0.1)
