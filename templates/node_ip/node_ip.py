@@ -14,6 +14,7 @@ class NodeIp(TemplateBase):
 
     def __init__(self, name, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
+        self.recurring_action('_monitor', 60)  # every 60 seconds
 
     def validate(self):
         cidr = self.data.get('cidr')
@@ -35,6 +36,14 @@ class NodeIp(TemplateBase):
         """
         return j.clients.zos.get(NODE_CLIENT)
 
+    def _monitor(self):
+        try:
+            self.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            return
+
+        self.install()
+
     def install(self):
         node = self._node_sal()
         interface = self.data['interface']
@@ -42,6 +51,7 @@ class NodeIp(TemplateBase):
 
         ips = node.client.ip.addr.list(interface)
         if cidr not in ips:
+            self.logger.info("config ip %s on interface %s", cidr, interface)
             node.client.ip.addr.add(interface, cidr)
         self.state.set('actions', 'install', 'ok')
 
