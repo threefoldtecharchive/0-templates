@@ -237,8 +237,9 @@ class S3Redundant(TemplateBase):
         active_s3.schedule_action('stop').wait(die=True)
 
     def upgrade_active(self):
-        self.stop_active()
-        self.start_active()
+        self.state.check('actions', 'install', 'ok')
+        active_s3 = self._active_s3()
+        active_s3.schedule_action('upgrade').wait(die=True)
 
     def start_passive(self):
         self.state.check('actions', 'install', 'ok')
@@ -251,8 +252,9 @@ class S3Redundant(TemplateBase):
         passive_s3.schedule_action('stop').wait(die=True)
 
     def upgrade_passive(self):
-        self.stop_passive()
-        self.start_passive()
+        self.state.check('actions', 'install', 'ok')
+        passive_s3 = self._passive_s3()
+        passive_s3.schedule_action('upgrade').wait(die=True)
 
     def update_reverse_proxy(self, reverse_proxy):
         self.data['reverseProxy'] = reverse_proxy

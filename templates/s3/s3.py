@@ -349,8 +349,7 @@ class S3(TemplateBase):
 
     def upgrade(self):
         self.state.check('actions', 'install', 'ok')
-        self.stop()
-        self.start()
+        self._minio.schedule_action('upgrade').wait(die=True)
 
     def tlog(self):
         return self.data['tlog']
