@@ -325,11 +325,11 @@ class Healer:
                 elif 'tlog' in msg and not msg.get('master', False):
                     addr = msg['tlog']
 
-                    if addr not in self.service.data['zerodbs']:
+                    if 'tlog' in self.service.data and self.service.data['tlog'].get('address') != addr:
                         # this is an old shards we dont use anymore
                         return
 
-                    if self.error_counter.increment(addr) > 10:
+                    if self.error_counter.increment(addr) >= 2:
                         self.service.state.set('tlog_shards', addr, SERVICE_STATE_ERROR)
 
                 elif 'subsystem' in msg and msg['subsystem'] == 'disk':
