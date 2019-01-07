@@ -153,6 +153,18 @@ class Minio(TemplateBase):
         self.state.delete('actions', 'install')
         self.state.delete('status', 'running')
 
+    def upgrade(self):
+        self.logger.info("upgrading minio")
+        self.state.set('upgrade', 'running', 'ok')
+        try:
+            minio_sal = self._minio_sal
+            self._healer.stop()
+            minio_sal.stop()
+            minio_sal.start()
+            self._healer.start()
+        finally:
+            self.state.delete('upgrade', 'running')
+
     def update_all(self, zerodbs, tlog, master):
         if zerodbs:
             self.update_zerodbs(zerodbs, reload=False)
