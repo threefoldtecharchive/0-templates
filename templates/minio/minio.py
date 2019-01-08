@@ -110,6 +110,7 @@ class Minio(TemplateBase):
         self.error_counter.reset()
         self.state.delete('data_shards')
         self.state.delete('tlog_shards')
+        self.state.delete('vm')
 
         for addr in self.data['zerodbs']:
             self.state.set('data_shards', addr, SERVICE_STATE_OK)
@@ -138,6 +139,7 @@ class Minio(TemplateBase):
         self._healer.stop()
         self.state.delete('data_shards')
         self.state.delete('tlog_shards')
+        self.state.delete('vm')
         self.state.delete('actions', 'start')
         self.state.delete('status', 'running')
 
@@ -150,6 +152,7 @@ class Minio(TemplateBase):
 
         self.state.delete('data_shards')
         self.state.delete('tlog_shards')
+        self.state.delete('vm')
         self.state.delete('actions', 'install')
         self.state.delete('status', 'running')
 
@@ -194,6 +197,8 @@ class Minio(TemplateBase):
             self.state.set('data_shards', addr, SERVICE_STATE_OK)
 
     def update_tlog(self, namespace, address, reload=True):
+        self.state.delete('vm')
+        self.state.delete('tlog_shards')
         self.data['tlog'] = {
             'namespace': namespace,
             'address': address
