@@ -138,6 +138,12 @@ class S3Redundant(TemplateBase):
         except StateCategoryNotExistsError:
             pass
 
+        try:
+            if SERVICE_STATE_ERROR in list(passive_s3.state.get('vm', 'disk').values()):
+                self._handle_passive_tlog_failure()
+        except StateCategoryNotExistsError:
+            pass
+
     def _promote(self):
         active_s3 = self._active_s3()
         passive_s3 = self._passive_s3()
