@@ -161,6 +161,8 @@ class S3(TemplateBase):
                 # nothing to do, it's responsibility of the active to report and fix this
 
     def _monitor(self):
+        if self.name == '4ace9195-4979-4ffc-85f0-4a1b9b179d32':
+            import ipdb;ipdb.set_trace()
         try:
             self.state.check('actions', 'install', 'ok')
         except StateCheckError:
@@ -376,6 +378,7 @@ class S3(TemplateBase):
         # make sure we reset error stats
         self.state.delete('data_shards')
         self.state.delete('tlog_shards')
+        self.state.delete('vm')
 
         try:
             if self._minio:
@@ -596,41 +599,44 @@ class S3(TemplateBase):
         def do():
             self.logger.info("bubble up minio state")
             try:
-                # TODO
-                pass
-                # self.state.set('vm', 'disk', self._minio.state.get('vm', 'disk'))
-                # if self._minio.state.get('vm', 'disk') == SERVICE_STATE_ERROR:
-                #     self._send_alert(
-                #         "vdisk from %s" % self._minio.name,
-                #         text="Minio VM vdisk is in error state",
-                #         tags=['minio_name:%s' % self._minio.name],
-                #         event='storage')
+                self.state.set('vm', 'disk', self._minio.state.get('vm', 'disk')['disk'])
+            except StateCheckError:
+                self.state.set('vm', 'disk','error')
+                self._send_alert(
+                    "tlog disk from minio_name:%s" % self._minio.name,
+                    text="Minio Tlog disk is in error state",
+                    tags=['minio_name:%s' % self._minio.name],
+                    event='storage')
             except StateCategoryNotExistsError:
                 # probably no state set on the minio disk #FIXME
-                pass
+                self.state.delete('vm')
             except ServiceNotFoundError:
                 self.state.delete('data_shards')
                 self.state.delete('tlog_shards')
+                self.state.delte('vm')
                 self.state.set('status', 'running', 'error')
                 return
 
-            for connection_info, shard_state in self._minio.state.get('data_shards').items():
-                self.state.set('data_shards', connection_info, shard_state)
-                if shard_state == SERVICE_STATE_ERROR:
-                    self._send_alert(
-                        connection_info,
-                        text='data shard %s is in error state' % connection_info,
-                        tags=['shard:%s' % connection_info],
-                        event='storage')
+            try:
+                for connection_info, shard_state in self._minio.state.get('data_shards').items():
+                    self.state.set('data_shards', connection_info, shard_state)
+                    if shard_state == SERVICE_STATE_ERROR:
+                        self._send_alert(
+                            connection_info,
+                            text='data shard %s is in error state' % connection_info,
+                            tags=['shard:%s' % connection_info],
+                            event='storage')
 
-            for connection_info, shard_state in self._minio.state.get('tlog_shards').items():
-                self.state.set('tlog_shards', connection_info, shard_state)
-                if shard_state == SERVICE_STATE_ERROR:
-                    self._send_alert(
-                        connection_info,
-                        text='tlog shard %s is in error state' % connection_info,
-                        tags=['shard:%s' % connection_info],
-                        event='storage')
+                for connection_info, shard_state in self._minio.state.get('tlog_shards').items():
+                    self.state.set('tlog_shards', connection_info, shard_state)
+                    if shard_state == SERVICE_STATE_ERROR:
+                        self._send_alert(
+                            connection_info,
+                            text='tlog shard %s is in error state' % connection_info,
+                            tags=['shard:%s' % connection_info],
+                            event='storage')
+            except StateCategoryNotExistsError:
+                pass
 
         try:
             do()
