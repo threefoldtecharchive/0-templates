@@ -161,8 +161,6 @@ class S3(TemplateBase):
                 # nothing to do, it's responsibility of the active to report and fix this
 
     def _monitor(self):
-        if self.name == '4ace9195-4979-4ffc-85f0-4a1b9b179d32':
-            import ipdb;ipdb.set_trace()
         try:
             self.state.check('actions', 'install', 'ok')
         except StateCheckError:
@@ -602,6 +600,7 @@ class S3(TemplateBase):
                 self.state.set('vm', 'disk', self._minio.state.get('vm', 'disk')['disk'])
             except StateCheckError:
                 self.state.set('vm', 'disk','error')
+                self.state.set('status', 'running', 'error')
                 self._send_alert(
                     "tlog disk from minio_name:%s" % self._minio.name,
                     text="Minio Tlog disk is in error state",
