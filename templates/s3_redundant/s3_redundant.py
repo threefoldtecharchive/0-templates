@@ -119,6 +119,13 @@ class S3Redundant(TemplateBase):
             self._promote()
             return
 
+        try:
+            if SERVICE_STATE_ERROR in list(active_s3.state.get('vm', 'disk').values()):
+                self._promote()
+                return
+        except StateCategoryNotExistsError:
+            pass
+
         # if both minios are running fine, check the states shards
         try:
             if SERVICE_STATE_ERROR in list(active_s3.state.get('data_shards').values()):
