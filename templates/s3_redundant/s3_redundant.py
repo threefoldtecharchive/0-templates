@@ -51,9 +51,9 @@ class S3Redundant(TemplateBase):
     def _handle_data_shard_failure(self, active, passive):
         # handle data failure in the active node then update the namespaces in the passive node
         self.logger.info("Handling data shard failure")
-        active.schedule_action('_handle_data_shard_failure').wait(die=True)
-        namespaces = active.schedule_action('namespaces').wait(die=True).result
-        passive.schedule_action('_update_namespaces', {'namespaces': namespaces}).wait(die=True)
+        namespaces = active.schedule_action('_handle_data_shard_failure').wait(die=True).result
+        if namespaces:
+            passive.schedule_action('_update_namespaces', {'namespaces': namespaces}).wait(die=True)
 
     def _handle_active_tlog_failure(self):
         """
@@ -130,24 +130,28 @@ class S3Redundant(TemplateBase):
         try:
             if SERVICE_STATE_ERROR in list(active_s3.state.get('data_shards').values()):
                 self._handle_data_shard_failure(active_s3, passive_s3)
+                return
         except StateCategoryNotExistsError:
             pass
 
         try:
             if SERVICE_STATE_ERROR in list(active_s3.state.get('tlog_shards').values()):
                 self._handle_active_tlog_failure()
+                return
         except StateCategoryNotExistsError:
             pass
 
         try:
             if SERVICE_STATE_ERROR in list(passive_s3.state.get('tlog_shards').values()):
                 self._handle_passive_tlog_failure()
+                return
         except StateCategoryNotExistsError:
             pass
 
         try:
             if SERVICE_STATE_ERROR in list(passive_s3.state.get('vm', 'disk').values()):
                 self._handle_passive_tlog_failure()
+                return
         except StateCategoryNotExistsError:
             pass
 
