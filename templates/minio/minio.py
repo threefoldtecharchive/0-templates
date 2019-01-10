@@ -310,7 +310,7 @@ class Healer:
                         # this is an old shards we dont use anymore
                         return
 
-                    if self.error_counter.increment(addr) > 10:
+                    if self.error_counter.increment(addr) > 2:
                         self.service.state.set('data_shards', addr, SERVICE_STATE_ERROR)
 
                 # we check only the minio owns tlog server, not it's master
