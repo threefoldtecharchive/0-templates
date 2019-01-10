@@ -325,6 +325,9 @@ class Healer:
 
                     if self.error_counter.increment(addr) > 10:
                         self.service.state.set('data_shards', addr, SERVICE_STATE_ERROR)
+                    else:
+                        # no more error for 10 minutes, consider ok
+                        self.service.state.set('data_shards', addr, SERVICE_STATE_OK)
 
                 # we check only the minio owns tlog server, not it's master
                 elif 'tlog' in msg and not msg.get('master', False):
@@ -336,6 +339,9 @@ class Healer:
 
                     if self.error_counter.increment(addr) >= 2:
                         self.service.state.set('tlog_shards', addr, SERVICE_STATE_ERROR)
+                    else:
+                        # no more error for 10 minutes, consider ok
+                        self.service.state.set('data_shards', addr, SERVICE_STATE_OK)
 
                 elif 'subsystem' in msg and msg['subsystem'] == 'disk':
                     self.service.state.set('vm', 'disk', 'error')
