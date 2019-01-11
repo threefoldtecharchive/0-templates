@@ -9,7 +9,7 @@ struct Schema {
     token @4 :Text; # cluster token
     password @5 :Text; # etcd password
     clusterConnections @6 :Text;
-    hostNetwork @7 :Bool # if true, etcd container will use host networking;
+    hostNetwork @7 :Bool; # if true, etcd container will use host networking
 
     struct Etcd {
       name @0: Text; # etcd service name
