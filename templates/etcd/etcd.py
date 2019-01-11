@@ -64,6 +64,7 @@ class Etcd(TemplateBase):
             'token': self.data['token'],
             'cluster': self.data['cluster'],
             'password': self.data['password'],
+            'host_network': self.data.get('hostNetwork', False),
         }
         return j.sal_zos.etcd.get(**kwargs)
 
