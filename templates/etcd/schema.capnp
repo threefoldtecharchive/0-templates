@@ -7,6 +7,7 @@ struct Schema {
     token @2 :Text; # cluster token
     cluster @3 :Text; #  a string of the cluster connection info, used in the etcd conf `initial-cluster` value ex: `one=http://172.12.53.12:2380,two=172.12.53.13:2380`
     password @4 :Text; # etcd root user password
+    hostNetwork @5 :Bool # if true, etcd container will use host networking;
 
     struct Nic {
         type @0 :NicType;

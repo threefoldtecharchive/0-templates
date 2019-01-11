@@ -161,6 +161,7 @@ class WebGateway(TemplateBase):
             'password': self.data['etcdPassword'],
             'farmerIyoOrg': self.data['farmerIyoOrg'],
             'nics': self.data['nics'],
+            'hostNetwork': self.data.get('hostNetwork', False),
         }
         etcd_cluster = self.api.services.find_or_create(ETCD_CLUSTER_TEMPLATE_UID, self._etcds_name, cluster_data)
         etcd_cluster.schedule_action('install').wait(die=True)

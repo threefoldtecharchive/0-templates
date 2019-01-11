@@ -173,6 +173,7 @@ class EtcdCluster(TemplateBase):
                 'token': self.data['token'],
                 'password': self.data['password'],
                 'nics': nics,
+                'hostNetwork': self.data.get('hostNetwork', False),
             }
             etcd = robot.services.create(template_uid=ETCD_TEMPLATE_UID, data=data)
             task = etcd.schedule_action('install').wait(timeout=300)

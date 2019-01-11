@@ -10,6 +10,7 @@ struct Schema {
     etcdConnectionInfo @6 :ClusterConnection; #save last etcd connection info
     backplane @7 :Text="backplane"; #the network interface name that will answer dns queries only
     domain @8 :Text; # authorative domain
+    hostNetwork @9 :Bool # if true, etcd container will use host networking;
 
     struct Nic {
         type @0 :NicType;

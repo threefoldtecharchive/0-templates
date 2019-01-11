@@ -10,6 +10,7 @@ This is a node template responsible for managing [etcd](https://coreos.com/etcd/
 - `token`: the token for the cluster. If not supplied, the template will generate one.
 - `cluster`: a string of the cluster connection info, used in the etcd conf `initial-cluster` value ex: `one=http://172.12.53.12:2380,two=172.12.53.13:2380`
 - `password`: password to be used to create root user. If not supplied, the template will generate one.
+-  `host_network`: if true, etcd container will use host networking
 
 Nic:
 - `id`: vxlan or vlan id or zerotier network id
