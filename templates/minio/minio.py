@@ -244,6 +244,7 @@ class Minio(TemplateBase):
             return
         port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
         port_mgr.schedule_action("release", {"service_guid": self.guid, 'ports': [self.data['nodePort']]})
+        self.data['nodePort'] = 0
 
 
 LOG_LVL_STDOUT = 1
