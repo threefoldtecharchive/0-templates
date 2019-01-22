@@ -470,8 +470,7 @@ class S3(TemplateBase):
 
         # 4. if more the parity shards needs to be replaced, mark as degrated and stop
         if len(to_replace) > N:
-            error_msg = "Too many shard down (%d), cannot repair now. Need %s more shards up" % (
-                to_replace, failed_shards-N)
+            error_msg = "Too many shard down (%d), cannot repair now. Need %s more shards up" % (len(to_replace), len(failed_shards)-N)
             self.logger.error(error_msg)
             self._send_alert(
                 ressource="Cannot repair data shards on %s" % self._minio.name,
@@ -479,7 +478,7 @@ class S3(TemplateBase):
                 tags=['minio_name:%s' % self._minio.name],
                 event='healing')
             self.state.set('healing', 'blocked', 'ok')
-            raise RuntimeError()
+            raise RuntimeError(error_msg)
 
         self.state.delete('healing')
 
