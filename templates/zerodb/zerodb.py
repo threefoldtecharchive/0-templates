@@ -42,33 +42,33 @@ class Zerodb(TemplateBase):
         node = self.api.services.get(template_account='threefoldtech', template_name='node')
         node.state.check('disks', 'mounted', 'ok')
 
-        if not self._zerodb_sal.is_running():
+        if self._zerodb_sal.is_running():
+            self.state.set('status', 'running', 'ok')
+            return
+
+        try:
+            self._deploy()
+        except Exception as err:
+            self.state.set('status', 'running', 'error')
+            hostname = self._node_sal.client.info.os()['hostname']
+            node_id = self._node_sal.name
             data = {
                 'attributes': {},
                 'resource': self.guid,
                 'environment': 'Production',
                 'severity': 'critical',
                 'event': 'Hardware',
-                'tags': [],
-                'service': ['zerodb']
+                'tags': ["node:%s" % hostname, "node_id:%s" % node_id],
+                'service': ['zerodb'],
+                'text': 'Zerodb {} is not running and we failed to redeploy it: {}'.format(self.name, str(err))
             }
-            try:
-                self._deploy()
-            except Exception:
-                self.state.set('status', 'running', 'error')
-                data['text'] = 'Failed to deploy zerodb {}'.format(self.name)
-                send_alert(self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'), data)
-                return
+            send_alert(self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'), data)
+            return
 
-            if self._zerodb_sal.is_running():
-                self.state.set('status', 'running', 'ok')
-            else:
-                self.state.set('status', 'running', 'error')
-                data['text'] = 'Failed to start zerodb {}'.format(self.name)
-                send_alert(self.api.services.find(template_uid='github.com/threefoldtech/0-templates/alerta/0.0.1'), data)
-
-        else:
+        if self._zerodb_sal.is_running():
             self.state.set('status', 'running', 'ok')
+        else:
+            self.state.set('status', 'running', 'error')
 
     def install(self):
         self.logger.info('Installing zerodb %s' % self.name)
