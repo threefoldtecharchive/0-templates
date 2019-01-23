@@ -375,7 +375,6 @@ class S3(TemplateBase):
         try:
             if self._minio:
                 self._minio.schedule_action('uninstall').wait(die=True)
-                self._minio.delete()
         except ServiceNotFoundError:
             pass
 
