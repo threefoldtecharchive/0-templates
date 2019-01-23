@@ -312,7 +312,7 @@ class Healer:
             self.service.state.set('data_shards', addr, SERVICE_STATE_OK)
 
     def _process_tlog_shard_event(self, msg):
-        addr = msg['shard']
+        addr = msg['tlog']
         if 'tlog' in self.service.data and self.service.data['tlog'].get('address') != addr:
             # this is an old shards we dont use anymore
             return
