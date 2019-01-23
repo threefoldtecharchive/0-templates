@@ -25,8 +25,7 @@ class Minio(TemplateBase):
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self._node_sal = j.clients.zos.get(NODE_CLIENT)
-        self.error_counter = ErrorCounter(self)
-        self._healer = Healer(self, self.error_counter)
+        self._healer = Healer(self)
         self.add_delete_callback(self.uninstall)
         self.recurring_action('_monitor', 30)  # every 30 seconds
         self.recurring_action('check_and_repair', 43200)  # every 12 hours
@@ -108,7 +107,6 @@ class Minio(TemplateBase):
         self.logger.info('Installing minio %s' % self.name)
         self._reserve_port()
         self.state.set('actions', 'install', 'ok')
-        self.error_counter.reset()
         self.state.delete('data_shards')
         self.state.delete('tlog_shards')
         self.state.delete('vm')
@@ -183,7 +181,6 @@ class Minio(TemplateBase):
             minio_sal.reload()
 
     def update_zerodbs(self, zerodbs, reload=True):
-        self.error_counter.reset()
         self.state.delete('data_shards')
 
         self.data['zerodbs'] = zerodbs
@@ -268,21 +265,26 @@ LOG_LVL_JOB = 30
 class Healer:
     MinioStreamKey = "minio.logs"
 
-    def __init__(self, minio, error_counter):
+    def __init__(self, minio):
         self.service = minio
         self.logger = minio.logger
-        self.error_counter = error_counter
 
     def start(self):
-        if self.service.gl_mgr.gls.get(Healer.MinioStreamKey, None) is None:
+        started = False
+        try:
+            gl = self.service.gl_mgr.get(Healer.MinioStreamKey)
+            if gl.started and not gl.ready():
+                started = True
+        except KeyError:
+            started = False
+
+        if not started:
             self.logger.info("start minio logs processing")
             self.service.gl_mgr.add(Healer.MinioStreamKey, self._process_logs)
 
     def stop(self):
-        if self.service.gl_mgr.gls.get(Healer.MinioStreamKey, None) is not None:
-            self.logger.info("stop minio logs processing")
-            self.service.gl_mgr.stop(Healer.MinioStreamKey, wait=True, timeout=5)
-        self.error_counter.reset()
+        self.logger.info("stop minio logs processing")
+        self.service.gl_mgr.stop(Healer.MinioStreamKey, wait=True, timeout=5)
 
     def _send_alert(self, ressource, text, tags, event, severity='critical'):
         alert = {
@@ -298,49 +300,46 @@ class Healer:
         for alerta in self.service.api.services.find(template_uid=ALERTA_UID):
             alerta.schedule_action('send_alert', args={'data': alert})
 
+    def _process_data_shards_event(self, msg):
+        addr = msg['shard']
+        if addr not in self.service.data['zerodbs']:
+            # this is an old shards we dont use anymore
+            return
+
+        if 'error' in msg:
+            self.service.state.set('data_shards', addr, SERVICE_STATE_ERROR)
+        else:
+            self.service.state.set('data_shards', addr, SERVICE_STATE_OK)
+
+    def _process_tlog_shard_event(self, msg):
+        addr = msg['shard']
+        if 'tlog' in self.service.data and self.service.data['tlog'].get('address') != addr:
+            # this is an old shards we dont use anymore
+            return
+
+        if 'error' in msg:
+            self.service.state.set('tlog_shards', addr, SERVICE_STATE_ERROR)
+        else:
+            self.service.state.set('tlog_shards', addr, SERVICE_STATE_OK)
+
+    def _process_disk_event(self, msg):
+        self.service.state.set('vm', 'disk', 'error')
+
     def _process_logs(self):
         self.logger.info("processing logs for minio '%s'" % self.service)
 
-        hostname = self.service._node_sal.client.info.os()['hostname']
-        node_id = self.service._node_sal.name
-        data = {
-            'attributes': {},
-            'resource': hostname,
-            'environment': 'Production',
-            'severity': 'critical',
-            'event': 'storage',
-            'tags': ["node:%s" % hostname, "node_id:%s" % node_id],
-            'service': [self.service.name]
-        }
-
         def callback(level, msg, flag):
-            if level in [LOG_LVL_MESSAGE_INTERNAL]:
-                gevent.spawn(self._send_alert(self.service.name, msg, [], 'minio_logs', 'debug'))
-                msg = j.data.serializer.json.loads(msg)
+            if level not in [LOG_LVL_MESSAGE_INTERNAL]:
+                return
+            # gevent.spawn(self._send_alert(self.service.name, msg, [], 'minio_logs', 'debug'))
+            msg = j.data.serializer.json.loads(msg)
 
-                if 'shard' in msg:
-                    addr = msg['shard']
-
-                    if addr not in self.service.data['zerodbs']:
-                        # this is an old shards we dont use anymore
-                        return
-
-                    if self.error_counter.increment(addr) > 2:
-                        self.service.state.set('data_shards', addr, SERVICE_STATE_ERROR)
-
-                # we check only the minio owns tlog server, not it's master
-                elif 'tlog' in msg and not msg.get('master', False):
-                    addr = msg['tlog']
-
-                    if 'tlog' in self.service.data and self.service.data['tlog'].get('address') != addr:
-                        # this is an old shards we dont use anymore
-                        return
-
-                    if self.error_counter.increment(addr) >= 2:
-                        self.service.state.set('tlog_shards', addr, SERVICE_STATE_ERROR)
-
-                elif 'subsystem' in msg and msg['subsystem'] == 'disk':
-                    self.service.state.set('vm', 'disk', 'error')
+            if 'shard' in msg:
+                self._process_data_shards_event(msg)
+            elif 'tlog' in msg:
+                self._process_tlog_shard_event(msg)
+            elif 'disk' in msg:
+                self._process_disk_event(msg)
 
         while True:
             # wait for the process to be running before processing the logs
@@ -354,42 +353,3 @@ class Healer:
             # this will block until the process stops streaming (usually that means the process has stopped)
             self.logger.info("calling minio stream method")
             self.service._minio_sal.stream(callback)
-
-
-class ErrorCounter:
-
-    def __init__(self, service):
-        service.data['error_counter'] = {}
-        self.counter = service.data['error_counter']
-        self._counter_mu = Semaphore()
-        gevent.spawn(self._scrub)
-
-    def increment(self, addr):
-        with self._counter_mu:
-            count = 0
-            if addr in self.counter:
-                count, last_update = self.counter[addr]
-                count += 1
-            self.counter[addr] = (count, time.time())
-            return count
-
-    def reset(self):
-        now = time.time()
-        with self._counter_mu:
-            for addr in list(self.counter.keys()):
-                self.counter[addr] = (0, now)
-
-    def _scrub(self):
-        """
-        clean up all the error counter
-        if there was not more error for 10 minutes
-        """
-        while True:
-            time.sleep(600)
-
-            ago = time.time() - 600
-            with self._counter_mu:
-                for addr in list(self.counter.keys()):
-                    _, last_update = self.counter[addr]
-                    if last_update < ago:
-                        del self.counter[addr]
