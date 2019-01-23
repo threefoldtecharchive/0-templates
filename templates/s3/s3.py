@@ -366,7 +366,6 @@ class S3(TemplateBase):
         Redeploys the tlog and minio
         """
         self.state.check('actions', 'install', 'ok')
-
         # make sure we reset error stats
         self.state.delete('data_shards')
         self.state.delete('tlog_shards')
@@ -375,6 +374,7 @@ class S3(TemplateBase):
         try:
             if self._minio:
                 self._minio.schedule_action('uninstall').wait(die=True)
+                self._minio.delete()
         except ServiceNotFoundError:
             pass
 
@@ -451,7 +451,7 @@ class S3(TemplateBase):
         N = self.data['parityShards']
         namespaces_by_addr = {ns['address']: ns for ns in self.data['namespaces']}
 
-        # 1. list all the shards marqued as in error state
+        # 1. list all the shards marked as in error state
         failed_shards = [address for address, state in self.state.get('data_shards').items() if state == 'error']
 
         # 2. walk over the list of failed shards
@@ -463,13 +463,14 @@ class S3(TemplateBase):
             if not namespace:
                 # this state reference a shards we're not using
                 continue
-             # if the error started more then 2 hours ago, then mark the shard to be replaced
-            if 'error_started' in namespace and namespace['error_started'] < (int(time.time()) - 7200):
+             # if the error started more then 1 hours ago, then mark the shard to be replaced
+            if 'error_started' in namespace and namespace['error_started'] < (int(time.time()) - 3600):
                 to_replace.append(namespace)
 
         # 4. if more the parity shards needs to be replaced, mark as degrated and stop
         if len(to_replace) > N:
-            error_msg = "Too many shard down (%d), cannot repair now. Need %s more shards up" % (len(to_replace), len(failed_shards)-N)
+            error_msg = "Too many shard down (%d), cannot repair now. Need %s more shards up" % (
+                len(to_replace), len(failed_shards)-N)
             self.logger.error(error_msg)
             self._send_alert(
                 ressource="Cannot repair data shards on %s" % self._minio.name,
@@ -482,10 +483,6 @@ class S3(TemplateBase):
         self.state.delete('healing')
 
         if not to_replace:
-            # nothing to do for now, just send the current shards address to minio
-            # so minio can update its state
-            new_shards = [ns['address'] for ns in self.data['namespaces']]
-            self._minio.schedule_action('update_zerodbs', {'zerodbs': new_shards, 'reload': False})
             return
 
         # 5. replace the shards with new one
@@ -657,7 +654,7 @@ class S3(TemplateBase):
                             event='storage')
 
                     # when we detect a shards in failure. We keep the time the failure has been detected
-                    # so during self-healin we can decide what to do base on the amount of
+                    # so during self-healing we can decide what to do base on the amount of
                     # time the shard has been down
                     try:
                         s3_shard_state = self.state.get('data_shards', addr)[addr]
@@ -674,10 +671,10 @@ class S3(TemplateBase):
                     elif s3_shard_state == SERVICE_STATE_ERROR and minio_shard_state == SERVICE_STATE_ERROR and 'error_started' not in namespace:
                         # no switch, but we should had an time, set it now
                         namespace['error_started'] = int(time.time())
-                    # elif s3_shard_state == SERVICE_STATE_ERROR and minio_shard_state == SERVICE_STATE_OK:
-                    #     # switch from error to ok
-                    #     if 'error_started' in namespace:
-                    #         del namespace['error_started']
+                    elif s3_shard_state == SERVICE_STATE_ERROR and minio_shard_state == SERVICE_STATE_OK:
+                        # switch from error to ok
+                        if 'error_started' in namespace:
+                            del namespace['error_started']
 
                     self.state.set('data_shards', addr, minio_shard_state)
 
