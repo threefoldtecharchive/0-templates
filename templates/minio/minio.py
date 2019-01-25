@@ -338,7 +338,7 @@ class Healer:
                 self._process_data_shards_event(msg)
             elif 'tlog' in msg:
                 self._process_tlog_shard_event(msg)
-            elif 'disk' in msg or 'bucket'in msg:
+            elif 'disk' in msg:
                 self._process_disk_event(msg)
 
         while True:
