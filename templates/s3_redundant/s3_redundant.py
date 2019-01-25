@@ -103,6 +103,7 @@ class S3Redundant(TemplateBase):
 
         # both minios are down, just redeploy both but preserve the active tlog
         if not passive_running and not active_running:
+            self.logger.warning('active and passive minio are both not running, redeploying both')
             active_s3.schedule_action('redeploy', args={'reset_tlog': False}).wait(die=True)
             passive_s3.schedule_action(
                 'redeploy', {'exclude_nodes': [active_s3.data['minioLocation']['nodeId']]}).wait(die=True)
@@ -110,17 +111,21 @@ class S3Redundant(TemplateBase):
 
         # only passive is down, redeploy it
         if not passive_running:
+            self.logger.warning('passive minio not running, redeploying passive')
             passive_s3.schedule_action(
                 'redeploy', {'exclude_nodes': [active_s3.data['minioLocation']['nodeId']]}).wait(die=True)
             return
 
         # active is down, promote the passive and redeploy a minio for the old active
         if not active_running:
+            self.logger.warning('active is not running, starting promotion of passive')
             self._promote()
             return
 
         try:
             if SERVICE_STATE_ERROR in list(active_s3.state.get('vm', 'disk').values()):
+                self.logger.warning('error in metadata disk of active minio, start promotion of passive0')
+
                 self._promote()
                 return
         except StateCategoryNotExistsError:
