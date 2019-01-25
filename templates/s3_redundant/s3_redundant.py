@@ -124,7 +124,7 @@ class S3Redundant(TemplateBase):
 
         try:
             if SERVICE_STATE_ERROR in list(active_s3.state.get('vm', 'disk').values()):
-                self.logger.warning('error in metadata disk of active minio, start promotion of passive0')
+                self.logger.warning('error in metadata disk of active minio, start promotion of passive')
 
                 self._promote()
                 return
