@@ -449,7 +449,7 @@ class S3(TemplateBase):
             5.2 call check_and_repair to copy data to new shards
             5.3 delete all shards that have been replaced
         """
-        nodes = self._nodes
+
         N = self.data['parityShards']
         namespaces_by_addr = {ns['address']: ns for ns in self.data['namespaces']}
 
@@ -493,6 +493,9 @@ class S3(TemplateBase):
             self.data['namespaces'].remove(namespace)
 
         # 5.1 deploy N new namespaces
+        nodes = self._nodes
+        node_to_excludes = [namespace['node'] for namespace in to_replace]
+        nodes = filter(lambda node: node['node_id'] not in node_to_excludes, nodes)
         self._deploy_minio_backend_namespaces(nodes)
 
         # 5.2 update minio config with new shards
