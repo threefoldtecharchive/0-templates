@@ -3,6 +3,7 @@ import time
 from itertools import zip_longest
 
 import gevent
+from gevent.pool import Pool
 from jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
@@ -26,6 +27,7 @@ class S3(TemplateBase):
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self.__minio = None
+        self._pool = Pool(30)
 
         self.recurring_action('_monitor', 60)
         # self.recurring_action('_ensure_namespaces_connections', 300)
@@ -98,9 +100,8 @@ class S3(TemplateBase):
 
         namespaces = self.data['namespaces']
 
-        group = gevent.pool.Group()
-        group.map(update_namespace, namespaces)
-        group.join()
+        self._pool.map(update_namespace, namespaces)
+        self._pool.join()
 
         namespaces_connection = sorted(map(lambda ns: ns['address'], namespaces))
         if not self.data.get('current_namespaces_connections'):
@@ -315,12 +316,11 @@ class S3(TemplateBase):
             pass
 
         # delete all the created namespaces
-        group = gevent.pool.Group()
         namespaces = list(self.data['namespaces'])
         if self.data['tlog'].get('node'):
             namespaces.append(self.data['tlog'])
-        group.map(self._delete_namespace, namespaces)
-        group.join()
+        self._pool.map(self._delete_namespace, namespaces)
+        self._pool.join()
         self.data['tlog'] = {}
         self.data['current_namespaces_connections'] = None
 
@@ -375,6 +375,7 @@ class S3(TemplateBase):
         try:
             if self._minio:
                 self._minio.schedule_action('uninstall').wait(die=True)
+                self._minio.delete()
         except ServiceNotFoundError:
             pass
 
@@ -385,6 +386,7 @@ class S3(TemplateBase):
         if exclude_nodes:
             if not isinstance(exclude_nodes, list):
                 exclude_nodes = [exclude_nodes]
+            exclude_nodes.append(self.data['minioLocation']['nodeId'])
             self.data['excludeNodes'] = exclude_nodes
         self.install()
 
@@ -570,12 +572,14 @@ class S3(TemplateBase):
             for i in range(required_nr_namespaces - deployed_nr_namespaces):
                 node = nodes[i % len(nodes)]
                 self.logger.info("try to install namespace %s on node %s", name, node['node_id'])
-                gls.add(gevent.spawn(self._install_namespace,
-                                     node=node,
-                                     name=name,
-                                     disk_type=storage_type,
-                                     size=size,
-                                     password=password))
+
+                gl = self._pool.spawn(self._install_namespace,
+                                      node=node,
+                                      name=name,
+                                      disk_type=storage_type,
+                                      size=size,
+                                      password=password)
+                gls.add(gl)
 
             for g in gevent.iwait(gls):
                 if g.exception and g.exception.node in nodes:
@@ -794,7 +798,7 @@ def compute_minimum_namespaces(total_size, data, parity):
 
 
 def namespaces_connection_info(namespaces):
-    group = gevent.pool.Group()
+    group = gevent.pool.Pool(30)
     return list(group.imap_unordered(namespace_connection_info, namespaces))
 
 
@@ -825,13 +829,6 @@ def sort_minio_node_candidates(nodes):
                 node['used_resources']['cru'],
                 node['used_resources']['sru'])
     return sorted(nodes, key=key)
-
-
-def grouper(iterable, n, fillvalue=None):
-    "Collect data into fixed-length chunks or blocks"
-    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
-    args = [iter(iterable)] * n
-    return zip_longest(*args, fillvalue=fillvalue)
 
 
 class NamespaceDeployError(RuntimeError):
