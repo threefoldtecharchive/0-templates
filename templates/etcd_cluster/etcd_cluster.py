@@ -126,7 +126,8 @@ class EtcdCluster(TemplateBase):
                 try:
                     etcds.append(self._install_etcd(node))
                     nr_deployed_etcds += 1
-                except:
+                except BaseException as err:
+                    self.logger.error('Installing etcd on node %s failed: %s' % (node['node_id'], err))
                     nodes.remove(node)
         return etcds
 
