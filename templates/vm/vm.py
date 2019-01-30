@@ -38,6 +38,7 @@ class Vm(TemplateBase):
 
         data = self.data.copy()
         data['name'] = self.name
+        data['kvm'] = True
 
         return node_sal.primitives.from_dict('vm', data)
 
