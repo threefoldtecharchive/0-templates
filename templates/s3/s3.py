@@ -346,6 +346,13 @@ class S3(TemplateBase):
         self.state.check('actions', 'install', 'ok')
         self._minio.schedule_action('upgrade').wait(die=True)
 
+    def update_credentials(self, login, password):
+        self.data['minioLogin'] = login
+        self.data['minioPassword'] = password
+        minio = self._minio
+        if minio:
+            minio.schedule_action('update_credentials', {'login': login, 'password': password}).wait(die=True)
+
     def tlog(self):
         return self.data['tlog']
 

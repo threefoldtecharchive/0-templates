@@ -285,3 +285,11 @@ class S3Redundant(TemplateBase):
         except StateCheckError:
             return
         self._update_reverse_proxy_servers()
+
+    def update_credentials(self, login, password):
+        self.data['minioLogin'] = login
+        self.data['minioPassword'] = password
+        active_s3 = self._active_s3()
+        passive_s3 = self._passive_s3()
+        active_s3.schedule_action('update_credentials', {'login': login, 'password': password}).wait(die=True)
+        passive_s3.schedule_action('update_credentials', {'login': login, 'password': password}).wait(die=True)

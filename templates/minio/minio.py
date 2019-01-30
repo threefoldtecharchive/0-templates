@@ -221,6 +221,21 @@ class Minio(TemplateBase):
             minio_sal.create_config()
             minio_sal.reload()
 
+    def update_credentials(self, login, password):
+        self.data['login'] = login
+        self.data['password'] = password
+
+        try:
+            # if minio is running, force to re-create a new container
+            self.state.check('status', 'running', 'ok')
+            minio_sal = self._minio_sal
+            self._healer.stop()
+            minio_sal.stop()
+            minio_sal.start()
+            self._healer.start()
+        except StateCheckError:
+            return
+
     def check_and_repair(self, block=False):
         if block:
             self._minio_sal.check_and_repair()
