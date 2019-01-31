@@ -545,7 +545,7 @@ class S3(TemplateBase):
         tlog_namespace = None
         for namespace, node in self._deploy_namespaces(nr_namepaces=1,
                                                        name=self._tlog_namespace,
-                                                       size=10,  # TODO: compute how much is needed
+                                                       size=compute_tlog_size(self.data['storageSize']),
                                                        storage_type='ssd',
                                                        password=self.data['nsPassword'],
                                                        nodes=nodes):
@@ -794,7 +794,7 @@ def compute_minimum_namespaces(total_size, data, parity):
     compute the number and size of zerodb namespace required to
     fulfill the erasure coding policy
 
-    :param total_size: total size of the s3 storage
+    :param total_size: total size of the s3 storage in GB
     :type total_size: int
     :param data: data shards number
     :type data: int
@@ -820,6 +820,17 @@ def compute_minimum_namespaces(total_size, data, parity):
         nr_shards = math.ceil(required_size / shard_size)
 
     return nr_shards, shard_size
+
+
+def compute_tlog_size(total_size):
+    """
+    compute the size of the tlog shard
+    :param total_size: data size of the archive in GB
+    :type total_size: int
+    :return: size to use for tlog shard in GB
+    :rtype: int
+    """
+    return total_size / 2000
 
 
 def namespaces_connection_info(namespaces):
