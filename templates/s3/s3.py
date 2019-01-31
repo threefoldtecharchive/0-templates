@@ -319,9 +319,15 @@ class S3(TemplateBase):
         namespaces = list(self.data['namespaces'])
         if self.data['tlog'].get('node'):
             namespaces.append(self.data['tlog'])
+        # delete all previous tlog namespace that could have been left over
+        # by self-healing
+        for tlog in self.data.get('tlogs_to_remove', []):
+            namespaces.append(tlog)
+
         self._pool.map(self._delete_namespace, namespaces)
         self._pool.join()
         self.data['tlog'] = {}
+        self.data['tlogs_to_remove'] = []
         self.data['current_namespaces_connections'] = None
 
         self.state.delete('actions', 'install')
@@ -383,11 +389,14 @@ class S3(TemplateBase):
             if self._minio:
                 self._minio.schedule_action('uninstall').wait(die=True)
                 self._minio.delete()
+                self.__minio = None
         except ServiceNotFoundError:
             pass
 
         if reset_tlog and 'node' in self.data['tlog'] and 'url' in self.data['tlog']:
-            self._delete_namespace(self.data['tlog'])
+            if 'tlogs_to_remove' not in self.data:
+                self.data['tlogs_to_remove'] = []
+            self.data['tlogs_to_remove'].append(self.data['tlog'].copy())
             self.data['tlog'] = {}
 
         if exclude_nodes:
