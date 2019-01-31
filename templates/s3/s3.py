@@ -712,7 +712,7 @@ class S3(TemplateBase):
                     elif minio_shard_state == SERVICE_STATE_WARNING:
                         self._send_alert(
                             addr,
-                            text='tlog shard %s has reached is maximum size' % add,
+                            text='tlog shard %s has reached is maximum size' % addr,
                             tags=['shard:%s' % addr],
                             event='storage')
             except StateCategoryNotExistsError:
