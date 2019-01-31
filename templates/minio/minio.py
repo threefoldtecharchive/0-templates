@@ -332,7 +332,10 @@ class Healer:
             return
 
         if 'error' in msg:
-            self.service.state.set('tlog_shards', addr, SERVICE_STATE_ERROR)
+            if msg['error'].find('No space left on this namespace') != -1:
+                self.service.state.set('tlog_shards', addr, SERVICE_STATE_WARNING)
+            else:
+                self.service.state.set('tlog_shards', addr, SERVICE_STATE_ERROR)
         else:
             self.service.state.set('tlog_shards', addr, SERVICE_STATE_OK)
 
