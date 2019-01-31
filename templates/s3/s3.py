@@ -830,7 +830,7 @@ def compute_tlog_size(total_size):
     :return: size to use for tlog shard in GB
     :rtype: int
     """
-    return total_size / 2000
+    return math.ceil(total_size / 2000)
 
 
 def namespaces_connection_info(namespaces):
