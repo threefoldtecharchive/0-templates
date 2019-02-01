@@ -15,6 +15,7 @@ struct Schema {
     blockSize @10 :UInt32=1048576;
     master @11 :Tlog;
     nodePort @12 :Int32; # public port on the node that is forwared to the minio inside the container. This field is fille by the template
+    logoURL @13 :Text; # if specified, download the logo pointed by this url and use it in the web frontend of minio
 
     struct Tlog {
         namespace @0 :Text; # name of the tlog namespace

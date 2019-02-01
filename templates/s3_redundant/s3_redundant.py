@@ -306,3 +306,10 @@ class S3Redundant(TemplateBase):
         passive_s3 = self._passive_s3()
         active_s3.schedule_action('update_credentials', {'login': login, 'password': password}).wait(die=True)
         passive_s3.schedule_action('update_credentials', {'login': login, 'password': password}).wait(die=True)
+
+    def update_logo(self, logo_url):
+        active_s3 = self._active_s3()
+        passive_s3 = self._passive_s3()
+        active_s3.schedule_action('update_logo', {'logo_url': logo_url}).wait(die=True)
+        passive_s3.schedule_action('update_logo', {'logo_url': logo_url}).wait(die=True)
+        self.data['logoURL'] = logo_url

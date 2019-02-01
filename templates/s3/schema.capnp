@@ -19,6 +19,7 @@ struct Schema {
     deletableNamespaces @15 :List(Namespace);
     excludeNodes @16 :List(Text); # list of node to avoid using when deploying minio
     minioLocation @17 :MinioLocation;
+    logoURL @18 :Text; # if specified, download the logo pointed by this url and use it in the web frontend of minio
 
     enum StorageType {
      hdd @0;

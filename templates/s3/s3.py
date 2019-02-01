@@ -745,6 +745,7 @@ class S3(TemplateBase):
                 'namespace': self._tlog_namespace,
             },
             'blockSize': self.data['minioBlockSize'],
+            'logoURL': self.data.get('logoURL'),
         }
 
         try:
@@ -787,6 +788,11 @@ class S3(TemplateBase):
         }
         for alerta in self.api.services.find(template_uid=ALERTA_UID):
             alerta.schedule_action('send_alert', args={'data': alert})
+
+    def update_logo(self, logo_url):
+        if self._minio:
+            self._minio.schedule_action('update_logo', {'logo_url': logo_url}).wait(die=True)
+        self.data['logoURL'] = logo_url
 
 
 def compute_minimum_namespaces(total_size, data, parity):

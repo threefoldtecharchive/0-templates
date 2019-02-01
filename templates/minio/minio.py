@@ -92,6 +92,7 @@ class Minio(TemplateBase):
             'master_address': master_address,
             'block_size': self.data['blockSize'],
             'node_port': self.data['nodePort'],
+            'logo_url': self.data.get('logoURL'),
         }
         return j.sal_zos.minio.get(**kwargs)
 
@@ -225,6 +226,19 @@ class Minio(TemplateBase):
         self.data['login'] = login
         self.data['password'] = password
 
+        try:
+            # if minio is running, force to re-create a new container
+            self.state.check('status', 'running', 'ok')
+            minio_sal = self._minio_sal
+            self._healer.stop()
+            minio_sal.stop()
+            minio_sal.start()
+            self._healer.start()
+        except StateCheckError:
+            return
+
+    def update_logo(self, logo_url):
+        self.data['logoURL'] = logo_url
         try:
             # if minio is running, force to re-create a new container
             self.state.check('status', 'running', 'ok')
