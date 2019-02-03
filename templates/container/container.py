@@ -3,6 +3,8 @@ import copy
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 
+from jumpscale import j
+
 NODE_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node/0.0.1'
 NODE_CLIENT = 'local'
 
