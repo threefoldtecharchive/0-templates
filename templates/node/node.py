@@ -51,11 +51,6 @@ class Node(TemplateBase):
         self.logger.info('Monitoring node %s' % self.name)
         self.state.check('actions', 'install', 'ok')
 
-        # make sure cache is always mounted
-        sp = self._node_sal.storagepools.get('zos-cache')
-        if not sp.mountpoint:
-            self._node_sal.ensure_persistance()
-
         # check for reboot
         if self._node_sal.uptime() < self.data['uptime']:
             self.install()
