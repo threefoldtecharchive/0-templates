@@ -53,6 +53,17 @@ class Minio(TemplateBase):
         else:
             self.state.set('status', 'running', 'ok')
 
+        # test if minio is fully synced
+        if self._minio_sal.container.client.filesystem.exists('/minio_metadata/tlog.state'):
+            self.state.set('tlog_sync', 'tlog', SERVICE_STATE_OK)
+        else:
+            self.state.delete('tlog_sync', 'tlog')
+
+        if self._minio_sal.container.client.filesystem.exists('/minio_metadata/master.state'):
+            self.state.set('tlog_sync', 'master', SERVICE_STATE_OK)
+        else:
+            self.state.delete('tlog_sync', 'master')
+
         self._healer.start()
 
     @property
