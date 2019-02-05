@@ -455,7 +455,7 @@ class S3(TemplateBase):
     def _handle_data_shard_failure(self):
         """
         handling data shards failures
-        1. list all the shards marqued as in error state
+        1. list all the shards marked as in error state
         2. walk over the list of failed shards
             2.1 for each failed shard that is in failure for more then 2 hours, mark as to replace
         3. walk over the list of shads to replace
@@ -715,8 +715,15 @@ class S3(TemplateBase):
                             text='tlog shard %s has reached is maximum size' % addr,
                             tags=['shard:%s' % addr],
                             event='storage')
+
             except StateCategoryNotExistsError:
                 pass
+
+            try:
+                for tlog_type, minio_state in self._minio.state.get('tlog_sync').items():
+                    self.state.set('tlog_sync', tlog_type, minio_state)
+            except StateCategoryNotExistsError:
+                self.state.delete('tlog_sync', tlog_type)
 
         try:
             do()

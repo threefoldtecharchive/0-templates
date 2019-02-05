@@ -307,6 +307,9 @@ class Healer:
     def __init__(self, minio):
         self.service = minio
         self.logger = minio.logger
+        self.last_sync_event = -1
+        self._last_sync_event_mu = Semaphore()
+        gevent.spawn(self._tlog_sync_watchdog)
 
     def start(self):
         started = False
@@ -324,6 +327,20 @@ class Healer:
     def stop(self):
         self.logger.info("stop minio logs processing")
         self.service.gl_mgr.stop(Healer.MinioStreamKey, wait=True, timeout=5)
+
+    def _tlog_sync_watchdog(self):
+        self.service.logger.info("tlog sync watchdog")
+        with self._last_sync_event_mu:
+            now = int(time.time())
+
+            if self.last_sync_event <= -1:
+                self.last_sync_event = now
+            elif (now - self.last_sync_event) > 120:
+                # no sync event for more then 2 minutes, tlog sync is probably dead
+                self.service.state.set('tlog_sync', 'running', SERVICE_STATE_ERROR)
+
+        # loop to call function every minute
+        gevent.spawn_later(60, self._tlog_sync_watchdog)
 
     def _send_alert(self, ressource, text, tags, event, severity='critical'):
         alert = {
@@ -367,6 +384,16 @@ class Healer:
     def _process_disk_event(self, msg):
         self.service.state.set('vm', 'disk', 'error')
 
+    def _process_sync_event(self, msg):
+        self.logger.info("tlog sync event received")
+        with self._last_sync_event_mu:
+            self.last_sync_event = int(time.time())
+
+        if 'error' in msg:
+            self.service.state.set('tlog_sync', 'running', SERVICE_STATE_ERROR)
+        else:
+            self.service.state.set('tlog_sync', 'running', SERVICE_STATE_OK)
+
     def _process_logs(self):
         self.logger.info("processing logs for minio '%s'" % self.service)
 
@@ -382,6 +409,8 @@ class Healer:
                 self._process_tlog_shard_event(msg)
             elif 'disk' in msg:
                 self._process_disk_event(msg)
+            elif 'subsystem' in msg and msg['subsystem'] == 'sync':
+                self._process_sync_event(msg)
 
         while True:
             # wait for the process to be running before processing the logs
@@ -395,3 +424,4 @@ class Healer:
             # this will block until the process stops streaming (usually that means the process has stopped)
             self.logger.info("calling minio stream method")
             self.service._minio_sal.stream(callback)
+            self.logger.info("streaming stopped, restarting")

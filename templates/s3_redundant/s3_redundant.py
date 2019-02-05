@@ -170,6 +170,17 @@ class S3Redundant(TemplateBase):
             self._promote(reset_tlog=False)
             return
 
+        try:
+            passive_s3.state.check('tlog_sync', 'running', SERVICE_STATE_OK)
+            self.logger.info("passive tlog sync is running")
+        except StateCategoryNotExistsError:
+            # let's wait to know the value of the state before taking action
+            pass
+        except StateCheckError:
+            self.logger.error("passive tlog sync is not running, restart the passive minio")
+            passive_s3.schedule_action('stop')
+            passive_s3.schedule_action('start').wait()
+
     def _promote(self, reset_tlog=False):
         active_s3 = self._active_s3()
         passive_s3 = self._passive_s3()
