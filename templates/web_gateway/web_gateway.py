@@ -264,3 +264,12 @@ class WebGateway(TemplateBase):
     def public_ips_set(self, public_ips):
         self.data['publicIps'] = public_ips
         self._set_public_ips(self.data['etcdConnectionInfo'])
+
+    def list_domains(self):
+        self.state.check('actions', 'install', 'ok')
+        webgateway = j.sal.webgateway.get(self.name)
+        domains = []
+        for service in webgateway.services:
+            for rule in service.proxy.frontend.rules:
+                domains.append(rule.value)
+        return domains

@@ -51,11 +51,6 @@ class Node(TemplateBase):
         self.logger.info('Monitoring node %s' % self.name)
         self.state.check('actions', 'install', 'ok')
 
-        # make sure cache is always mounted
-        sp = self._node_sal.storagepools.get('zos-cache')
-        if not sp.mountpoint:
-            self._node_sal.ensure_persistance()
-
         # check for reboot
         if self._node_sal.uptime() < self.data['uptime']:
             self.install()
@@ -205,14 +200,16 @@ class Node(TemplateBase):
 
             if sp.type.value not in disks_types_map[disktype]:
                 return False
-            if (sp.size - sp.total_quota() / GiB) <= size:
+            free = (sp.size - sp.total_quota()) / GiB
+            if free <= size:
                 return False
             return True
 
         # all storage pool path of type disktypes and with more then size storage available
         storagepools = list(filter(usable_storagepool, node_sal.storagepools.list()))
         if not storagepools:
-            raise ZDBPathNotFound("Could not find any usable  storage pool. Not enough space for disk type %s" % disktype)
+            raise ZDBPathNotFound(
+                "Could not find any usable  storage pool. Not enough space for disk type %s" % disktype)
 
         storagepools.sort(key=lambda sp: sp.size - sp.total_quota(), reverse=True)
 
@@ -272,7 +269,8 @@ class Node(TemplateBase):
             mountpoint = self.zdb_path(disktype, zdb_size, zdb_name)
             self._create_zdb(zdb_name, mountpoint, mode, zdb_size, disktype, [namespace])
             return zdb_name, namespace_name
-        except ZDBPathNotFound:
+        except ZDBPathNotFound as err:
+            self.logger.warning("fail to create a 0-db namespace: %s", str(err))
             # at this point we could find a place where to create a new zerodb
             # let's look at the already existing one
             pass
@@ -290,7 +288,8 @@ class Node(TemplateBase):
 
         zdbinfos = list(filter(usable_zdb, self._list_zdbs_info()))
         if len(zdbinfos) <= 0:
-            message = 'Not enough free space for namespace creation with size {} and type {}'.format(ns_size, ','.join(disktypes))
+            message = 'Not enough free space for namespace creation with size {} and type {}'.format(
+                ns_size, ','.join(disktypes))
             raise NoNamespaceAvailability(message)
 
         # sort result by free size, first item of the list is the the one with bigger free size

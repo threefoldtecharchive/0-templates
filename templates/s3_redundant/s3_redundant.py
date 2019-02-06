@@ -18,7 +18,7 @@ class S3Redundant(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        self.recurring_action('_monitor', 60)  # every 60 seconds
+        self.recurring_action('_monitor', 60)  # every minutes
 
     def validate(self):
         if self.data['parityShards'] > self.data['dataShards']:
@@ -63,7 +63,7 @@ class S3Redundant(TemplateBase):
         Note: there is only one tlog server associated with a node
         so address is not really useful
         """
-        self._promote()
+        self._promote(reset_tlog=True)
 
     def _handle_passive_tlog_failure(self):
         """
@@ -74,8 +74,10 @@ class S3Redundant(TemplateBase):
         """
         active = self._active_s3()
         passive = self._passive_s3()
-        passive.schedule_action('redeploy', {'exclude_nodes':
-                                             [active.data['minioLocation']['nodeId']]}).wait(die=True)
+        passive.schedule_action('redeploy', {
+            'exclude_nodes': [active.data['minioLocation']['nodeId']],
+            'reset_tlog': True,
+        }).wait(die=True)
 
     def _monitor(self):
         try:
@@ -103,36 +105,14 @@ class S3Redundant(TemplateBase):
 
         # both minios are down, just redeploy both but preserve the active tlog
         if not passive_running and not active_running:
+            self.logger.warning('active and passive minio are both not running, redeploying both')
             active_s3.schedule_action('redeploy', args={'reset_tlog': False}).wait(die=True)
             passive_s3.schedule_action(
-                'redeploy', {'exclude_nodes': [active_s3.data['minioLocation']['nodeId']]}).wait(die=True)
+                'redeploy', {
+                    'reset_tlog': False,
+                    'exclude_nodes': [active_s3.data['minioLocation']['nodeId']]
+                }).wait(die=True)
             return
-
-        # only passive is down, redeploy it
-        if not passive_running:
-            passive_s3.schedule_action(
-                'redeploy', {'exclude_nodes': [active_s3.data['minioLocation']['nodeId']]}).wait(die=True)
-            return
-
-        # active is down, promote the passive and redeploy a minio for the old active
-        if not active_running:
-            self._promote()
-            return
-
-        try:
-            if SERVICE_STATE_ERROR in list(active_s3.state.get('vm', 'disk').values()):
-                self._promote()
-                return
-        except StateCategoryNotExistsError:
-            pass
-
-        # if both minios are running fine, check the states shards
-        try:
-            if SERVICE_STATE_ERROR in list(active_s3.state.get('data_shards').values()):
-                self._handle_data_shard_failure(active_s3, passive_s3)
-                return
-        except StateCategoryNotExistsError:
-            pass
 
         try:
             if SERVICE_STATE_ERROR in list(active_s3.state.get('tlog_shards').values()):
@@ -149,13 +129,59 @@ class S3Redundant(TemplateBase):
             pass
 
         try:
-            if SERVICE_STATE_ERROR in list(passive_s3.state.get('vm', 'disk').values()):
-                self._handle_passive_tlog_failure()
+            if SERVICE_STATE_ERROR in list(active_s3.state.get('vm', 'disk').values()):
+                self.logger.warning('error in metadata disk of active minio, start promotion of passive')
+                self._promote(reset_tlog=False)
                 return
         except StateCategoryNotExistsError:
             pass
 
-    def _promote(self):
+        try:
+            if SERVICE_STATE_ERROR in list(passive_s3.state.get('vm', 'disk').values()):
+                self.logger.warning('error in metadata disk of passive minio, redeploy passive')
+                passive_s3.schedule_action('redeploy', {
+                    'reset_tlog': False,
+                    'exclude_nodes': [active_s3.data['minioLocation']['nodeId']]
+                }).wait(die=True)
+                return
+        except StateCategoryNotExistsError:
+            pass
+
+        # if both minios are running fine, check the states shards
+        try:
+            if SERVICE_STATE_ERROR in list(active_s3.state.get('data_shards').values()):
+                self._handle_data_shard_failure(active_s3, passive_s3)
+                return
+        except StateCategoryNotExistsError:
+            pass
+
+         # only passive is down, redeploy it
+        if not passive_running:
+            self.logger.warning('passive minio not running, redeploying passive')
+            passive_s3.schedule_action('redeploy', {
+                'reset_tlog': False,
+                'exclude_nodes': [active_s3.data['minioLocation']['nodeId']]
+            }).wait(die=True)
+            return
+
+        # active is down, promote the passive and redeploy a minio for the old active
+        if not active_running:
+            self.logger.warning('active is not running, starting promotion of passive')
+            self._promote(reset_tlog=False)
+            return
+
+        try:
+            passive_s3.state.check('tlog_sync', 'running', SERVICE_STATE_OK)
+            self.logger.info("passive tlog sync is running")
+        except StateCategoryNotExistsError:
+            # let's wait to know the value of the state before taking action
+            pass
+        except StateCheckError:
+            self.logger.error("passive tlog sync is not running, restart the passive minio")
+            passive_s3.schedule_action('stop')
+            passive_s3.schedule_action('start').wait()
+
+    def _promote(self, reset_tlog=False):
         active_s3 = self._active_s3()
         passive_s3 = self._passive_s3()
         old_active = self.data['activeS3']
@@ -170,7 +196,10 @@ class S3Redundant(TemplateBase):
         master_tlog = passive_s3.schedule_action('tlog').wait(die=True).result
         active_s3.schedule_action('update_master', args={'master': master_tlog}).wait(die=True)
         active_s3.schedule_action(
-            'redeploy', {'exclude_nodes': [passive_s3.data['minioLocation']['nodeId']]}).wait(die=True)
+            'redeploy', {
+                'reset_tlog': reset_tlog,
+                'exclude_nodes': [passive_s3.data['minioLocation']['nodeId']]
+            }).wait(die=True)
 
     def _update_reverse_proxy_servers(self):
         urls = self._active_s3().schedule_action('url').wait(die=True).result
@@ -280,3 +309,18 @@ class S3Redundant(TemplateBase):
         except StateCheckError:
             return
         self._update_reverse_proxy_servers()
+
+    def update_credentials(self, login, password):
+        self.data['minioLogin'] = login
+        self.data['minioPassword'] = password
+        active_s3 = self._active_s3()
+        passive_s3 = self._passive_s3()
+        active_s3.schedule_action('update_credentials', {'login': login, 'password': password}).wait(die=True)
+        passive_s3.schedule_action('update_credentials', {'login': login, 'password': password}).wait(die=True)
+
+    def update_logo(self, logo_url):
+        active_s3 = self._active_s3()
+        passive_s3 = self._passive_s3()
+        active_s3.schedule_action('update_logo', {'logo_url': logo_url}).wait(die=True)
+        passive_s3.schedule_action('update_logo', {'logo_url': logo_url}).wait(die=True)
+        self.data['logoURL'] = logo_url

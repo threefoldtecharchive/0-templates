@@ -3,6 +3,7 @@ import time
 from itertools import zip_longest
 
 import gevent
+from gevent.pool import Pool
 from jumpscale import j
 from zerorobot.service_collection import ServiceNotFoundError
 from zerorobot.template.base import TemplateBase
@@ -26,6 +27,8 @@ class S3(TemplateBase):
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self.__minio = None
+        self._pool = Pool(30)
+
         self.recurring_action('_monitor', 60)
         # self.recurring_action('_ensure_namespaces_connections', 300)
         self.recurring_action('_remove_deletable_namespaces', 86400)  # run once a day
@@ -97,9 +100,8 @@ class S3(TemplateBase):
 
         namespaces = self.data['namespaces']
 
-        group = gevent.pool.Group()
-        group.map(update_namespace, namespaces)
-        group.join()
+        self._pool.map(update_namespace, namespaces)
+        self._pool.join()
 
         namespaces_connection = sorted(map(lambda ns: ns['address'], namespaces))
         if not self.data.get('current_namespaces_connections'):
@@ -314,13 +316,18 @@ class S3(TemplateBase):
             pass
 
         # delete all the created namespaces
-        group = gevent.pool.Group()
         namespaces = list(self.data['namespaces'])
         if self.data['tlog'].get('node'):
             namespaces.append(self.data['tlog'])
-        group.map(self._delete_namespace, namespaces)
-        group.join()
+        # delete all previous tlog namespace that could have been left over
+        # by self-healing
+        for tlog in self.data.get('tlogs_to_remove', []):
+            namespaces.append(tlog)
+
+        self._pool.map(self._delete_namespace, namespaces)
+        self._pool.join()
         self.data['tlog'] = {}
+        self.data['tlogs_to_remove'] = []
         self.data['current_namespaces_connections'] = None
 
         self.state.delete('actions', 'install')
@@ -344,6 +351,13 @@ class S3(TemplateBase):
     def upgrade(self):
         self.state.check('actions', 'install', 'ok')
         self._minio.schedule_action('upgrade').wait(die=True)
+
+    def update_credentials(self, login, password):
+        self.data['minioLogin'] = login
+        self.data['minioPassword'] = password
+        minio = self._minio
+        if minio:
+            minio.schedule_action('update_credentials', {'login': login, 'password': password}).wait(die=True)
 
     def tlog(self):
         return self.data['tlog']
@@ -374,16 +388,21 @@ class S3(TemplateBase):
         try:
             if self._minio:
                 self._minio.schedule_action('uninstall').wait(die=True)
+                self._minio.delete()
+                self.__minio = None
         except ServiceNotFoundError:
             pass
 
         if reset_tlog and 'node' in self.data['tlog'] and 'url' in self.data['tlog']:
-            self._delete_namespace(self.data['tlog'])
+            if 'tlogs_to_remove' not in self.data:
+                self.data['tlogs_to_remove'] = []
+            self.data['tlogs_to_remove'].append(self.data['tlog'].copy())
             self.data['tlog'] = {}
 
         if exclude_nodes:
             if not isinstance(exclude_nodes, list):
                 exclude_nodes = [exclude_nodes]
+            exclude_nodes.append(self.data['minioLocation']['nodeId'])
             self.data['excludeNodes'] = exclude_nodes
         self.install()
 
@@ -436,7 +455,7 @@ class S3(TemplateBase):
     def _handle_data_shard_failure(self):
         """
         handling data shards failures
-        1. list all the shards marqued as in error state
+        1. list all the shards marked as in error state
         2. walk over the list of failed shards
             2.1 for each failed shard that is in failure for more then 2 hours, mark as to replace
         3. walk over the list of shads to replace
@@ -446,7 +465,6 @@ class S3(TemplateBase):
             5.2 call check_and_repair to copy data to new shards
             5.3 delete all shards that have been replaced
         """
-        nodes = self._nodes
         N = self.data['parityShards']
         namespaces_by_addr = {ns['address']: ns for ns in self.data['namespaces']}
 
@@ -490,6 +508,9 @@ class S3(TemplateBase):
             self.data['namespaces'].remove(namespace)
 
         # 5.1 deploy N new namespaces
+        nodes = self._nodes
+        node_to_excludes = [namespace['node'] for namespace in to_replace]
+        nodes = filter(lambda node: node['node_id'] not in node_to_excludes, nodes)
         self._deploy_minio_backend_namespaces(nodes)
 
         # 5.2 update minio config with new shards
@@ -523,7 +544,7 @@ class S3(TemplateBase):
         tlog_namespace = None
         for namespace, node in self._deploy_namespaces(nr_namepaces=1,
                                                        name=self._tlog_namespace,
-                                                       size=10,  # TODO: compute how much is needed
+                                                       size=compute_tlog_size(self.data['storageSize']),
                                                        storage_type='ssd',
                                                        password=self.data['nsPassword'],
                                                        nodes=nodes):
@@ -569,12 +590,14 @@ class S3(TemplateBase):
             for i in range(required_nr_namespaces - deployed_nr_namespaces):
                 node = nodes[i % len(nodes)]
                 self.logger.info("try to install namespace %s on node %s", name, node['node_id'])
-                gls.add(gevent.spawn(self._install_namespace,
-                                     node=node,
-                                     name=name,
-                                     disk_type=storage_type,
-                                     size=size,
-                                     password=password))
+
+                gl = self._pool.spawn(self._install_namespace,
+                                      node=node,
+                                      name=name,
+                                      disk_type=storage_type,
+                                      size=size,
+                                      password=password)
+                gls.add(gl)
 
             for g in gevent.iwait(gls):
                 if g.exception and g.exception.node in nodes:
@@ -685,8 +708,21 @@ class S3(TemplateBase):
                             text='tlog shard %s is in error state' % addr,
                             tags=['shard:%s' % addr],
                             event='storage')
+                    elif minio_shard_state == SERVICE_STATE_WARNING:
+                        self._send_alert(
+                            addr,
+                            text='tlog shard %s has reached is maximum size' % addr,
+                            tags=['shard:%s' % addr],
+                            event='storage')
+
             except StateCategoryNotExistsError:
                 pass
+
+            try:
+                for tlog_type, minio_state in self._minio.state.get('tlog_sync').items():
+                    self.state.set('tlog_sync', tlog_type, minio_state)
+            except StateCategoryNotExistsError:
+                self.state.delete('tlog_sync', tlog_type)
 
         try:
             do()
@@ -715,6 +751,7 @@ class S3(TemplateBase):
                 'namespace': self._tlog_namespace,
             },
             'blockSize': self.data['minioBlockSize'],
+            'logoURL': self.data.get('logoURL'),
         }
 
         try:
@@ -758,13 +795,18 @@ class S3(TemplateBase):
         for alerta in self.api.services.find(template_uid=ALERTA_UID):
             alerta.schedule_action('send_alert', args={'data': alert})
 
+    def update_logo(self, logo_url):
+        if self._minio:
+            self._minio.schedule_action('update_logo', {'logo_url': logo_url}).wait(die=True)
+        self.data['logoURL'] = logo_url
+
 
 def compute_minimum_namespaces(total_size, data, parity):
     """
     compute the number and size of zerodb namespace required to
     fulfill the erasure coding policy
 
-    :param total_size: total size of the s3 storage
+    :param total_size: total size of the s3 storage in GB
     :type total_size: int
     :param data: data shards number
     :type data: int
@@ -792,8 +834,19 @@ def compute_minimum_namespaces(total_size, data, parity):
     return nr_shards, shard_size
 
 
+def compute_tlog_size(total_size):
+    """
+    compute the size of the tlog shard
+    :param total_size: data size of the archive in GB
+    :type total_size: int
+    :return: size to use for tlog shard in GB
+    :rtype: int
+    """
+    return math.ceil(total_size / 2000)
+
+
 def namespaces_connection_info(namespaces):
-    group = gevent.pool.Group()
+    group = gevent.pool.Pool(30)
     return list(group.imap_unordered(namespace_connection_info, namespaces))
 
 
@@ -824,13 +877,6 @@ def sort_minio_node_candidates(nodes):
                 node['used_resources']['cru'],
                 node['used_resources']['sru'])
     return sorted(nodes, key=key)
-
-
-def grouper(iterable, n, fillvalue=None):
-    "Collect data into fixed-length chunks or blocks"
-    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
-    args = [iter(iterable)] * n
-    return zip_longest(*args, fillvalue=fillvalue)
 
 
 class NamespaceDeployError(RuntimeError):

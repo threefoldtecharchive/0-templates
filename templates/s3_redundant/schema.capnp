@@ -15,6 +15,7 @@ struct Schema {
     activeS3 @10 :Text; # name of the active s3 service
     passiveS3 @11 :Text; # name of passive s3 service
     reverseProxy @12 :Text; #name of the reverse proxy service to update
+    logoURL @13 :Text; # if specified, download the logo pointed by this url and use it in the web frontend of minio
 
     enum StorageType {
      hdd @0;
