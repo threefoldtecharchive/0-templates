@@ -195,10 +195,14 @@ class S3(TemplateBase):
         nodes = list(self._nodes)
 
         def get_master_info():
-            robot = self.api.robots.get(self.data['master']['node'], self.data['master']['url'])
-            namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['master']['name'])
-            master_connection = namespace_connection_info(namespace)
-            self.data['master']['address'] = master_connection
+            try:
+                robot = self.api.robots.get(self.data['master']['node'], self.data['master']['url'])
+                namespace = robot.services.get(template_uid=NS_TEMPLATE_UID, name=self.data['master']['name'])
+                master_connection = namespace_connection_info(namespace)
+                self.data['master']['address'] = master_connection
+            except ServiceNotFoundError:
+                self.data['master'] = {'name':'', 'node':'', 'url':'','address': ''}
+                return
 
             return {
                 'address': master_connection,
