@@ -31,3 +31,7 @@ class Upgrader(TemplateBase):
             else:
                 self.logger.info('zerodb %s upgraded', task.service.name)
         self.state.delete('zdb_upgrade', 'running')
+
+    def reboot_host(self):
+        self.logger.info("rebooting")
+        self._node_sal.reboot()
