@@ -13,10 +13,7 @@ from zerorobot.template.state import (SERVICE_STATE_ERROR, SERVICE_STATE_OK,
 
 PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
 ALERTA_UID = 'github.com/threefoldtech/0-templates/alerta/0.0.1'
-<< << << < HEAD
 
-== == == =
->>>>>> > master
 NODE_CLIENT = 'local'
 
 
