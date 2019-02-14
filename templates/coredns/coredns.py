@@ -25,6 +25,10 @@ class Coredns(TemplateBase):
             if not self.data[key]:
                 raise ValueError('Invalid value for {}'.format(key))
 
+        # If backplane is empty get the interface name from the public ip
+        if not self.data['backplane']:
+            self.data['backplane'] = self._node_sal.get_nic_by_ip(self._node_sal.network.get_management_info())['name']
+
     def _monitor(self):
         self.logger.info('Monitor coredns %s' % self.name)
         self.state.check('actions', 'start', 'ok')
