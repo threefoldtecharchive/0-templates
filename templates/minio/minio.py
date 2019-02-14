@@ -407,7 +407,7 @@ class Healer:
                 self._process_data_shards_event(msg)
             elif 'tlog' in msg:
                 self._process_tlog_shard_event(msg)
-            elif 'disk' in msg:
+            elif 'disk' in msg or 'subsystem' in msg and msg['subsystem'] == 'disk':
                 self._process_disk_event(msg)
             elif 'subsystem' in msg and msg['subsystem'] == 'sync':
                 self._process_sync_event(msg)
