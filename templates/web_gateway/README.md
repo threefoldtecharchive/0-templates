@@ -42,7 +42,8 @@ args = {
     'nics': [{'name': 'ten', 'type': 'zerotier', 'ztClient':'zt', 'id': '1d719394044ed153'}],
     'farmerIyoOrg': 'farmer',
     'nrEtcds': 3,
-    'publicNodes': ['124121421']
+    'backplane':'backplane',
+    'publicNodes': ['124121421'],
     'publicIps': ['271.2.1.3']
     }
 
