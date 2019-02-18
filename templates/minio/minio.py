@@ -262,6 +262,12 @@ class Minio(TemplateBase):
             return
 
     def check_and_repair(self, block=False):
+        try:
+            self.state.check('actions', 'install', 'ok')
+            self.state.check('actions', 'start', 'ok')
+        except StateCheckError:
+            return
+
         if block:
             self._minio_sal.check_and_repair()
         else:
