@@ -13,6 +13,10 @@ class Upgrader(TemplateBase):
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self._node_sal = j.clients.zos.get(NODE_CLIENT)
+        self._runtime_id = j.data.idgenerator.generateGUID()
+
+    def runtime_id(self):
+        return self._runtime_id
 
     def upgrade_robot(self):
         self.state.set('robot_upgrade', 'running', 'ok')
