@@ -110,6 +110,11 @@ class Etcd(TemplateBase):
         return self._etcd_sal.connection_info()
 
     def update_cluster(self, cluster):
+        # do nothing if the cluster config is
+        # the same as the one received
+        if self.data.get('cluster') == cluster:
+            return
+
         self.data['cluster'] = cluster
         etcd_sal = self._etcd_sal
         if etcd_sal.is_running():
