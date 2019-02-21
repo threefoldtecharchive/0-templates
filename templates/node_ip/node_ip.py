@@ -48,11 +48,18 @@ class NodeIp(TemplateBase):
         node = self._node_sal()
         interface = self.data['interface']
         cidr = self.data['cidr']
+        gateway = self.data.get('gateway')
 
         ips = node.client.ip.addr.list(interface)
         if cidr not in ips:
             self.logger.info("config ip %s on interface %s", cidr, interface)
             node.client.ip.addr.add(interface, cidr)
+
+        if gateway:
+            routes = node.client.ip.route.list()
+            if {'dev': interface, 'dst': '', 'gw': gateway} not in routes:
+                node.client.bash("ip r del default; ip r add default via %s" % gateway)
+
         self.state.set('actions', 'install', 'ok')
 
     def uninstall(self):

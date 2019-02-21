@@ -7,6 +7,8 @@ This template add an ip address on one of the interface of the node.
 
 - `cidr`: ip adress and netmask e.g: `192.168.1.1/32`
 - `interface`: the name of the interface which to set the address
+- `gateway`: If specified, the default gateway of the machine will be replace by the value of this field
+             the equivalent of `ip r del default, ip r add default via {gateway}` will be executed
 
 
 ### Actions
