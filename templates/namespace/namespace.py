@@ -31,6 +31,9 @@ class Namespace(TemplateBase):
             if not self.data.get(param):
                 raise ValueError("parameter '{}' not valid: {}".format(param, str(self.data[param])))
 
+        if not self.data['nsName']:
+            self.data['nsName'] = j.data.idgenerator.generateGUID()
+
     def _monitor(self):
         self.logger.info('Monitor namespace %s' % self.name)
         try:

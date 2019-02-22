@@ -13,18 +13,18 @@ This template is responsible for managing a 0-db namespace
 - `password`: the namespace password **optional**
 - `nsName`: the namespace name. It will be generated if empty.
 
-DiskType enum: 
-- `hdd` 
+DiskType enum:
+- `hdd`
 - `ssd`
 
-Mode enum: 
-- `user` 
+Mode enum:
+- `user`
 - `direct`
 - `seq`
 
 ### Actions
 - `install`: creates the namespace.
-- `info`: returns info about the namespace. 
+- `info`: returns info about the namespace.
 - `url`: return the public url of the namespace
 - `private_url`: return the private url of the namespace
 - `uninstall`: removes the namespace from the zerodb
@@ -38,6 +38,9 @@ robot = j.clients.zrobot.robots['main']
 args = {
     'size': 10,
     'password': 'password',
+    'diskType':'hdd',
+    'mode': 'user',
+    'nsName': 'mynamespace',
 }
 namespace = robot.services.create('github.com/threefoldtech/0-templates/namespace/0.0.1', 'namespace_one', data=args)
 namespace.schedule_action('install')
@@ -54,7 +57,7 @@ services:
     - github.com/threefoldtech/0-templates/namespace/0.0.1__namespace_one:
           size: 10
           password: 'password'
-          
+
 actions:
     - template: 'github.com/threefoldtech/0-templates/namespace/0.0.1'
       service: 'namespace_one'
