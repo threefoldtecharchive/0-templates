@@ -131,24 +131,11 @@ class EtcdCluster(TemplateBase):
                     nodes.remove(node)
         return etcds
 
-        # gls = set()
-        # for i in range(required_etcds - nr_deployed_etcds):
-        #     node = nodes[i % len(nodes)]
-        #     self.logger.info("try to install etcd on node %s" % node['node_id'])
-        #     gls.add(gevent.spawn(self._install_etcd, node=node))
-
-        # for g in gevent.iwait(gls):
-        #     if g.exception and g.exception.node in nodes:
-        #         self.logger.error("we could not deploy on node %s, remove it from the possible node to use", node['node_id'])
-        #         nodes.remove(g.exception.node)
-        #     else:
-        #         etcd, node = g.value
-        #         nr_deployed_etcds += 1
-        #         yield (etcd, node)
-
     def _create_zt_clients(self, nics, node_url):
         result = deepcopy(nics)
         for nic in result:
+            if nic['type'] != 'zerotier':
+                continue
             zt_name = nic['ztClient']
             zt_client = self.api.services.get(name=zt_name, template_uid=ZT_TEMPLATE_UID)
             node_zt_name = '{}_{}'.format(zt_name, self.guid)
@@ -160,6 +147,8 @@ class EtcdCluster(TemplateBase):
 
     def _remove_zt_clients(self, nics, node_url):
         for nic in nics:
+            if nic['type'] != 'zerotier':
+                continue
             zt_name = nic['ztClient']
             zt_client = self.api.services.get(name=zt_name, template_uid=ZT_TEMPLATE_UID)
             node_zt_name = '{}_{}'.format(zt_name, self.guid)
@@ -197,6 +186,7 @@ class EtcdCluster(TemplateBase):
             tasks.append(etcd.schedule_action('update_cluster', args={'cluster': self.data['clusterConnections']}))
             tasks.append(etcd.schedule_action('start'))
         for task in tasks:
+            self.logger.info("wait %s action on %s", task.action_name, task.service.name)
             task.wait(die=True)
 
         @retry(Exception, tries=4, delay=3, backoff=2)

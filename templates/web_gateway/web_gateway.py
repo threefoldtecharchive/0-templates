@@ -137,6 +137,8 @@ class WebGateway(TemplateBase):
     def _create_zt_clients(self, nics, node_url):
         result = deepcopy(nics)
         for nic in result:
+            if nic['type'] != 'zerotier':
+                continue
             zt_name = nic['ztClient']
             zt_client = self.api.services.get(name=zt_name, template_uid=ZT_TEMPLATE_UID)
             node_zt_name = '{}_{}'.format(zt_name, self.guid)
@@ -148,6 +150,8 @@ class WebGateway(TemplateBase):
 
     def _remove_zt_clients(self, nics, node_url):
         for nic in nics:
+            if nic['type'] != 'zerotier':
+                continue
             zt_name = nic['ztClient']
             zt_client = self.api.services.get(name=zt_name, template_uid=ZT_TEMPLATE_UID)
             node_zt_name = '{}_{}'.format(zt_name, self.guid)
@@ -169,13 +173,14 @@ class WebGateway(TemplateBase):
         return cluster_connection
 
     def _install_traefik(self, traefik_endpoint):
-        self.logger.info('Installing traefik')
         data = {
             'etcdEndpoint': traefik_endpoint,
             'etcdPassword': self.data['etcdPassword'],
             'etcdWatch': True,
         }
-        for node_id in self.data['publicNodes']:
+
+        def _install(node_id):
+            self.logger.info('Installing traefik on %s', node_id)
             nics = self._create_zt_clients(self.data['nics'], self._public_urls[node_id])
             data['nics'] = nics
 
@@ -183,19 +188,28 @@ class WebGateway(TemplateBase):
             traefik.schedule_action('install').wait(die=True)
             traefik.schedule_action('start').wait(die=True)
 
+        pool = gevent.pool.Pool(5)
+        pool.map(_install, self.data['publicNodes'])
+
     def _install_coredns(self, coredns_endpoint):
-        self.logger.info('Installing coredns')
         data = {
             'etcdEndpoint': coredns_endpoint,
             'etcdPassword': self.data['etcdPassword'],
             'domain': self.data['domain'],
         }
-        for node_id in self.data['publicNodes']:
+        if self.data.get('backplane'):
+            data['backplane'] = self.data.get('backplane')
+
+        def _install(node_id):
+            self.logger.info('Installing coredns on %s', node_id)
             nics = self._create_zt_clients(self.data['nics'], self._public_urls[node_id])
             data['nics'] = nics
             coredns = self._public_apis[node_id].services.find_or_create(COREDNS_TEMPLATE_UID, self._coredns_name, data)
             coredns.schedule_action('install').wait(die=True)
             coredns.schedule_action('start').wait(die=True)
+
+        pool = gevent.pool.Pool(5)
+        pool.map(_install, self.data['publicNodes'])
 
     def _public_nodes_action(self, action):
         if action not in ['start', 'stop']:
