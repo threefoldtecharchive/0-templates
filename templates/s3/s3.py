@@ -41,10 +41,19 @@ class S3(TemplateBase):
         if self.data['parityShards'] > self.data['dataShards']:
             raise ValueError('parityShards must be equal to or less than dataShards')
 
-        if len(self.data['minioPassword']) < 8:
-            raise ValueError("minio password need to be at least 8 characters")
+        if self.data['minioLogin']:
+            self.data['minioLogin_'] = self.data['minioLogin']
+        if not self.data['minioLogin_']:
+            self.data.set_encrypted('minioLogin_', j.data.idgenerator.generateXCharID(8))
+        self.data.pop('minioLogin')
 
-        for key in ['minioLogin', 'nsName', 'storageSize']:
+        if self.data['minioPassword']:
+            self.data['minioPassword_'] = self.data['minioPassword']
+        if not self.data['minioPassword_']:
+            self.data.set_encrypted('minioPassword_', j.data.idgenerator.generateXCharID(32))
+        self.data.pop('minioPassword')
+
+        for key in ['nsName', 'storageSize']:
             if not self.data[key]:
                 raise ValueError('Invalid value for {}'.format(key))
 
@@ -357,11 +366,12 @@ class S3(TemplateBase):
         self._minio.schedule_action('upgrade').wait(die=True)
 
     def update_credentials(self, login, password):
-        self.data['minioLogin'] = login
-        self.data['minioPassword'] = password
+        self.data.set_encrypted('minioLogin_', login)
+        self.data.set_encrypted('minioPassword_', password)
         minio = self._minio
         if minio:
             minio.schedule_action('update_credentials', {'login': login, 'password': password}).wait(die=True)
+        return {'login': login, 'password': password}
 
     def tlog(self):
         return self.data['tlog']
@@ -469,7 +479,6 @@ class S3(TemplateBase):
             5.2 call check_and_repair to copy data to new shards
             5.3 delete all shards that have been replaced
         """
-
         N = self.data['parityShards']
         namespaces_by_addr = {ns['address']: ns for ns in self.data['namespaces']}
 
@@ -743,8 +752,8 @@ class S3(TemplateBase):
             'zerodbs': [ns['address'] for ns in self.data['namespaces']],
             'namespace': self.data['nsName'],
             'nsSecret': self.data['nsPassword'],
-            'login': self.data['minioLogin'],
-            'password': self.data['minioPassword'],
+            'login': self.data.get_decrypted('minioLogin_'),
+            'password': self.data.get_decrypted('minioPassword_'),
             'dataShard': self.data['dataShards'],
             'parityShard': self.data['parityShards'],
             'tlog': {
