@@ -24,6 +24,12 @@ class S3Redundant(TemplateBase):
         if self.data['parityShards'] > self.data['dataShards']:
             raise ValueError('parityShards must be equal to or less than dataShards')
 
+        if not self.data['minioLogin']:  # newly created
+            self.data.set_encrypted('minioLogin', j.data.idgenerator.generateXCharID(8))
+
+        if not self.data['minioPassword']:  # newly created
+            self.data.set_encrypted('minioPassword', j.data.idgenerator.generateXCharID(32))
+
         if len(self.data['minioPassword']) < 8:
             raise ValueError('minio password need to be at least 8 characters')
 
@@ -211,8 +217,14 @@ class S3Redundant(TemplateBase):
 
     def install(self):
         self.logger.info('Installing s3_redundant {}'.format(self.name))
+
         active_data = dict(self.data)
         active_data['nsName'] = self.guid
+        login = self.data.get_decrypted('minioLogin')
+        password = self.data.get_decrypted('minioPassword')
+        active_data['minioLogin'] = login
+        active_data['minioPassword'] = password
+
         if self.data['activeS3']:
             active_s3 = self._active_s3()
         else:
@@ -236,6 +248,7 @@ class S3Redundant(TemplateBase):
         self.logger.info('Installed s3 {}'.format(passive_s3.name))
 
         self.state.set('actions', 'install', 'ok')
+        return {'login': login, 'password': password}
 
     def uninstall(self):
         s3s = [self._active_s3, self._passive_s3]
@@ -310,13 +323,17 @@ class S3Redundant(TemplateBase):
             return
         self._update_reverse_proxy_servers()
 
-    def update_credentials(self, login, password):
-        self.data['minioLogin'] = login
-        self.data['minioPassword'] = password
+    def generate_credentials(self):
+        login = j.data.idgenerator.generateXCharID(8)
+        password = j.data.idgenerator.generateXCharID(32)
+        self.data.set_encrypted('minioLogin', login)
+        self.data.set_encrypted('minioPassword', login)
         active_s3 = self._active_s3()
         passive_s3 = self._passive_s3()
-        active_s3.schedule_action('update_credentials', {'login': login, 'password': password}).wait(die=True)
-        passive_s3.schedule_action('update_credentials', {'login': login, 'password': password}).wait(die=True)
+        tasks = list(map(lambda s: s.schedule_action('update_credentials', {'login': login, 'password': password}),
+                         [active_s3, passive_s3]))
+        map(lambda t: t.wait(die=True), tasks)
+        return {'login': login, 'password': password}
 
     def update_logo(self, logo_url):
         active_s3 = self._active_s3()
