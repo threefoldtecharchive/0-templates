@@ -33,6 +33,9 @@ class NodeCapacity(TemplateBase):
         """
         self.logger.info("register the total node capacity")
 
+        node = self.api.services.get(template_account='threefoldtech', template_name='node')
+        node.state.check('disks', 'mounted', 'ok')
+
         self.state.delete('capacity', 'total')
         try:
             self._node_sal.capacity.register()
