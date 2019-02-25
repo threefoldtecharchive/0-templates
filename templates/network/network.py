@@ -130,6 +130,11 @@ class Network(TemplateBase):
             self._node_sal.network.reload_driver(driver)
 
         self.logger.info("configure network: cidr: {cidr} - vlan tag: {vlan}".format(**self.data))
+
+        interfaces = None
+        if self.data.get('interfaces'):
+            interfaces = self.data.get('interfaces').copy()
+
         self.data['usedInterfaces'] = self._node_sal.network.configure(
             cidr=self.data['cidr'],
             vlan_tag=self.data['vlan'],
@@ -137,7 +142,7 @@ class Network(TemplateBase):
             bonded=self.data.get('bonded', False),
             mtu=self.data.get('mtu', 9000) or 9000,
             mode=self.data.get('mode', 'ovs'),
-            interfaces=self.data.get('interfaces').copy() or None,
+            interfaces=interfaces,
             balance_mode=self.data.get('balanceMode'),
             lacp=self.data.get('lacp', False)
         )
