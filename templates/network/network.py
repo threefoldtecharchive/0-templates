@@ -138,6 +138,8 @@ class Network(TemplateBase):
             mtu=self.data.get('mtu', 9000) or 9000,
             mode=self.data.get('mode', 'ovs'),
             interfaces=self.data.get('interfaces').copy() or None,
+            balance_mode=self.data.get('balanceMode'),
+            lacp=self.data.get('lacp', False)
         )
 
         self.state.set('actions', 'install', 'ok')
