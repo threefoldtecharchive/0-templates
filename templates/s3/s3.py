@@ -277,6 +277,8 @@ class S3(TemplateBase):
         self.state.set('actions', 'install', 'ok')
         self.state.set('status', 'running', 'ok')
 
+        return {'login': self.data.get_decrypted('minioLogin_'), 'password': self.data.get_decrypted('minioPassword_')}
+
     def _delete_namespace(self, namespace):
         self.logger.info("deleting namespace %s on node %s", namespace['node'], namespace['url'])
         robot = self.api.robots.get(namespace['node'], namespace['url'])
