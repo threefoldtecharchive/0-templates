@@ -12,7 +12,7 @@ VDISK_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vdisk/0.0.1'
 VM_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/vm/0.0.1'
 ZT_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/zerotier_client/0.0.1'
 BASEFLIST = 'https://hub.grid.tf/tf-bootable/{}.flist'
-ZEROOSFLIST = 'https://hub.grid.tf/tf-autobuilder/zero-os-development.flist'
+ZEROOSFLIST = 'https://hub.grid.tf/tf-autobuilder/zero-os-{}.flist'
 
 
 class DmVm(TemplateBase):
@@ -127,7 +127,7 @@ class DmVm(TemplateBase):
         image, _, version = self.data['image'].partition(':')
         if image == 'zero-os':
             version = version or 'development'
-            vm_data['flist'] = ZEROOSFLIST
+            vm_data['flist'] = ZEROOSFLIST.format(version)
         else:
             version = version or 'lts'
             flist = '{}:{}'.format(image, version)
