@@ -287,8 +287,10 @@ class S3(TemplateBase):
             ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
             ns.delete()
         except ServiceNotFoundError:
+            self.logger.debug("namespace %s already deleted" % namespace)
             pass
-        except Exception:
+        except Exception as err:
+            self.logger.error("Something went wrong deleting namespace %s: %s" % (namespace, err))
             if namespace not in self.data['deletableNamespaces']:
                 self.data['deletableNamespaces'].append(namespace)
 
