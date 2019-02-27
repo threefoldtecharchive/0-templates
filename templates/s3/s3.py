@@ -294,7 +294,7 @@ class S3(TemplateBase):
             if namespace not in self.data['deletableNamespaces']:
                 self.data['deletableNamespaces'].append(namespace)
 
-        self.logger.info("done deleting namespace %s on node %s" % namespace['name'], namespace['node'])
+        self.logger.info("done deleting namespace %s on node %s" % (namespace['name'], namespace['node']))
 
     def _remove_deletable_namespaces(self):
         namespaces = self.data['deletableNamespaces'].copy()
