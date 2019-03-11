@@ -29,7 +29,7 @@ Process:
 - `name`: name of the executable.
 - `pwd`: directory in which the process needs to be started.
 - `args`: list of the process' command line arguments.
-- `environment`: list of environment variables for the process e.g ['PATH=/usr/bin/local'].
+- `env`: list of environment variables for the process e.g ['PATH=/usr/bin/local'].
 - `stdin`: data that needs to be passed into the stdin of the started process.
 - `id`: job id used for this process
 
