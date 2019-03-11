@@ -280,15 +280,17 @@ class S3(TemplateBase):
         return {'login': self.data.get_decrypted('minioLogin_'), 'password': self.data.get_decrypted('minioPassword_')}
 
     def _delete_namespace(self, namespace):
-        self.logger.info("deleting namespace %s on node %s", namespace['node'], namespace['url'])
+        self.logger.info("deleting namespace %s on node %s", namespace['name'], namespace['node'])
         try:
             robot = self.api.robots.get(namespace['node'], namespace['url'])
             ns = robot.services.get(template_uid=NS_TEMPLATE_UID, name=namespace['name'])
+            ns.schedule_action("uninstall").wait(timeout=300, die=True)
             ns.delete()
         except ServiceNotFoundError:
             self.logger.debug("namespace %s already deleted" % namespace['name'])
             pass
-        except Exception: # handle different exception like connection error
+        except Exception as e: # handle different exception like connection error
+            self.logger.error("failed to delete namespace %s : %s" % (namespace, e))
             if namespace not in self.data['deletableNamespaces']:
                 self.data['deletableNamespaces'].append(namespace)
 
