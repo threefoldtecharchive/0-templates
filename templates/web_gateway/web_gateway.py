@@ -54,6 +54,12 @@ class WebGateway(TemplateBase):
                 self._traefik(node_id).schedule_action('update_endpoint', args=self._traefik_endpoint()).wait(die=True)
 
     def validate(self):
+        if self.data['nrEtcds'] <= 0:
+            raise ValueError("nrEtcds cannot be null or negative")
+
+        if self.data['nrEtcds'] % 2 == 0:
+            raise ValueError("nrEtcds must be an odd number")
+
         for nic in self.data['nics']:
             if nic['type'] == 'zerotier':
                 break

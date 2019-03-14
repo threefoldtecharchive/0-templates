@@ -26,6 +26,12 @@ class EtcdCluster(TemplateBase):
         self._robots = {}
 
     def validate(self):
+        if self.data['nrEtcds'] <= 0:
+            raise ValueError("nrEtcds cannot be null or negative")
+
+        if self.data['nrEtcds'] % 2 == 0:
+            raise ValueError("nrEtcds must be an odd number")
+
         self.state.delete('status', 'running')
         for nic in self.data['nics']:
             if nic['type'] == 'zerotier':
