@@ -16,21 +16,15 @@ class ZerobootClient(TemplateBase):
             return
 
         # create the client instance
-        network_id = self.data.get('networkId')
-        if not network_id:
-            raise ValueError("no networkId specified in service data")
-
         sshClient = self.data.get('sshClient')
         if not sshClient:
             raise ValueError("no sshClient specified in service data")
 
-        zerotierClient = self.data.get('zerotierClient')
-
         # this will create a configuration for this instance
         data = {
-            'network_id': network_id,
+            'network_id': self.data.get("networkId") or "",
             'sshclient_instance': sshClient,
-            'zerotier_instance': zerotierClient,
+            'zerotier_instance': self.data.get('zerotierClient') or "",
         }
         j.clients.zboot.get(self.name, data=data, interactive=False)
 
