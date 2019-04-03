@@ -666,23 +666,24 @@ class S3(TemplateBase):
         def do():
             self.logger.info("bubble up minio state")
             try:
-                self.state.set('vm', 'disk', self._minio.state.get('vm', 'disk')['disk'])
+                self._minio.state.check('vm', 'disk', SERVICE_STATE_OK)
+                self.state.set('vm', 'disk', SERVICE_STATE_OK)
             except StateCheckError:
                 self._send_alert(
                     "tlog disk from minio_name:%s" % self._minio.name,
                     text="Minio Tlog disk is in error state",
                     tags=['minio_name:%s' % self._minio.name],
                     event='storage')
-                self.state.set('vm', 'disk', 'error')
-                self.state.set('status', 'running', 'error')
+                self.state.set('vm', 'disk', SERVICE_STATE_ERROR)
+                self.state.set('status', 'running', SERVICE_STATE_ERROR)
             except StateCategoryNotExistsError:
                 # probably no state set on the minio disk #FIXME
                 self.state.delete('vm')
             except ServiceNotFoundError:
                 self.state.delete('data_shards')
                 self.state.delete('tlog_shards')
-                self.state.delte('vm')
-                self.state.set('status', 'running', 'error')
+                self.state.delete('vm')
+                self.state.set('status', 'running', SERVICE_STATE_ERROR)
                 return
 
             namespaces_by_addr = {ns['address']: ns for ns in self.data['namespaces']}
