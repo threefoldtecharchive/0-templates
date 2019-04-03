@@ -668,13 +668,13 @@ class S3(TemplateBase):
             try:
                 self.state.set('vm', 'disk', self._minio.state.get('vm', 'disk')['disk'])
             except StateCheckError:
-                self.state.set('vm', 'disk', 'error')
-                self.state.set('status', 'running', 'error')
                 self._send_alert(
                     "tlog disk from minio_name:%s" % self._minio.name,
                     text="Minio Tlog disk is in error state",
                     tags=['minio_name:%s' % self._minio.name],
                     event='storage')
+                self.state.set('vm', 'disk', 'error')
+                self.state.set('status', 'running', 'error')
             except StateCategoryNotExistsError:
                 # probably no state set on the minio disk #FIXME
                 self.state.delete('vm')
@@ -721,7 +721,6 @@ class S3(TemplateBase):
                     self.state.set('data_shards', addr, minio_shard_state)
 
                 for addr, minio_shard_state in self._minio.state.get('tlog_shards').items():
-                    self.state.set('tlog_shards', addr, minio_shard_state)
                     if minio_shard_state == SERVICE_STATE_ERROR:
                         self._send_alert(
                             addr,
@@ -734,6 +733,7 @@ class S3(TemplateBase):
                             text='tlog shard %s has reached is maximum size' % addr,
                             tags=['shard:%s' % addr],
                             event='storage')
+                    self.state.set('tlog_shards', addr, minio_shard_state)
 
             except StateCategoryNotExistsError:
                 pass
