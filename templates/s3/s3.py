@@ -407,7 +407,7 @@ class S3(TemplateBase):
 
         try:
             if self._minio:
-                self._minio.schedule_action('uninstall').wait(die=True)
+                self._minio.schedule_action('uninstall').wait()
                 self._minio.delete()
                 self.__minio = None
         except ServiceNotFoundError:
@@ -670,10 +670,10 @@ class S3(TemplateBase):
                 self.state.set('vm', 'disk', SERVICE_STATE_OK)
             except StateCheckError:
                 self._send_alert(
-                    "tlog disk from minio_name:%s" % self._minio.name,
-                    text="Minio Tlog disk is in error state",
-                    tags=['minio_name:%s' % self._minio.name],
-                    event='storage')
+                    ressource=self.name,
+                    text="failure of the metadata disk used by minio",
+                    tags=['minio_name:%s' % self._minio.name, "s3_name:%s" % self.name],
+                    event='metadata disk failure')
                 self.state.set('vm', 'disk', SERVICE_STATE_ERROR)
                 self.state.set('status', 'running', SERVICE_STATE_ERROR)
             except StateCategoryNotExistsError:
@@ -691,10 +691,10 @@ class S3(TemplateBase):
                 for addr, minio_shard_state in self._minio.state.get('data_shards').items():
                     if minio_shard_state == SERVICE_STATE_ERROR:
                         self._send_alert(
-                            addr,
+                            ressource=self.name,
                             text='data shard %s is in error state' % addr,
-                            tags=['shard:%s' % addr],
-                            event='storage')
+                            tags=['shard:%s' % addr, 'minio_name:%s' % self._minio.name, "s3_name:%s" % self.name],
+                            event='data shard disk failure')
 
                     # when we detect a shards in failure. We keep the time the failure has been detected
                     # so during self-healing we can decide what to do base on the amount of
@@ -724,16 +724,17 @@ class S3(TemplateBase):
                 for addr, minio_shard_state in self._minio.state.get('tlog_shards').items():
                     if minio_shard_state == SERVICE_STATE_ERROR:
                         self._send_alert(
-                            addr,
+                            self.name,
                             text='tlog shard %s is in error state' % addr,
-                            tags=['shard:%s' % addr],
-                            event='storage')
+                            tags=['shard:%s' % addr, 'minio_name:%s' % self._minio.name, "s3_name:%s" % self.name],
+                            event='tlog shard disk failure')
                     elif minio_shard_state == SERVICE_STATE_WARNING:
                         self._send_alert(
-                            addr,
+                            self.name,
                             text='tlog shard %s has reached is maximum size' % addr,
-                            tags=['shard:%s' % addr],
-                            event='storage')
+                            tags=['shard:%s' % addr, 'minio_name:%s' % self._minio.name, "s3_name:%s" % self.name],
+                            event='tlog shard full',
+                            severity='warning')
                     self.state.set('tlog_shards', addr, minio_shard_state)
 
             except StateCategoryNotExistsError:

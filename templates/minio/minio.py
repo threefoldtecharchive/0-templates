@@ -312,6 +312,8 @@ class Healer:
 
     def __init__(self, minio):
         self.service = minio
+        self._hostname = minio._node_sal.client.info.os()['hostname']
+        self._node_id = minio._node_sal.name
         self.logger = minio.logger
         self.last_sync_event = -1
         self._last_sync_event_mu = Semaphore()
@@ -349,6 +351,10 @@ class Healer:
         gevent.spawn_later(60, self._tlog_sync_watchdog)
 
     def _send_alert(self, ressource, text, tags, event, severity='critical'):
+        if not tags:
+            tags = []
+        tags.append('node_id:%s' % self._node_id)
+        tags.append('hostname:%s' % self._hostname)
         alert = {
             'attributes': {},
             'resource': ressource,
@@ -388,6 +394,30 @@ class Healer:
             self.service.state.set('tlog_shards', addr, SERVICE_STATE_OK)
 
     def _process_disk_event(self, msg):
+        # find the device name of the disk use in minio container
+        node = self.service._node_sal
+        container = self.service._minio_sal.container
+        volume_path = list(container.mounts.keys())[0]
+        partition_uuid = None
+        device_name = None
+        for sp in node.storagepools.list():
+            if sp.mountpoint.find(volume_path) != -1:
+                partition_uuid = sp.devicename
+                device_name = sp.device
+                break
+
+        tags = [
+            'minio_name:%s' % self.service.name,
+            'partition_uuid:%s' % partition_uuid,
+            'device_name:%s' % device_name,
+        ]
+
+        gevent.spawn(self._send_alert(
+            ressource=self.service.name,
+            text="failure of the metadata disk used by minio",
+            tags=[],
+            event='metadata disk failure',
+            severity='major'))
         self.service.state.set('vm', 'disk', 'error')
 
     def _process_sync_event(self, msg):
@@ -406,7 +436,6 @@ class Healer:
         def callback(level, msg, flag):
             if level not in [LOG_LVL_MESSAGE_INTERNAL]:
                 return
-            # gevent.spawn(self._send_alert(self.service.name, msg, [], 'minio_logs', 'debug'))
             msg = j.data.serializer.json.loads(msg)
 
             if 'shard' in msg:
