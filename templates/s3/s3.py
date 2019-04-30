@@ -41,17 +41,16 @@ class S3(TemplateBase):
         if self.data['parityShards'] > self.data['dataShards']:
             raise ValueError('parityShards must be equal to or less than dataShards')
 
-        if self.data['minioLogin']:
-            self.data['minioLogin_'] = self.data['minioLogin']
-        if not self.data['minioLogin_']:
-            self.data.set_encrypted('minioLogin_', j.data.idgenerator.generateXCharID(8))
-        self.data.pop('minioLogin')
+        if not self.data['minioLogin']:  # newly created
+            self.data['minioLogin'] = j.data.idgenerator.generateXCharID(8)
 
-        if self.data['minioPassword']:
-            self.data['minioPassword_'] = self.data['minioPassword']
-        if not self.data['minioPassword_']:
-            self.data.set_encrypted('minioPassword_', j.data.idgenerator.generateXCharID(32))
-        self.data.pop('minioPassword')
+        if not self.data['minioPassword']:  # newly created
+            self.data['minioPassword'] = j.data.idgenerator.generateXCharID(32)
+
+        if not self.data.is_encrypted(self.data['minioLogin']):
+            self.data.set_encrypted('minioLogin', self.data['minioLogin'])
+        if not self.data.is_encrypted(self.data['minioPassword']):
+            self.data.set_encrypted('minioPassword', self.data['minioPassword'])
 
         for key in ['nsName', 'storageSize']:
             if not self.data[key]:
@@ -277,7 +276,10 @@ class S3(TemplateBase):
         self.state.set('actions', 'install', 'ok')
         self.state.set('status', 'running', 'ok')
 
-        return {'login': self.data.get_decrypted('minioLogin_'), 'password': self.data.get_decrypted('minioPassword_')}
+        return {
+            'login': self.data.get_decrypted('minioLogin').decode(),
+            'password': self.data.get_decrypted('minioPassword').decode()
+        }
 
     def _delete_namespace(self, namespace):
         self.logger.info("deleting namespace %s on node %s", namespace['name'], namespace['node'])
@@ -372,8 +374,8 @@ class S3(TemplateBase):
         self._minio.schedule_action('upgrade').wait(die=True)
 
     def update_credentials(self, login, password):
-        self.data.set_encrypted('minioLogin_', login)
-        self.data.set_encrypted('minioPassword_', password)
+        self.data.set_encrypted('minioLogin', login)
+        self.data.set_encrypted('minioPassword', password)
         minio = self._minio
         if minio:
             minio.schedule_action('update_credentials', {'login': login, 'password': password}).wait(die=True)
@@ -760,8 +762,8 @@ class S3(TemplateBase):
             'zerodbs': [ns['address'] for ns in self.data['namespaces']],
             'namespace': self.data['nsName'],
             'nsSecret': self.data['nsPassword'],
-            'login': self.data.get_decrypted('minioLogin_'),
-            'password': self.data.get_decrypted('minioPassword_'),
+            'login': self.data.get_decrypted('minioLogin').decode(),
+            'password': self.data.get_decrypted('minioPassword').decode(),
             'dataShard': self.data['dataShards'],
             'parityShard': self.data['parityShards'],
             'tlog': {

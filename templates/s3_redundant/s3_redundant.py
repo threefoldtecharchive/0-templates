@@ -25,12 +25,17 @@ class S3Redundant(TemplateBase):
             raise ValueError('parityShards must be equal to or less than dataShards')
 
         if not self.data['minioLogin']:  # newly created
-            self.data.set_encrypted('minioLogin', j.data.idgenerator.generateXCharID(8))
+            self.data['minioLogin'] = j.data.idgenerator.generateXCharID(8)
 
         if not self.data['minioPassword']:  # newly created
-            self.data.set_encrypted('minioPassword', j.data.idgenerator.generateXCharID(32))
+            self.data['minioPassword'] = j.data.idgenerator.generateXCharID(32)
 
-        if len(self.data['minioPassword']) < 8:
+        if not self.data.is_encrypted(self.data['minioLogin']):
+            self.data.set_encrypted(self.data['minioLogin'])
+        if not self.data.is_encrypted(self.data['minioPassword']):
+            self.data.set_encrypted(self.data['minioPassword'])
+
+        if len(self.data.get_decrypted('minioPassword').decode()) < 8:
             raise ValueError('minio password need to be at least 8 characters')
 
         for key in ['minioLogin', 'storageSize']:
@@ -327,7 +332,7 @@ class S3Redundant(TemplateBase):
         login = j.data.idgenerator.generateXCharID(8)
         password = j.data.idgenerator.generateXCharID(32)
         self.data.set_encrypted('minioLogin', login)
-        self.data.set_encrypted('minioPassword', login)
+        self.data.set_encrypted('minioPassword', password)
         active_s3 = self._active_s3()
         passive_s3 = self._passive_s3()
         tasks = list(map(lambda s: s.schedule_action('update_credentials', {'login': login, 'password': password}),
