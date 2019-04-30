@@ -31,9 +31,9 @@ class S3Redundant(TemplateBase):
             self.data['minioPassword'] = j.data.idgenerator.generateXCharID(32)
 
         if not self.data.is_encrypted(self.data['minioLogin']):
-            self.data.set_encrypted(self.data['minioLogin'])
+            self.data.set_encrypted('minioLogin', self.data['minioLogin'])
         if not self.data.is_encrypted(self.data['minioPassword']):
-            self.data.set_encrypted(self.data['minioPassword'])
+            self.data.set_encrypted('minioPassword', self.data['minioPassword'])
 
         if len(self.data.get_decrypted('minioPassword').decode()) < 8:
             raise ValueError('minio password need to be at least 8 characters')
