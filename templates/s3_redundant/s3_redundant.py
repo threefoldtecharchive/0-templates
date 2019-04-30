@@ -225,8 +225,8 @@ class S3Redundant(TemplateBase):
 
         active_data = dict(self.data)
         active_data['nsName'] = self.guid
-        login = self.data.get_decrypted('minioLogin')
-        password = self.data.get_decrypted('minioPassword')
+        login = self.data.get_decrypted('minioLogin').decode()
+        password = self.data.get_decrypted('minioPassword').decode()
         active_data['minioLogin'] = login
         active_data['minioPassword'] = password
 
