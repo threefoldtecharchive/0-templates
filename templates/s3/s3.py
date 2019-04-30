@@ -180,6 +180,9 @@ class S3(TemplateBase):
                 self._minio.state.check('status', 'running', 'ok')
                 self.state.set('status', 'running', 'ok')
                 return
+            except ServiceNotFoundError:
+                self.state.set('status', 'running', 'error')
+                raise
             except StateCheckError:
                 self.state.set('status', 'running', 'error')
                 zdbs_connection = []
