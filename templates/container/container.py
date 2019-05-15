@@ -15,7 +15,7 @@ class Container(TemplateBase):
         super().__init__(name=name, guid=guid, data=data)
         self.recurring_action('_monitor', 30)  # every 30 seconds
         self._container = None
-        self._node_sal = j.clients.zos.get(NODE_CLIENT)
+        self._node_sal = self.api.node_sal
 
     def validate(self):
         for param in ['flist']:

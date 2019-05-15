@@ -59,7 +59,7 @@ class TestZrobotTemplate(ZrobotBaseTest):
         zrobot = Zrobot('zrobot', data=self.valid_data)
         node_sal_return = 'node_sal'
         patch('jumpscale.j.clients.zos.get',  MagicMock(return_value=node_sal_return)).start()
-        node_sal = zrobot.node_sal
+        node_sal = zrobot._node_sal
 
         assert node_sal == node_sal_return
         j.clients.zos.get.assert_called_with(NODE_CLIENT)
@@ -72,7 +72,7 @@ class TestZrobotTemplate(ZrobotBaseTest):
         zrobot_sal_return = 'zrobot_sal'
         patch('jumpscale.j.clients.zrobot.get',  MagicMock(return_value=zrobot_sal_return)).start()
         zrobot_sal = zrobot.zrobot_sal
-        container_sal = zrobot.node_sal.containers.get(zrobot._container_name)
+        container_sal = zrobot._node_sal.containers.get(zrobot._container_name)
         kwargs = {
             'container': container_sal,
             'port': 6600,

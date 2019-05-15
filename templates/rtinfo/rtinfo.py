@@ -2,8 +2,6 @@ from jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 
-NODE_CLIENT = "local"
-
 
 class Rtinfo(TemplateBase):
     version = "0.0.1"
@@ -13,6 +11,7 @@ class Rtinfo(TemplateBase):
         super().__init__(name=name, guid=guid, data=data)
         self.add_delete_callback(self.uninstall)
         self.recurring_action("_monitor", 600)
+        self._node_sal = self.api.node_sal
 
     def _monitor(self):
         try:
@@ -21,29 +20,21 @@ class Rtinfo(TemplateBase):
             return
 
         addr = "{host}:{port}".format(host=self.data["address"], port=self.data["port"])
-        for s in self.node_sal.client.rtinfo.list():
+        for s in self._node_sal.client.rtinfo.list():
             if s == addr:
                 return
 
-        self.node_sal.client.rtinfo.start(
-            self.data["address"], self.data["port"], self.data["disks"]
-        )
-
-    @property
-    def node_sal(self):
-        return j.clients.zos.get(NODE_CLIENT)
+        self._node_sal.client.rtinfo.start(self.data["address"], self.data["port"], self.data["disks"])
 
     def install(self):
         # reinstall if already present
         # stop doesn't throw exception when no service with address/port is present
-        self.node_sal.client.rtinfo.stop(self.data["address"], self.data["port"])
+        self._node_sal.client.rtinfo.stop(self.data["address"], self.data["port"])
 
-        self.node_sal.client.rtinfo.start(
-            self.data["address"], self.data["port"], self.data["disks"]
-        )
+        self._node_sal.client.rtinfo.start(self.data["address"], self.data["port"], self.data["disks"])
 
         self.state.set("actions", "install", "ok")
 
     def uninstall(self):
-        self.node_sal.client.rtinfo.stop(self.data["address"], self.data["port"])
+        self._node_sal.client.rtinfo.stop(self.data["address"], self.data["port"])
         self.state.delete("actions", "install")
