@@ -6,32 +6,28 @@ from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry
 from zerorobot.template.state import StateCheckError
 
-FLIST_ZROBOT_DEFAULT = 'https://hub.grid.tf/gig-official-apps/zero-os-0-robot-latest.flist'
-CONTAINER_TEMPLATE = 'github.com/threefoldtech/0-templates/container/0.0.1'
-PORT_MANAGER_TEMPLATE_UID = 'github.com/threefoldtech/0-templates/node_port_manager/0.0.1'
-NODE_CLIENT = 'local'
+FLIST_ZROBOT_DEFAULT = "https://hub.grid.tf/gig-official-apps/zero-os-0-robot-latest.flist"
+CONTAINER_TEMPLATE = "github.com/threefoldtech/0-templates/container/0.0.1"
+PORT_MANAGER_TEMPLATE_UID = "github.com/threefoldtech/0-templates/node_port_manager/0.0.1"
 
 
 class Zrobot(TemplateBase):
 
-    version = '0.0.1'
+    version = "0.0.1"
     template_name = "zrobot"
 
     def __init__(self, name, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        self.recurring_action('_monitor', 30)  # every 30 seconds
+        self.recurring_action("_monitor", 30)  # every 30 seconds
+        self._node_sal = self.api.node_sal
 
     def validate(self):
-        if self.data.get('configRepo') and not self.data.get('sshkey'):
+        if self.data.get("configRepo") and not self.data.get("sshkey"):
             raise ValueError("Need to specify sshkey when specifying configRepo")
-        if self.data.get('dataRepo') and not self.data.get('sshkey'):
+        if self.data.get("dataRepo") and not self.data.get("sshkey"):
             raise ValueError("Need to specify sshkey when specifying dataRepo")
-        if self.data.get('flist') is None or self.data.get('flist') == '':
-            self.data['flist'] = FLIST_ZROBOT_DEFAULT
-
-    @property
-    def node_sal(self):
-        return j.clients.zos.get(NODE_CLIENT)
+        if self.data.get("flist") is None or self.data.get("flist") == "":
+            self.data["flist"] = FLIST_ZROBOT_DEFAULT
 
     @property
     def _container_name(self):
@@ -39,74 +35,73 @@ class Zrobot(TemplateBase):
 
     def _get_container(self):
         ports = None
-        nics = self.data.get('nics')
+        nics = self.data.get("nics")
         if not nics:
-            nics = [{'type': 'default'}]
+            nics = [{"type": "default"}]
 
-            port = self.data.get('port')
+            port = self.data.get("port")
             if not port:
-                self.data['port'] = self._reserve_port()
+                self.data["port"] = self._reserve_port()
 
-            ports = ['%s:6600' % self.data['port']]
+            ports = ["%s:6600" % self.data["port"]]
 
         data = {
-            'flist': self.data['flist'],
-            'nics': nics,
-            'hostname': self.name,
-            'privileged': False,
-            'ports': ports,
-            'env': [
-                {'name': 'LC_ALL', 'value': 'C.UTF-8'},
-                {'name': 'LANG', 'value': 'C.UTF-8'},
-                {'name': 'SSH_AUTH_SOCK', 'value': '/tmp/sshagent_socket'},
-                {'name': 'HOME', 'value': '/root'}
-            ]
+            "flist": self.data["flist"],
+            "nics": nics,
+            "hostname": self.name,
+            "privileged": False,
+            "ports": ports,
+            "env": [
+                {"name": "LC_ALL", "value": "C.UTF-8"},
+                {"name": "LANG", "value": "C.UTF-8"},
+                {"name": "SSH_AUTH_SOCK", "value": "/tmp/sshagent_socket"},
+                {"name": "HOME", "value": "/root"},
+            ],
         }
 
-        sp = self.node_sal.storagepools.get('zos-cache')
+        sp = self._node_sal.storagepools.get("zos-cache")
         try:
             fs = sp.get(self.guid)
         except ValueError:
             fs = sp.create(self.guid)
 
         # prepare persistant volume to mount into the container
-        node_fs = self.node_sal.client.filesystem
-        ssh_vol = os.path.join(fs.path, 'ssh')
-        jsconfig_vol = os.path.join(fs.path, 'jsconfig')
-        data_vol = os.path.join(fs.path, 'data')
+        node_fs = self._node_sal.client.filesystem
+        ssh_vol = os.path.join(fs.path, "ssh")
+        jsconfig_vol = os.path.join(fs.path, "jsconfig")
+        data_vol = os.path.join(fs.path, "data")
         for vol in (ssh_vol, jsconfig_vol, data_vol):
             node_fs.mkdir(vol)
 
-        data['mounts'] = [
-            {'source': ssh_vol,
-             'target': '/root/.ssh'},
-            {'source': jsconfig_vol,
-             'target': '/root/jumpscalehost/cfg'},
-            {'source': data_vol,
-             'target': '/opt/var/data/zrobot/zrobot_data'},
-            {'source': '/var/run/redis.sock',  # mount zero-os redis socket into container, so the robot can talk to the os directly
-             'target': '/tmp/redis.sock'}
+        data["mounts"] = [
+            {"source": ssh_vol, "target": "/root/.ssh"},
+            {"source": jsconfig_vol, "target": "/root/jumpscalehost/cfg"},
+            {"source": data_vol, "target": "/opt/var/data/zrobot/zrobot_data"},
+            {
+                "source": "/var/run/redis.sock",  # mount zero-os redis socket into container, so the robot can talk to the os directly
+                "target": "/tmp/redis.sock",
+            },
         ]
 
         return self.api.services.find_or_create(CONTAINER_TEMPLATE, self._container_name, data)
 
     @property
     def sshkey_path(self):
-        if self.data.get('sshkey'):
-            return '/root/.ssh/id_rsa'
+        if self.data.get("sshkey"):
+            return "/root/.ssh/id_rsa"
 
     @property
     def zrobot_sal(self):
-        container_sal = self.node_sal.containers.get(self._container_name)
-        interval = self.data.get('autoPushInterval') or None
+        container_sal = self._node_sal.containers.get(self._container_name)
+        interval = self.data.get("autoPushInterval") or None
         return j.clients.zrobot.get(
             container=container_sal,
             port=6600,
-            template_repos=self.data['templates'],
-            data_repo=self.data.get('dataRepo'),
-            config_repo=self.data.get('configRepo'),
+            template_repos=self.data["templates"],
+            data_repo=self.data.get("dataRepo"),
+            config_repo=self.data.get("configRepo"),
             config_key=self.sshkey_path,
-            organization=(self.data.get('organization') or None),
+            organization=(self.data.get("organization") or None),
             auto_push=True if interval else False,
             auto_push_interval=interval,
         )
@@ -117,47 +112,47 @@ class Zrobot(TemplateBase):
         Returns:
             int -- portnumber of host
         """
-        self.state.check('actions', 'start', 'ok')
-        if self.data.get('port'):
-            return self.data['port']
+        self.state.check("actions", "start", "ok")
+        if self.data.get("port"):
+            return self.data["port"]
 
     def install(self, force=False):
         try:
-            self.state.check('actions', 'install', 'ok')
+            self.state.check("actions", "install", "ok")
             if not force:
                 return
         except StateCheckError:
             pass
 
         container = self._get_container()
-        container.schedule_action('install').wait(die=True)
-        if self.data.get('sshkey'):
+        container.schedule_action("install").wait(die=True)
+        if self.data.get("sshkey"):
             container_sal = container.container_sal
-            container_sal.client.filesystem.mkdir('/root/.ssh')
-            container_sal.upload_content(self.sshkey_path, self.data['sshkey'])
-            container_sal.client.filesystem.chmod(self.sshkey_path, int('400', 8))
+            container_sal.client.filesystem.mkdir("/root/.ssh")
+            container_sal.upload_content(self.sshkey_path, self.data["sshkey"])
+            container_sal.client.filesystem.chmod(self.sshkey_path, int("400", 8))
 
         self.zrobot_sal.start()
-        self.state.set('actions', 'install', 'ok')
-        self.state.set('actions', 'start', 'ok')
-        self.state.set('status', 'running', 'ok')
+        self.state.set("actions", "install", "ok")
+        self.state.set("actions", "start", "ok")
+        self.state.set("status", "running", "ok")
 
     def start(self):
         container = self._get_container()
-        container.schedule_action('start').wait(die=True)
+        container.schedule_action("start").wait(die=True)
 
         self.zrobot_sal.start()
-        self.state.set('actions', 'start', 'ok')
-        self.state.set('status', 'running', 'ok')
+        self.state.set("actions", "start", "ok")
+        self.state.set("status", "running", "ok")
 
     def stop(self):
-        self.state.check('actions', 'start', 'ok')
+        self.state.check("actions", "start", "ok")
         try:
             self.zrobot_sal.stop()
         except (ServiceNotFoundError, LookupError):
             pass
-        self.state.delete('actions', 'start')
-        self.state.delete('status', 'running')
+        self.state.delete("actions", "start")
+        self.state.delete("status", "running")
 
     def upgrade(self):
         """
@@ -170,7 +165,7 @@ class Zrobot(TemplateBase):
         # force to stop the container
         try:
             contservice = self.api.services.get(name=self._container_name)
-            contservice.schedule_action('stop').wait(die=True)
+            contservice.schedule_action("stop").wait(die=True)
         except (ServiceNotFoundError, LookupError):
             pass
 
@@ -182,47 +177,48 @@ class Zrobot(TemplateBase):
         try:
             container = self.api.services.get(name=self._container_name)
             self.zrobot_sal.stop()
-            container.schedule_action('uninstall').wait(die=True)
+            container.schedule_action("uninstall").wait(die=True)
             container.delete()
         except (ServiceNotFoundError, LookupError):
             pass
 
         try:
             # cleanup filesystem used by this robot
-            storagepool_sal = self.node_sal.storagepools.get('zos-cache')
+            storagepool_sal = self._node_sal.storagepools.get("zos-cache")
             fs_sal = storagepool_sal.get(self.guid)
             fs_sal.delete()
         except ValueError:
             # filesystem doesn't exist, nothing else to do
             pass
 
-        self.state.delete('actions', 'install')
-        self.state.delete('status', 'running')
+        self.state.delete("actions", "install")
+        self.state.delete("status", "running")
 
     def _monitor(self):
-        self.state.check('actions', 'install', 'ok')
-        self.state.check('actions', 'start', 'ok')
+        self.state.check("actions", "install", "ok")
+        self.state.check("actions", "start", "ok")
 
         try:
             self.api.services.get(name=self._container_name)  # check that container service exists
             if self.zrobot_sal and self.zrobot_sal.is_running():
-                self.state.set('status', 'running', 'ok')
+                self.state.set("status", "running", "ok")
                 return
         except (ServiceNotFoundError, LookupError):
-            self.state.set('status', 'running', 'error')
+            self.state.set("status", "running", "error")
 
         # try to start
         self.start()
 
     @retry(exceptions=ServiceNotFoundError, tries=3, delay=3, backoff=2)
     def _reserve_port(self):
-        port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
-        port = port_mgr.schedule_action("reserve", {"service_guid": self.guid, 'n': 1}).wait(die=True).result[0]
+        port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name="_port_manager")
+        port = port_mgr.schedule_action("reserve", {"service_guid": self.guid, "n": 1}).wait(die=True).result[0]
         return port
 
     @retry(exceptions=ServiceNotFoundError, tries=3, delay=3, backoff=2)
     def _release_port(self):
-        if not self.data['port']:
+        if not self.data["port"]:
             return
-        port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name='_port_manager')
-        port_mgr.schedule_action("release", {"service_guid": self.guid, 'ports': [self.data['port']]})
+        port_mgr = self.api.services.get(template_uid=PORT_MANAGER_TEMPLATE_UID, name="_port_manager")
+        port_mgr.schedule_action("release", {"service_guid": self.guid, "ports": [self.data["port"]]})
+

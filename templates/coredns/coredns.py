@@ -12,6 +12,7 @@ class Coredns(TemplateBase):
         super().__init__(name=name, guid=guid, data=data)
         self.add_delete_callback(self.uninstall)
         self.recurring_action('_monitor', 30)  # every 30 seconds
+        self._node_sal = self.api.node_sal
 
     def validate(self):
         self.state.delete('status', 'running')
@@ -41,13 +42,6 @@ class Coredns(TemplateBase):
                 self.state.set('status', 'running', 'ok')
         else:
             self.state.set('status', 'running', 'ok')
-
-    @property
-    def _node_sal(self):
-        """
-        connection to the node
-        """
-        return j.clients.zos.get(NODE_CLIENT)
 
     @property
     def _coredns_sal(self):

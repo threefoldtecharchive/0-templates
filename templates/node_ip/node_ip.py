@@ -1,73 +1,63 @@
-
 from jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.state import StateCheckError
 import netaddr
 
-NODE_CLIENT = 'local'
-
 
 class NodeIp(TemplateBase):
 
-    version = '0.0.1'
-    template_name = 'node_ip'
+    version = "0.0.1"
+    template_name = "node_ip"
 
     def __init__(self, name, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        self.recurring_action('_monitor', 60)  # every 60 seconds
+        self.recurring_action("_monitor", 60)  # every 60 seconds
+        self._node_sal = self.api.node_sal
 
     def validate(self):
-        cidr = self.data.get('cidr')
+        cidr = self.data.get("cidr")
         if not cidr:
-            raise ValueError('cidr should be provided')
+            raise ValueError("cidr should be provided")
 
         try:
             netaddr.IPNetwork(cidr)
         except netaddr.AddrFormatError:
-            raise ValueError('cidr format is not valid')
+            raise ValueError("cidr format is not valid")
 
-        vlan = self.data.get('interface')
+        vlan = self.data.get("interface")
         if not vlan:
-            raise ValueError('interface should be provided')
-
-    def _node_sal(self):
-        """
-        connection to the node
-        """
-        return j.clients.zos.get(NODE_CLIENT)
+            raise ValueError("interface should be provided")
 
     def _monitor(self):
         try:
-            self.state.check('actions', 'install', 'ok')
+            self.state.check("actions", "install", "ok")
         except StateCheckError:
             return
 
         self.install()
 
     def install(self):
-        node = self._node_sal()
-        interface = self.data['interface']
-        cidr = self.data['cidr']
-        gateway = self.data.get('gateway')
+        interface = self.data["interface"]
+        cidr = self.data["cidr"]
+        gateway = self.data.get("gateway")
 
-        ips = node.client.ip.addr.list(interface)
+        ips = self._node_sal.client.ip.addr.list(interface)
         if cidr not in ips:
             self.logger.info("config ip %s on interface %s", cidr, interface)
-            node.client.ip.addr.add(interface, cidr)
+            self._node_sal.client.ip.addr.add(interface, cidr)
 
         if gateway:
-            routes = node.client.ip.route.list()
-            if {'dev': interface, 'dst': '', 'gw': gateway} not in routes:
-                node.client.bash("ip r del default; ip r add default via %s" % gateway)
+            routes = self._node_sal.client.ip.route.list()
+            if {"dev": interface, "dst": "", "gw": gateway} not in routes:
+                self._node_sal.client.bash("ip r del default; ip r add default via %s" % gateway)
 
-        self.state.set('actions', 'install', 'ok')
+        self.state.set("actions", "install", "ok")
 
     def uninstall(self):
-        node = self._node_sal()
-        interface = self.data['interface']
-        cidr = self.data['cidr']
+        interface = self.data["interface"]
+        cidr = self.data["cidr"]
 
-        ips = node.client.ip.addr.list(interface)
+        ips = self._node_sal.client.ip.addr.list(interface)
         if cidr in ips:
-            node.client.ip.addr.delete(interface, cidr)
-        self.state.delete('actions', 'install')
+            self._node_sal.client.ip.addr.delete(interface, cidr)
+        self.state.delete("actions", "install")
