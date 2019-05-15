@@ -57,7 +57,8 @@ class Node(TemplateBase):
         try:
             self._node_sal.zerodbs.prepare()
             self.state.set("disks", "mounted", "ok")
-        except:
+        except Exception as err:
+            self.logger.error("fail to mount the disks: %s" % str(err))
             self.state.delete("disks", "mounted")
 
     def _network_monitor(self):
