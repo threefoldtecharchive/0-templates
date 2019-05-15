@@ -147,7 +147,7 @@ class Node(TemplateBase):
     @retry(Exception, tries=2, delay=2)
     def install(self):
         self.logger.info("Installing node %s" % self.name)
-        self.data["version"] = "{branch}:{revision}".format(**self.api.node_sallient.info.version())
+        self.data["version"] = "{branch}:{revision}".format(**self._node_sal.client.info.version())
         # Set host name
         self._node_sal.client.system("hostname %s" % self.data["hostname"]).get()
         self._node_sal.client.bash("echo %s > /etc/hostname" % self.data["hostname"]).get()
