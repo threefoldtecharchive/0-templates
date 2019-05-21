@@ -671,16 +671,15 @@ class S3(TemplateBase):
         def do():
             self.logger.info("bubble up minio state")
             try:
-                self._minio.state.check('vm', 'disk', SERVICE_STATE_OK)
-                self.state.set('vm', 'disk', SERVICE_STATE_OK)
-            except StateCheckError:
-                self._send_alert(
-                    ressource=self.name,
-                    text="failure of the metadata disk used by minio",
-                    tags=['minio_name:%s' % self._minio.name, "s3_name:%s" % self.name],
-                    event='metadata disk failure')
-                self.state.set('vm', 'disk', SERVICE_STATE_ERROR)
-                self.state.set('status', 'running', SERVICE_STATE_ERROR)
+                disk_state = self._minio.state.get('vm', 'disk')
+                self.state.set('vm', 'disk', disk_state['disk'])
+                if disk_state['disk'] == SERVICE_STATE_ERROR:
+                    self._send_alert(
+                        ressource=self.name,
+                        text="failure of the metadata disk used by minio",
+                        tags=['minio_name:%s' % self._minio.name, "s3_name:%s" % self.name],
+                        event='metadata disk failure')
+                    self.state.set('status', 'running', SERVICE_STATE_ERROR)
             except StateCategoryNotExistsError:
                 # probably no state set on the minio disk #FIXME
                 self.state.delete('vm')
