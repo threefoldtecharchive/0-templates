@@ -370,6 +370,8 @@ class S3(TemplateBase):
 
     def stop(self):
         self.state.check('actions', 'install', 'ok')
+        self.state.delete('tlog_sync')
+        self.state.delete('status')
         self._minio.schedule_action('stop').wait(die=True)
 
     def upgrade(self):

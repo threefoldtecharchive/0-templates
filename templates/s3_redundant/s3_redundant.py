@@ -182,6 +182,7 @@ class S3Redundant(TemplateBase):
             return
 
         try:
+            passive_s3.state.get('tlog_sync', 'running')
             passive_s3.state.check('tlog_sync', 'running', SERVICE_STATE_OK)
             self.logger.info("passive tlog sync is running")
         except StateCategoryNotExistsError:
