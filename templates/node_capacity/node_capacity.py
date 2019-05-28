@@ -1,3 +1,5 @@
+import time
+
 from jumpscale import j
 from zerorobot.template.base import TemplateBase
 from zerorobot.template.decorator import retry, timeout
@@ -27,9 +29,22 @@ class NodeCapacity(TemplateBase):
         node.state.check("disks", "mounted", "ok")
 
         self.state.delete("capacity", "total")
+
+        send_hardware = False
+        last_update = self.data.get('lastHardwareUpdate')
+        # check if we sent hardware update more then 24h ago
+        if not last_update or (int(time.time()) - last_update > 86400):
+            send_hardware = True
+
         try:
-            self._node_sal.capacity.register()
-            self.state.set("capacity", "total", "ok")
+            try:
+                self._node_sal.capacity.register(include_hardware_dump=send_hardware)
+                self.state.set("capacity", "total", "ok")
+                self.data['lastHardwareUpdate'] = int(time.time())
+            except TypeError as err:
+                self.logger.error("fail to send hardware update, need to update 0-robot flist")
+                self._node_sal.capacity.register()
+                self.state.set("capacity", "total", "ok")
         except:
             self.state.set("capacity", "total", "error")
             raise
