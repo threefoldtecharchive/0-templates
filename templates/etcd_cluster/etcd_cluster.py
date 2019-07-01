@@ -141,7 +141,7 @@ class EtcdCluster(TemplateBase):
                     nr_deployed_etcds += 1
                 except BaseException as err:
                     self.logger.error('Installing etcd on node %s failed: %s' % (node['node_id'], err))
-                    nodes.remove(node)
+                nodes.remove(node)
         return etcds
 
     def _create_zt_clients(self, nics, node_url):
