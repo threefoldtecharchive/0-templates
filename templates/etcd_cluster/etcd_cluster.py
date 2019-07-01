@@ -120,6 +120,13 @@ class EtcdCluster(TemplateBase):
 
     def _deploy_etcds(self, required_etcds):
         nodes = list(self._nodes())
+
+        # ensure we never deploy 2 etcd on the same node
+        used_node_ids = [n['node'] for n in self.data['etcds']]
+        for node in nodes:
+            if node['node_id'] in used_node_ids:
+                nodes.remove(node)
+        
         nr_deployed_etcds = 0
         etcds = []
         while nr_deployed_etcds < required_etcds:
