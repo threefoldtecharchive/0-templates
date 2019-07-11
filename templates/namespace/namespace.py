@@ -89,7 +89,7 @@ class Namespace(TemplateBase):
     def uninstall(self):
         self._zerodb.schedule_action('namespace_delete', args={'name': self.data['nsName']}).wait(die=True)
         self.state.delete('actions', 'install')
-        self.state.delete('status', 'running', 'ok')
+        self.state.delete('status', 'running')
 
     def connection_info(self):
         self.state.check('actions', 'install', 'ok')
