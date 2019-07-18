@@ -261,7 +261,7 @@ class S3(TemplateBase):
             if master_gl.exception:
                 raise master_gl.exception
 
-        self._deploy_minio()
+        self._deploy_minio(nodes)
         self.state.set('actions', 'install', 'ok')
         self.state.set('status', 'running', 'ok')
 
@@ -741,8 +741,9 @@ class S3(TemplateBase):
         except:
             self.state.set('status', 'running', 'error')
 
-    def _deploy_minio(self):
-        nodes = list(self._nodes)
+    def _deploy_minio(self, nodes=None):
+        if not nodes:
+            nodes = list(self._nodes)
 
         # exlude node where the minio cannot be installed
         to_exclude = [*self.data['excludeNodes']]
