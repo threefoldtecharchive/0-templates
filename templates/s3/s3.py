@@ -26,7 +26,6 @@ class S3(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        self.__minio = None
         self._pool = Pool(30)
 
         self.recurring_action('_monitor', 60)
@@ -77,19 +76,16 @@ class S3(TemplateBase):
 
     @property
     def _minio(self):
-        if self.__minio is None:
-            if self.data['minioLocation']['nodeId'] and self.data['minioLocation']['robotURL']:
-                try:
-                    robot = self.api.robots.get(
-                        self.data['minioLocation']['nodeId'],
-                        self.data['minioLocation']['robotURL'])
-                    self.__minio = robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
-                except ConnectionError:
-                    self.state.set('status', 'running', 'error')
-                except ServiceNotFoundError:
-                    self._deploy_minio()
-
-        return self.__minio
+        if self.data['minioLocation']['nodeId'] and self.data['minioLocation']['robotURL']:
+            try:
+                robot = self.api.robots.get(
+                    self.data['minioLocation']['nodeId'],
+                    self.data['minioLocation']['robotURL'])
+                return robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
+            except ConnectionError:
+                self.state.set('status', 'running', 'error')
+            except ServiceNotFoundError:
+                return self._deploy_minio()
 
     def _ensure_namespaces_connections(self):
         try:
@@ -325,7 +321,6 @@ class S3(TemplateBase):
                 self.data['minioLocation']['robotURL'] = ''
                 self.data['minioLocation']['public'] = ''
                 self.data['minioLocation']['storage'] = ''
-                self.__minio = None
         except ServiceNotFoundError:
             pass
 
@@ -406,7 +401,6 @@ class S3(TemplateBase):
             if self._minio:
                 self._minio.schedule_action('uninstall').wait()
                 self._minio.delete()
-                self.__minio = None
         except ServiceNotFoundError:
             pass
 
@@ -812,7 +806,7 @@ class S3(TemplateBase):
         self.data['minioLocation']['storage'] = connection_info['storage']
         self.logger.info("minio installed")
 
-        self.__minio = minio
+        return minio
 
     def _send_alert(self, ressource, text, tags, event, severity='critical'):
         alert = {
