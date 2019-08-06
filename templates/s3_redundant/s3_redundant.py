@@ -19,6 +19,7 @@ class S3Redundant(TemplateBase):
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
         self.recurring_action('_monitor', 60)  # every minutes
+        self.recurring_action('_update_reverse_proxy_servers', 60)
 
     def validate(self):
         if self.data['parityShards'] > self.data['dataShards']:
@@ -214,6 +215,13 @@ class S3Redundant(TemplateBase):
             }).wait(die=True)
 
     def _update_reverse_proxy_servers(self):
+        try:
+            self.state.check('actions', 'install', 'ok')
+        except StateCheckError:
+            return
+        if not self.data['reverseProxy']:
+            return
+
         urls = self._active_s3().schedule_action('url').wait(die=True).result
         try:
             reverse_proxy = self.api.services.get(template_uid=REVERSE_PROXY_UID, name=self.data['reverseProxy'])
@@ -323,10 +331,6 @@ class S3Redundant(TemplateBase):
 
     def update_reverse_proxy(self, reverse_proxy):
         self.data['reverseProxy'] = reverse_proxy
-        try:
-            self.state.check('actions', 'install', 'ok')
-        except StateCheckError:
-            return
         self._update_reverse_proxy_servers()
 
     def generate_credentials(self):
