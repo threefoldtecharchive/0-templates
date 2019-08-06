@@ -26,7 +26,6 @@ class S3(TemplateBase):
 
     def __init__(self, name=None, guid=None, data=None):
         super().__init__(name=name, guid=guid, data=data)
-        self.__minio = None
         self._pool = Pool(30)
 
         self.recurring_action('_monitor', 60)
@@ -77,16 +76,16 @@ class S3(TemplateBase):
 
     @property
     def _minio(self):
-        if self.__minio is None:
-            if self.data['minioLocation']['nodeId'] and self.data['minioLocation']['robotURL']:
-                try:
-                    robot = self.api.robots.get(
-                        self.data['minioLocation']['nodeId'],
-                        self.data['minioLocation']['robotURL'])
-                    self.__minio = robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
-                except ConnectionError:
-                    self.state.set('status', 'running', 'error')
-        return self.__minio
+        if self.data['minioLocation']['nodeId'] and self.data['minioLocation']['robotURL']:
+            try:
+                robot = self.api.robots.get(
+                    self.data['minioLocation']['nodeId'],
+                    self.data['minioLocation']['robotURL'])
+                return robot.services.get(template_uid=MINIO_TEMPLATE_UID, name=self.guid)
+            except ConnectionError:
+                self.state.set('status', 'running', 'error')
+            except ServiceNotFoundError:
+                return self._deploy_minio()
 
     def _ensure_namespaces_connections(self):
         try:
@@ -262,19 +261,6 @@ class S3(TemplateBase):
             if master_gl.exception:
                 raise master_gl.exception
 
-        # exlude node where the minio cannot be installed
-        to_exclude = [*self.data['excludeNodes']]
-        if 'tlog' in self.data and 'node' in self.data['tlog']:
-            if self.data['tlog']['node']:
-                to_exclude.append(self.data['tlog']['node'])
-
-        if 'master' in self.data and 'node' in self.data['master']:
-            if self.data['master']['node']:
-                to_exclude.append(self.data['master']['node'])
-
-        if to_exclude and len(nodes) - len(to_exclude) > 1:
-            nodes = list(filter(lambda n: n['node_id'] not in to_exclude, nodes))
-
         self._deploy_minio(nodes)
         self.state.set('actions', 'install', 'ok')
         self.state.set('status', 'running', 'ok')
@@ -335,7 +321,6 @@ class S3(TemplateBase):
                 self.data['minioLocation']['robotURL'] = ''
                 self.data['minioLocation']['public'] = ''
                 self.data['minioLocation']['storage'] = ''
-                self.__minio = None
         except ServiceNotFoundError:
             pass
 
@@ -416,7 +401,6 @@ class S3(TemplateBase):
             if self._minio:
                 self._minio.schedule_action('uninstall').wait()
                 self._minio.delete()
-                self.__minio = None
         except ServiceNotFoundError:
             pass
 
@@ -757,7 +741,23 @@ class S3(TemplateBase):
         except:
             self.state.set('status', 'running', 'error')
 
-    def _deploy_minio(self, nodes):
+    def _deploy_minio(self, nodes=None):
+        if not nodes:
+            nodes = list(self._nodes)
+
+        # exlude node where the minio cannot be installed
+        to_exclude = [*self.data['excludeNodes']]
+        if 'tlog' in self.data and 'node' in self.data['tlog']:
+            if self.data['tlog']['node']:
+                to_exclude.append(self.data['tlog']['node'])
+
+        if 'master' in self.data and 'node' in self.data['master']:
+            if self.data['master']['node']:
+                to_exclude.append(self.data['master']['node'])
+
+        if to_exclude and len(nodes) - len(to_exclude) > 1:
+            nodes = list(filter(lambda n: n['node_id'] not in to_exclude, nodes))
+
         nodes = sort_minio_node_candidates(nodes)
         minio_robot = self.api.robots.get(nodes[0]['node_id'], nodes[0]['robot_address'])
 
@@ -807,7 +807,7 @@ class S3(TemplateBase):
         self.data['minioLocation']['storage'] = connection_info['storage']
         self.logger.info("minio installed")
 
-        self.__minio = minio
+        return minio
 
     def _send_alert(self, ressource, text, tags, event, severity='critical'):
         alert = {
